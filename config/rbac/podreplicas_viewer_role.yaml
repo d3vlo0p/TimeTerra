@@ -1,0 +1,27 @@
+# permissions for end users to view podreplicas.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: podreplicas-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: timeterra
+    app.kubernetes.io/part-of: timeterra
+    app.kubernetes.io/managed-by: kustomize
+  name: podreplicas-viewer-role
+rules:
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - podreplicas
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - podreplicas/status
+  verbs:
+  - get

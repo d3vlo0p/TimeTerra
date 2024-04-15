@@ -1,0 +1,16 @@
+apiVersion: core.timeterra.d3vlo0p.dev/v1alpha1
+kind: Schedule
+metadata:
+  labels:
+    app.kubernetes.io/name: schedule
+    app.kubernetes.io/instance: schedule-sample
+    app.kubernetes.io/part-of: timeterra
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: timeterra
+  name: schedule-sample
+spec:
+  actions:
+    scaleup:
+      cron: '0/4 * * * *'
+    scalein:
+      cron: '2/4 * * * *'

@@ -1,0 +1,24 @@
+apiVersion: core.timeterra.d3vlo0p.dev/v1alpha1
+kind: PodReplicas
+metadata:
+  labels:
+    app.kubernetes.io/name: podreplicas
+    app.kubernetes.io/instance: podreplicas-sample
+    app.kubernetes.io/part-of: timeterra
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: timeterra
+  name: podreplicas-sample
+spec:
+  enabled: true
+  namespaces:
+    - default
+  resourceType: Deployment
+  labelSelector:
+    matchLabels:
+      app.kubernetes.io/name: hello-world
+  schedule: schedule-sample
+  actions:
+    scaleup:
+      replicas: 2
+    scalein:
+      replicas: 1

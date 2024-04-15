@@ -1,15 +1,84 @@
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  labels:
-    app.kubernetes.io/name: clusterrole
-    app.kubernetes.io/instance: manager-role
-    app.kubernetes.io/component: rbac
-    app.kubernetes.io/created-by: timeterra
-    app.kubernetes.io/part-of: timeterra
-    app.kubernetes.io/managed-by: kustomize
   name: manager-role
 rules:
-- apiGroups: [""]
-  resources: ["pods"]
-  verbs: ["get", "list", "watch"]
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - autoscalings
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - autoscalings/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - autoscalings/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - podreplicas
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - podreplicas/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - podreplicas/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - schedules
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - schedules/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - schedules/status
+  verbs:
+  - get
+  - patch
+  - update

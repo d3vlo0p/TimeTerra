@@ -10,4 +10,29 @@ plugins:
   scorecard.sdk.operatorframework.io/v2: {}
 projectName: timeterra
 repo: github.com/d3vlo0p/TimeTerra
+resources:
+- api:
+    crdVersion: v1
+  controller: true
+  domain: timeterra.d3vlo0p.dev
+  group: core
+  kind: Schedule
+  path: github.com/d3vlo0p/TimeTerra/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+  controller: true
+  domain: timeterra.d3vlo0p.dev
+  group: core
+  kind: PodReplicas
+  path: github.com/d3vlo0p/TimeTerra/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+  controller: true
+  domain: timeterra.d3vlo0p.dev
+  group: core
+  kind: Autoscaling
+  path: github.com/d3vlo0p/TimeTerra/api/v1alpha1
+  version: v1alpha1
 version: "3"

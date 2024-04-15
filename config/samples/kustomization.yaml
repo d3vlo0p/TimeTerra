@@ -1,0 +1,6 @@
+## Append samples of your project ##
+resources:
+- core_v1alpha1_schedule.yaml
+- core_v1alpha1_podreplicas.yaml
+- core_v1alpha1_autoscaling.yaml
+#+kubebuilder:scaffold:manifestskustomizesamples

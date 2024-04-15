@@ -1,0 +1,23 @@
+version: '3'
+
+vars:
+  IMG: ttl.sh/d3vlo0p/timeterra-operator:1h
+  PLATFROMS: linux/arm64,linux/amd64
+
+tasks:
+  update:
+    cmds:
+      - make generate
+      - make manifests
+      
+  run:
+    cmds:
+      - make install run
+
+  deploy-to-k8s:
+    cmds:
+      - make deploy IMG="{{.IMG}}"
+
+  docker-build:
+    cmds:
+      - make docker-buildx PLATFORMS="{{.PLATFROMS}}" docker-push IMG="{{.IMG}}"

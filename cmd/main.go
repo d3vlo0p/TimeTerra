@@ -21,7 +21,7 @@ import (
 	"flag"
 	"os"
 
-	cron "github.com/robfig/cron/v3"
+	"github.com/d3vlo0p/TimeTerra/internal/cron"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -35,6 +35,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
+	corev1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
+	"github.com/d3vlo0p/TimeTerra/internal/controller"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -46,6 +49,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
+	utilruntime.Must(corev1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -92,9 +96,6 @@ func main() {
 		TLSOpts: tlsOpts,
 	})
 
-	c := cron.New()
-	defer c.Stop()
-
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
@@ -123,6 +124,34 @@ func main() {
 		os.Exit(1)
 	}
 
+	c := cron.New()
+	c.Start()
+	defer c.Stop()
+
+	if err = (&controller.ScheduleReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+		Cron:   c,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Schedule")
+		os.Exit(1)
+	}
+	if err = (&controller.PodReplicasReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+		Cron:   c,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "PodReplicas")
+		os.Exit(1)
+	}
+	if err = (&controller.AutoscalingReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+		SC:     c,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Autoscaling")
+		os.Exit(1)
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
