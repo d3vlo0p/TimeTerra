@@ -58,7 +58,6 @@ type PodReplicasStatus struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	Conditions []metav1.Condition `json:"conditions"`
-	Actions    map[string]int     `json:"actions,omitempty"`
 }
 
 //+kubebuilder:object:root=true

@@ -4,15 +4,15 @@ import (
 	cron "github.com/robfig/cron/v3"
 )
 
-// shedule -> action -> list of cron based on
 type ScheduleCron struct {
-	m map[string]map[string][]int
+	// map of schedule => map of action => map of resource => list of cron ids
+	m map[string]map[string]map[string]int
 	c *cron.Cron
 }
 
 func New() *ScheduleCron {
 	return &ScheduleCron{
-		m: make(map[string]map[string][]int),
+		m: make(map[string]map[string]map[string]int),
 		c: cron.New(),
 	}
 }
@@ -29,57 +29,93 @@ func (sm *ScheduleCron) Get(entry int) cron.Entry {
 	return sm.c.Entry(cron.EntryID(entry))
 }
 
-func (sm *ScheduleCron) Add(schedule string, action string, spec string, cmd func()) (int, error) {
+func (sm *ScheduleCron) Add(schedule string, action string, resource string, spec string, cmd func()) (int, error) {
 	id, err := sm.c.AddFunc(spec, cmd)
 	if err != nil {
 		return 0, err
 	}
 
 	if _, ok := sm.m[schedule]; !ok {
-		sm.m[schedule] = make(map[string][]int)
+		sm.m[schedule] = make(map[string]map[string]int)
 	}
 	if _, ok := sm.m[schedule][action]; !ok {
-		sm.m[schedule][action] = make([]int, 0)
+		sm.m[schedule][action] = make(map[string]int)
 	}
-	sm.m[schedule][action] = append(sm.m[schedule][action], int(id))
+	sm.m[schedule][action][resource] = int(id)
 
 	return int(id), nil
 }
 
-func (sm *ScheduleCron) Remove(schedule string, action string, id int) {
+func (sm *ScheduleCron) Remove(schedule string, action string, resource string) {
 	if _, ok := sm.m[schedule]; !ok {
 		return
 	}
 	if _, ok := sm.m[schedule][action]; !ok {
 		return
 	}
-	for i, v := range sm.m[schedule][action] {
-		if v == id {
-			sm.m[schedule][action] = append(sm.m[schedule][action][:i], sm.m[schedule][action][i+1:]...)
-			break
-		}
+	if _, ok := sm.m[schedule][action][resource]; !ok {
+		return
 	}
-	sm.c.Remove(cron.EntryID(id))
+	sm.c.Remove(cron.EntryID(sm.m[schedule][action][resource]))
+	delete(sm.m[schedule][action], resource)
 }
 
-func (sm *ScheduleCron) GetActionList(schedule string) map[string][]int {
+func (sm *ScheduleCron) GetActions(schedule string) map[string]map[string]int {
 	if _, ok := sm.m[schedule]; !ok {
-		return make(map[string][]int)
+		return make(map[string]map[string]int)
 	}
 	return sm.m[schedule]
 }
 
-func (sm *ScheduleCron) ListId(schedule string, action string) []int {
+func (sm *ScheduleCron) GetActionIds(schedule string, action string) []int {
 	if _, ok := sm.m[schedule]; !ok {
 		return []int{}
 	}
 	if _, ok := sm.m[schedule][action]; !ok {
 		return []int{}
 	}
-	return sm.m[schedule][action]
+	var ids []int
+	for _, v := range sm.m[schedule][action] {
+		ids = append(ids, v)
+	}
+	return ids
+}
+
+func (sm *ScheduleCron) GetActionsOfResource(schedule string, resource string) map[string]int {
+	if _, ok := sm.m[schedule]; !ok {
+		return make(map[string]int)
+	}
+	resourceMap := make(map[string]int)
+	for action, v := range sm.m[schedule] {
+		resourceMap[action] = v[resource]
+	}
+	return resourceMap
+}
+
+func (sm *ScheduleCron) RemoveResource(resource string) {
+	for schedule, actions := range sm.m {
+		for action, resources := range actions {
+			if _, ok := resources[resource]; ok {
+				sm.Remove(schedule, action, resource)
+			}
+		}
+	}
 }
 
 func (sm *ScheduleCron) IsValidCron(spec string) bool {
 	_, err := cron.ParseStandard(spec)
 	return err == nil
+}
+
+func (sm *ScheduleCron) UpdateCronSpec(id int, spec string) bool {
+	entry := sm.Get(id)
+	if entry.ID == 0 {
+		return false
+	}
+	schedule, err := cron.ParseStandard(spec)
+	if err != nil {
+		return false
+	}
+	entry.Schedule = schedule
+	return true
 }

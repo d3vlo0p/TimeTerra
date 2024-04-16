@@ -113,10 +113,6 @@ spec:
           status:
             description: AutoscalingStatus defines the observed state of Autoscaling
             properties:
-              actions:
-                additionalProperties:
-                  type: integer
-                type: object
               conditions:
                 items:
                   description: "Condition contains details for one aspect of the current
