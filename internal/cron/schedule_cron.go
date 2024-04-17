@@ -2,7 +2,10 @@ package cron
 
 import (
 	cron "github.com/robfig/cron/v3"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
+
+var log = ctrl.Log.WithName("schedule_cron")
 
 type ScheduleCron struct {
 	// map of schedule => map of action => map of resource => list of cron ids
@@ -42,6 +45,7 @@ func (sm *ScheduleCron) Add(schedule string, action string, resource string, spe
 		sm.m[schedule][action] = make(map[string]int)
 	}
 	sm.m[schedule][action][resource] = int(id)
+	log.Info("added cron", "schedule", schedule, "action", action, "resource", resource, "spec", spec, "id", sm.m[schedule][action][resource])
 
 	return int(id), nil
 }
@@ -58,10 +62,12 @@ func (sm *ScheduleCron) Remove(schedule string, action string, resource string) 
 	}
 	sm.c.Remove(cron.EntryID(sm.m[schedule][action][resource]))
 	delete(sm.m[schedule][action], resource)
+	log.Info("removed cron", "schedule", schedule, "action", action, "resource", resource)
 }
 
 func (sm *ScheduleCron) GetActions(schedule string) map[string]map[string]int {
 	if _, ok := sm.m[schedule]; !ok {
+		log.Info("no actions for schedule", "schedule", schedule)
 		return make(map[string]map[string]int)
 	}
 	return sm.m[schedule]
@@ -69,9 +75,11 @@ func (sm *ScheduleCron) GetActions(schedule string) map[string]map[string]int {
 
 func (sm *ScheduleCron) GetActionIds(schedule string, action string) []int {
 	if _, ok := sm.m[schedule]; !ok {
+		log.Info("no actions for schedule", "schedule", schedule)
 		return []int{}
 	}
 	if _, ok := sm.m[schedule][action]; !ok {
+		log.Info("no actions for schedule", "schedule", schedule, "action", action)
 		return []int{}
 	}
 	var ids []int
@@ -83,6 +91,7 @@ func (sm *ScheduleCron) GetActionIds(schedule string, action string) []int {
 
 func (sm *ScheduleCron) GetActionsOfResource(schedule string, resource string) map[string]int {
 	if _, ok := sm.m[schedule]; !ok {
+		log.Info("no actions for schedule", "schedule", schedule)
 		return make(map[string]int)
 	}
 	resourceMap := make(map[string]int)

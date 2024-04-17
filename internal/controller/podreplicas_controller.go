@@ -111,14 +111,15 @@ func (r *PodReplicasReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 func (r *PodReplicasReconciler) reconcile(ctx context.Context, instance *corev1alpha1.PodReplicas, schedule *corev1alpha1.Schedule, resourceName string) (metav1.Condition, error) {
 	logger := log.FromContext(ctx)
+	scheduleName := schedule.Name
 	scheduledActions := []string{}
-	for action, id := range r.Cron.GetActionsOfResource(instance.Spec.Schedule, resourceName) {
+	for action, id := range r.Cron.GetActionsOfResource(scheduleName, resourceName) {
 		entry := r.Cron.Get(id)
 		if entry.Valid() {
 			// delete scheduled action if action is not defined in spec
 			if _, found := instance.Spec.Actions[action]; !found {
 				logger.Info(fmt.Sprintf("job action %q is no more defined in spec, removing it from status", action))
-				r.Cron.Remove(instance.Name, action, resourceName)
+				r.Cron.Remove(scheduleName, action, resourceName)
 			} else {
 				scheduledActions = append(scheduledActions, action)
 			}
@@ -141,7 +142,7 @@ func (r *PodReplicasReconciler) reconcile(ctx context.Context, instance *corev1a
 		}
 		if !contains(scheduledActions, actionName) {
 			logger.Info(fmt.Sprintf("action %q is not scheduled, scheduling it with %q", actionName, scheduleAction.Cron))
-			_, err := r.Cron.Add(instance.Name, actionName, scheduleAction.Cron, resourceName, func() {
+			_, err := r.Cron.Add(scheduleName, actionName, resourceName, scheduleAction.Cron, func() {
 				logger.Info(fmt.Sprintf("action %q is running", actionName))
 				r.setReplicas(ctx, instance.Spec, action)
 			})
@@ -158,12 +159,12 @@ func (r *PodReplicasReconciler) reconcile(ctx context.Context, instance *corev1a
 				logger.Info(fmt.Sprintf("failed to parse cron schedule: %q", err))
 				return metav1.Condition{}, err
 			}
-			currentCronID := r.Cron.GetActionsOfResource(instance.Spec.Schedule, resourceName)[actionName]
+			currentCronID := r.Cron.GetActionsOfResource(scheduleName, resourceName)[actionName]
 			entry := r.Cron.Get(currentCronID)
 			if entry.Schedule != currentSchedule {
 				logger.Info(fmt.Sprintf("action %q schedule is changed, updating it", actionName))
-				r.Cron.Remove(instance.Name, actionName, resourceName)
-				_, err := r.Cron.Add(instance.Name, actionName, resourceName, scheduleAction.Cron, func() {
+				r.Cron.Remove(scheduleName, actionName, resourceName)
+				_, err := r.Cron.Add(scheduleName, actionName, resourceName, scheduleAction.Cron, func() {
 					logger.Info(fmt.Sprintf("action %q is running", actionName))
 					r.setReplicas(ctx, instance.Spec, action)
 				})
@@ -179,6 +180,7 @@ func (r *PodReplicasReconciler) reconcile(ctx context.Context, instance *corev1a
 		LastTransitionTime: metav1.Now(),
 		Status:             metav1.ConditionTrue,
 		Type:               "Ready",
+		Reason:             "Ready",
 	}, nil
 }
 

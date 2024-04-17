@@ -93,6 +93,7 @@ func (r *ScheduleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 func (r *ScheduleReconciler) reconcile(ctx context.Context, instance *corev1alpha1.Schedule) (metav1.Condition, error) {
 	logger := log.FromContext(ctx)
+	scheduleName := instance.Name
 	// checking if the cron expression of the actions is correct
 	for action, c := range instance.Spec.Actions {
 		if !r.Cron.IsValidCron(c.Cron) {
@@ -107,10 +108,12 @@ func (r *ScheduleReconciler) reconcile(ctx context.Context, instance *corev1alph
 		}
 	}
 
-	activeActions := r.Cron.GetActions(instance.Name)
-	// check if some activities has been removed from the cron but there are still active
+	activeActions := r.Cron.GetActions(scheduleName)
 	for action, resources := range activeActions {
-		for resource := range resources {
+		logger.Info(fmt.Sprintf("action %s is active", action))
+		for resource, id := range resources {
+			logger.Info(fmt.Sprintf("action %s is used by %s", action, resource))
+			// check if some activities has been removed from the cron but there are still active
 			if _, ok := instance.Spec.Actions[action]; !ok {
 				logger.Info(fmt.Sprintf("action %s has been removed from the schedule", action))
 				return metav1.Condition{
@@ -120,13 +123,13 @@ func (r *ScheduleReconciler) reconcile(ctx context.Context, instance *corev1alph
 					Reason:             "Action is used",
 					Message:            fmt.Sprintf("action %s is used by %s, but was removed from the schedule", action, resource),
 				}, nil
+			}
+			// proceed to update spec on active cron
+			updated := r.Cron.UpdateCronSpec(id, instance.Spec.Actions[action].Cron)
+			if !updated {
+				logger.Info(fmt.Sprintf("failed to update cron %d spec of action %s", id, action))
 			} else {
-				// proceed to update spec on active cron
-				id := activeActions[action][resource]
-				updated := r.Cron.UpdateCronSpec(id, instance.Spec.Actions[action].Cron)
-				if !updated {
-					logger.Info(fmt.Sprintf("failed to update cron %d spec of action %s", id, action))
-				}
+				logger.Info(fmt.Sprintf("cron %d spec of action %s updated", id, action))
 			}
 		}
 	}
@@ -135,6 +138,7 @@ func (r *ScheduleReconciler) reconcile(ctx context.Context, instance *corev1alph
 		LastTransitionTime: metav1.Now(),
 		Status:             metav1.ConditionTrue,
 		Type:               "Ready",
+		Reason:             "Ready",
 	}, nil
 }
 
