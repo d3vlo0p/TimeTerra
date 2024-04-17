@@ -116,15 +116,31 @@ func (sm *ScheduleCron) IsValidCron(spec string) bool {
 	return err == nil
 }
 
-func (sm *ScheduleCron) UpdateCronSpec(id int, spec string) bool {
-	entry := sm.Get(id)
-	if entry.ID == 0 {
+func (sm *ScheduleCron) UpdateCronSpec(schedule string, action string, resource string, spec string) bool {
+	if _, ok := sm.m[schedule]; !ok {
 		return false
 	}
-	schedule, err := cron.ParseStandard(spec)
+	if _, ok := sm.m[schedule][action]; !ok {
+		return false
+	}
+	if _, ok := sm.m[schedule][action][resource]; !ok {
+		return false
+	}
+	old := sm.Get(sm.m[schedule][action][resource])
+	if old.ID == 0 {
+		return false
+	}
+	_, err := cron.ParseStandard(spec)
 	if err != nil {
 		return false
 	}
-	entry.Schedule = schedule
+	// replace old cron with new one
+	newJob := old.Job
+	new, err := sm.c.AddJob(spec, newJob)
+	if err != nil {
+		return false
+	}
+	sm.m[schedule][action][resource] = int(new)
+	sm.c.Remove(old.ID)
 	return true
 }

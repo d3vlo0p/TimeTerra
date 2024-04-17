@@ -111,7 +111,7 @@ func (r *ScheduleReconciler) reconcile(ctx context.Context, instance *corev1alph
 	activeActions := r.Cron.GetActions(scheduleName)
 	for action, resources := range activeActions {
 		logger.Info(fmt.Sprintf("action %s is active", action))
-		for resource, id := range resources {
+		for resource := range resources {
 			logger.Info(fmt.Sprintf("action %s is used by %s", action, resource))
 			// check if some activities has been removed from the cron but there are still active
 			if _, ok := instance.Spec.Actions[action]; !ok {
@@ -125,11 +125,11 @@ func (r *ScheduleReconciler) reconcile(ctx context.Context, instance *corev1alph
 				}, nil
 			}
 			// proceed to update spec on active cron
-			updated := r.Cron.UpdateCronSpec(id, instance.Spec.Actions[action].Cron)
+			updated := r.Cron.UpdateCronSpec(scheduleName, action, resource, instance.Spec.Actions[action].Cron)
 			if !updated {
-				logger.Info(fmt.Sprintf("failed to update cron %d spec of action %s", id, action))
+				logger.Info(fmt.Sprintf("failed to update resource %s cron spec for action %s", resource, action))
 			} else {
-				logger.Info(fmt.Sprintf("cron %d spec of action %s updated", id, action))
+				logger.Info(fmt.Sprintf("resource %s cron spec for action %s updated", resource, action))
 			}
 		}
 	}
