@@ -6,7 +6,9 @@ import (
 
 	corev1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 	sc "github.com/d3vlo0p/TimeTerra/internal/cron"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -25,15 +27,33 @@ func contains(actions []string, action string) bool {
 
 func rec[ActionType any, SpecType any](
 	ctx context.Context,
+	cli client.Client,
 	cron *sc.ScheduleCron,
 	instanceActions map[string]ActionType,
 	instanceSpec SpecType,
-	schedule *corev1alpha1.Schedule,
+	scheduleName string,
 	resourceName string,
 	job func(ctx context.Context, instanceSpec SpecType, action ActionType),
 ) (metav1.Condition, error) {
 	logger := log.FromContext(ctx)
-	scheduleName := schedule.Name
+
+	schedule := &corev1alpha1.Schedule{}
+	err := cli.Get(ctx, client.ObjectKey{Name: scheduleName}, schedule)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			logger.Info("Schedule resource not found.")
+			return metav1.Condition{
+				LastTransitionTime: metav1.Now(),
+				Status:             metav1.ConditionFalse,
+				Type:               "Ready",
+				Reason:             "Schedule not found",
+				Message:            fmt.Sprintf("Schedule %s not found", scheduleName),
+			}, nil
+		}
+		logger.Info("Failed to get Schedule resource. Re-running reconcile.")
+		return metav1.Condition{}, err
+	}
+
 	scheduledActions := make([]string, 0)
 	for action, id := range cron.GetActionsOfResource(scheduleName, resourceName) {
 		entry := cron.Get(id)

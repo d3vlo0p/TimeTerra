@@ -71,18 +71,7 @@ func (r *PodReplicasReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		instance.Status.Conditions = make([]metav1.Condition, 0)
 	}
 
-	schedule := &corev1alpha1.Schedule{}
-	err = r.Get(ctx, client.ObjectKey{Name: instance.Spec.Schedule}, schedule)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			logger.Info("Schedule resource not found. Re-running reconcile.")
-			return ctrl.Result{}, err
-		}
-		logger.Info("Failed to get Schedule resource. Re-running reconcile.")
-		return ctrl.Result{}, err
-	}
-
-	condition, err := rec(ctx, r.Cron, instance.Spec.Actions, instance.Spec, schedule, resourceName, r.setReplicas)
+	condition, err := rec(ctx, r.Client, r.Cron, instance.Spec.Actions, instance.Spec, instance.Spec.Schedule, resourceName, r.setReplicas)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
