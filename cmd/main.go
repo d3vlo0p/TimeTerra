@@ -147,7 +147,7 @@ func main() {
 	if err = (&controller.AutoscalingReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-		SC:     c,
+		Cron:   c,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Autoscaling")
 		os.Exit(1)

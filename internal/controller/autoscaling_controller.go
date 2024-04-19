@@ -37,7 +37,7 @@ import (
 type AutoscalingReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
-	SC     *sc.ScheduleCron
+	Cron   *sc.ScheduleCron
 }
 
 //+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=autoscalings,verbs=get;list;watch;create;update;patch;delete
@@ -47,10 +47,11 @@ type AutoscalingReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.16.3/pkg/reconcile
 func (r *AutoscalingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	updateStatus := false
 	logger := log.FromContext(ctx)
 
 	logger.Info(fmt.Sprintf("reconciling object %#q", req.NamespacedName))
+
+	resourceName := ResourceName("Autoscaling", req.Name)
 	instance := &corev1alpha1.Autoscaling{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
@@ -64,17 +65,35 @@ func (r *AutoscalingReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	if instance.Status.Conditions == nil {
 		instance.Status.Conditions = make([]metav1.Condition, 0)
-		updateStatus = true
 	}
 
-	if updateStatus {
-		err = r.Status().Update(ctx, instance)
-		if err != nil {
-			logger.Info("Failed to update AutoScaling resource. Re-running reconcile.")
-			return ctrl.Result{}, err
+	condition, err := rec(ctx, r.Client, r.Cron, instance.Spec.Actions, instance.Spec, instance.Spec.Schedule, resourceName, r.setAutoscaling)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if len(instance.Status.Conditions) > 0 {
+		// add condition if current status is false or if is different than last one
+		if condition.Status != metav1.ConditionTrue || condition.Status != instance.Status.Conditions[len(instance.Status.Conditions)-1].Status {
+			instance.Status.Conditions = append(instance.Status.Conditions, condition)
 		}
+		// keep only last ten conditions
+		if len(instance.Status.Conditions) > 10 {
+			instance.Status.Conditions = instance.Status.Conditions[len(instance.Status.Conditions)-10:]
+		}
+	} else {
+		instance.Status.Conditions = append(instance.Status.Conditions, condition)
+	}
+	err = r.Status().Update(ctx, instance)
+	if err != nil {
+		logger.Info("Failed to update AutoScaling resource. Re-running reconcile.")
+		return ctrl.Result{}, err
 	}
 	return ctrl.Result{}, nil
+}
+
+func (r *AutoscalingReconciler) setAutoscaling(ctx context.Context, spec corev1alpha1.AutoscalingSpec, action corev1alpha1.AutoscalingAction) {
+	// TODO: update HPA settings
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -82,19 +101,5 @@ func (r *AutoscalingReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1alpha1.Autoscaling{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
-		// Watches(
-		// 	&corev1alpha1.Schedule{},
-		// 	handler.EnqueueRequestsFromMapFunc(
-		// 		func(ctx context.Context, a client.Object) []reconcile.Request {
-		// 			// ritornare oggetto da riconciliare, devo leggere da qualche proprieta dell'oggetto?
-		// 			return []reconcile.Request{
-		// 				{
-		// 					NamespacedName: types.NamespacedName{
-		// 						Name: a.GetName(),
-		// 						// Namespace: a.GetNamespace(),
-		// 					},
-		// 				},
-		// 			}
-		// 		})).
 		Complete(r)
 }
