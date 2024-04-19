@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	sc "github.com/d3vlo0p/TimeTerra/internal/cron"
-	cron "github.com/robfig/cron/v3"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -83,7 +82,7 @@ func (r *PodReplicasReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, err
 	}
 
-	condition, err := r.reconcile(ctx, instance, schedule, resourceName)
+	condition, err := rec(ctx, r.Cron, instance.Spec.Actions, instance.Spec, schedule, resourceName, r.setReplicas)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -107,90 +106,6 @@ func (r *PodReplicasReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	return ctrl.Result{}, nil
-}
-
-func (r *PodReplicasReconciler) reconcile(ctx context.Context, instance *corev1alpha1.PodReplicas, schedule *corev1alpha1.Schedule, resourceName string) (metav1.Condition, error) {
-	logger := log.FromContext(ctx)
-	scheduleName := schedule.Name
-	scheduledActions := []string{}
-	for action, id := range r.Cron.GetActionsOfResource(scheduleName, resourceName) {
-		entry := r.Cron.Get(id)
-		if entry.Valid() {
-			// delete scheduled action if action is not defined in spec
-			if _, found := instance.Spec.Actions[action]; !found {
-				logger.Info(fmt.Sprintf("job action %q is no more defined in spec, removing it from status", action))
-				r.Cron.Remove(scheduleName, action, resourceName)
-			} else {
-				scheduledActions = append(scheduledActions, action)
-			}
-		}
-	}
-
-	for actionName, action := range instance.Spec.Actions {
-		actionName := actionName
-		action := action
-		scheduleAction, found := schedule.Spec.Actions[actionName]
-		if !found {
-			logger.Info(fmt.Sprintf("action %q is not defined in schedule", actionName))
-			return metav1.Condition{
-				LastTransitionTime: metav1.Now(),
-				Status:             metav1.ConditionFalse,
-				Type:               "Ready",
-				Reason:             "Acttion not found",
-				Message:            fmt.Sprintf("action %s not found", actionName),
-			}, nil
-		}
-		if !contains(scheduledActions, actionName) {
-			logger.Info(fmt.Sprintf("action %q is not scheduled, scheduling it with %q", actionName, scheduleAction.Cron))
-			_, err := r.Cron.Add(scheduleName, actionName, resourceName, scheduleAction.Cron, func() {
-				logger.Info(fmt.Sprintf("action %q is running", actionName))
-				r.setReplicas(ctx, instance.Spec, action)
-			})
-			if err != nil {
-				logger.Info(fmt.Sprintf("failed to add cron job: %q", err))
-				return metav1.Condition{}, err
-			}
-			logger.Info(fmt.Sprintf("action %q is scheduled", actionName))
-		} else {
-			// check if cron is changed
-			logger.Info(fmt.Sprintf("action %q is scheduled", actionName))
-			currentSchedule, err := cron.ParseStandard(scheduleAction.Cron)
-			if err != nil {
-				logger.Info(fmt.Sprintf("failed to parse cron schedule: %q", err))
-				return metav1.Condition{}, err
-			}
-			currentCronID := r.Cron.GetActionsOfResource(scheduleName, resourceName)[actionName]
-			entry := r.Cron.Get(currentCronID)
-			if entry.Schedule != currentSchedule {
-				logger.Info(fmt.Sprintf("action %q schedule is changed, updating it", actionName))
-				r.Cron.Remove(scheduleName, actionName, resourceName)
-				_, err := r.Cron.Add(scheduleName, actionName, resourceName, scheduleAction.Cron, func() {
-					logger.Info(fmt.Sprintf("action %q is running", actionName))
-					r.setReplicas(ctx, instance.Spec, action)
-				})
-				if err != nil {
-					logger.Info(fmt.Sprintf("failed to schedule: %q", err))
-					return metav1.Condition{}, err
-				}
-				logger.Info(fmt.Sprintf("action %q is scheduled", actionName))
-			}
-		}
-	}
-	return metav1.Condition{
-		LastTransitionTime: metav1.Now(),
-		Status:             metav1.ConditionTrue,
-		Type:               "Ready",
-		Reason:             "Ready",
-	}, nil
-}
-
-func contains(actions []string, action string) bool {
-	for _, a := range actions {
-		if a == action {
-			return true
-		}
-	}
-	return false
 }
 
 func (r *PodReplicasReconciler) setReplicas(ctx context.Context, spec corev1alpha1.PodReplicasSpec, action corev1alpha1.PodReplicasAction) {
