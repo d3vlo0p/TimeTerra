@@ -23,6 +23,7 @@ import (
 	sc "github.com/d3vlo0p/TimeTerra/internal/cron"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	corev1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -79,11 +81,11 @@ func (r *AutoscalingReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		})
 	} else {
 		condition, err := reconcileResource(ctx, r.Client, r.Cron, instance.Spec.Actions, instance.Spec, instance.Spec.Schedule, resourceName, r.setAutoscaling)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-		instance.Status.Conditions = addCondition(instance.Status.Conditions, condition)
+		if err != nil {
+			return ctrl.Result{}, err
 		}
+		instance.Status.Conditions = addCondition(instance.Status.Conditions, condition)
+	}
 
 	err = r.Status().Update(ctx, instance)
 	if err != nil {
@@ -94,7 +96,28 @@ func (r *AutoscalingReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 }
 
 func (r *AutoscalingReconciler) setAutoscaling(ctx context.Context, spec corev1alpha1.AutoscalingSpec, action corev1alpha1.AutoscalingAction) {
-	// TODO: update HPA settings
+	logger := log.FromContext(ctx)
+	selector := labels.SelectorFromSet(spec.LabelSelector.MatchLabels)
+
+	for _, namespace := range spec.Namespaces {
+		list := &autoscalingv2.HorizontalPodAutoscalerList{}
+		err := r.List(ctx, list, &client.ListOptions{Namespace: namespace, LabelSelector: selector})
+		if err != nil {
+			logger.Error(err, "Failed to list HorizontalPodAutoscaler")
+			return
+		}
+		logger.Info(fmt.Sprintf("updating HorizontalPodAutoscaler in namespace %q", namespace))
+		minReplicas := int32(action.MinReplicas)
+		maxReplicas := int32(action.MaxReplicas)
+		for _, hpa := range list.Items {
+			hpa.Spec.MinReplicas = &minReplicas
+			hpa.Spec.MaxReplicas = maxReplicas
+			err = r.Update(ctx, &hpa)
+			if err != nil {
+				logger.Error(err, "Failed to update HorizontalPodAutoscaler")
+			}
+		}
+	}
 }
 
 // SetupWithManager sets up the controller with the Manager.

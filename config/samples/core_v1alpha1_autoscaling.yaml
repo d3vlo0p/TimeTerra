@@ -9,4 +9,17 @@ metadata:
     app.kubernetes.io/created-by: timeterra
   name: autoscaling-sample
 spec:
-  # TODO(user): Add fields here
+  enabled: true
+  namespaces:
+    - default
+  labelSelector:
+    matchLabels:
+      app.kubernetes.io/name: hello-world
+  schedule: schedule-sample
+  actions:
+    scaleup:
+      minReplicas: 2
+      maxReplicas: 10
+    scalein:
+      minReplicas: 1
+      maxReplicas: 10
