@@ -4,20 +4,20 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.13.0
-  name: podreplicas.core.timeterra.d3vlo0p.dev
+  name: k8spodreplicas.core.timeterra.d3vlo0p.dev
 spec:
   group: core.timeterra.d3vlo0p.dev
   names:
-    kind: PodReplicas
-    listKind: PodReplicasList
-    plural: podreplicas
-    singular: podreplicas
+    kind: K8sPodReplicas
+    listKind: K8sPodReplicasList
+    plural: k8spodreplicas
+    singular: k8spodreplicas
   scope: Cluster
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: PodReplicas is the Schema for the podreplicas API
+        description: K8sPodReplicas is the Schema for the k8spodreplicas API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -32,12 +32,10 @@ spec:
           metadata:
             type: object
           spec:
-            description: PodReplicasSpec defines the desired state of PodReplicas
+            description: K8sPodReplicasSpec defines the desired state of K8sPodReplicas
             properties:
               actions:
                 additionalProperties:
-                  description: PodReplicasAction defines the desired number of replicas
-                    for each action
                   properties:
                     replicas:
                       type: integer
@@ -111,7 +109,7 @@ spec:
             - schedule
             type: object
           status:
-            description: PodReplicasStatus defines the observed state of PodReplicas
+            description: K8sPodReplicasStatus defines the observed state of K8sPodReplicas
             properties:
               conditions:
                 items:

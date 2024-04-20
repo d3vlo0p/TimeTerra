@@ -3,4 +3,7 @@ resources:
 - core_v1alpha1_schedule.yaml
 - core_v1alpha1_podreplicas.yaml
 - core_v1alpha1_autoscaling.yaml
+- core_v1alpha1_k8shpa.yaml
+- core_v1alpha1_k8spodreplicas.yaml
+- core_v1alpha1_awsrdsauroracluster.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

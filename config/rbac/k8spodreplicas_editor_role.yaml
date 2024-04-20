@@ -1,0 +1,31 @@
+# permissions for end users to edit k8spodreplicas.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: k8spodreplicas-editor-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: timeterra
+    app.kubernetes.io/part-of: timeterra
+    app.kubernetes.io/managed-by: kustomize
+  name: k8spodreplicas-editor-role
+rules:
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - k8spodreplicas
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - k8spodreplicas/status
+  verbs:
+  - get

@@ -7,7 +7,7 @@ rules:
 - apiGroups:
   - core.timeterra.d3vlo0p.dev
   resources:
-  - autoscalings
+  - awsrdsauroraclusters
   verbs:
   - create
   - delete
@@ -19,13 +19,13 @@ rules:
 - apiGroups:
   - core.timeterra.d3vlo0p.dev
   resources:
-  - autoscalings/finalizers
+  - awsrdsauroraclusters/finalizers
   verbs:
   - update
 - apiGroups:
   - core.timeterra.d3vlo0p.dev
   resources:
-  - autoscalings/status
+  - awsrdsauroraclusters/status
   verbs:
   - get
   - patch
@@ -33,7 +33,7 @@ rules:
 - apiGroups:
   - core.timeterra.d3vlo0p.dev
   resources:
-  - podreplicas
+  - k8shpas
   verbs:
   - create
   - delete
@@ -45,13 +45,39 @@ rules:
 - apiGroups:
   - core.timeterra.d3vlo0p.dev
   resources:
-  - podreplicas/finalizers
+  - k8shpas/finalizers
   verbs:
   - update
 - apiGroups:
   - core.timeterra.d3vlo0p.dev
   resources:
-  - podreplicas/status
+  - k8shpas/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - k8spodreplicas
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - k8spodreplicas/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - k8spodreplicas/status
   verbs:
   - get
   - patch

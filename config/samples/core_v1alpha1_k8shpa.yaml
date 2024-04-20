@@ -1,24 +1,25 @@
 apiVersion: core.timeterra.d3vlo0p.dev/v1alpha1
-kind: PodReplicas
+kind: K8sHpa
 metadata:
   labels:
-    app.kubernetes.io/name: podreplicas
-    app.kubernetes.io/instance: podreplicas-sample
+    app.kubernetes.io/name: k8shpa
+    app.kubernetes.io/instance: k8shpa-sample
     app.kubernetes.io/part-of: timeterra
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/created-by: timeterra
-  name: podreplicas-sample
+  name: k8shpa-sample
 spec:
   enabled: true
   namespaces:
     - default
-  resourceType: Deployment
   labelSelector:
     matchLabels:
       app.kubernetes.io/name: hello-world
   schedule: schedule-sample
   actions:
     scaleup:
-      replicas: 2
+      minReplicas: 2
+      maxReplicas: 10
     scalein:
-      replicas: 1
+      minReplicas: 1
+      maxReplicas: 10

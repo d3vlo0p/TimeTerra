@@ -4,20 +4,20 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.13.0
-  name: autoscalings.core.timeterra.d3vlo0p.dev
+  name: k8shpas.core.timeterra.d3vlo0p.dev
 spec:
   group: core.timeterra.d3vlo0p.dev
   names:
-    kind: Autoscaling
-    listKind: AutoscalingList
-    plural: autoscalings
-    singular: autoscaling
+    kind: K8sHpa
+    listKind: K8sHpaList
+    plural: k8shpas
+    singular: k8shpa
   scope: Cluster
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Autoscaling is the Schema for the autoscalings API
+        description: K8sHpa is the Schema for the k8shpas API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -32,12 +32,10 @@ spec:
           metadata:
             type: object
           spec:
-            description: AutoscalingSpec defines the desired state of Autoscaling
+            description: K8sHpaSpec defines the desired state of K8sHpa
             properties:
               actions:
                 additionalProperties:
-                  description: AutoscalingAction defines the desired number of replicas
-                    for each action
                   properties:
                     maxReplicas:
                       type: integer
@@ -111,7 +109,7 @@ spec:
             - schedule
             type: object
           status:
-            description: AutoscalingStatus defines the observed state of Autoscaling
+            description: K8sHpaStatus defines the observed state of K8sHpa
             properties:
               conditions:
                 items:

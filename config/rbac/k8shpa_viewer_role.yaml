@@ -1,0 +1,27 @@
+# permissions for end users to view k8shpas.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: k8shpa-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: timeterra
+    app.kubernetes.io/part-of: timeterra
+    app.kubernetes.io/managed-by: kustomize
+  name: k8shpa-viewer-role
+rules:
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - k8shpas
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - k8shpas/status
+  verbs:
+  - get

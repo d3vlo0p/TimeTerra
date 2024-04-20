@@ -20,9 +20,10 @@ import (
 	"context"
 	"fmt"
 
-	sc "github.com/d3vlo0p/TimeTerra/internal/cron"
-
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,32 +31,36 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	corev1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
-
-	appsv1 "k8s.io/api/apps/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
+	"github.com/d3vlo0p/TimeTerra/internal/cron"
 )
 
-// PodReplicasReconciler reconciles a PodReplicas object
-type PodReplicasReconciler struct {
+// K8sPodReplicasReconciler reconciles a K8sPodReplicas object
+type K8sPodReplicasReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
-	Cron   *sc.ScheduleCron
+	Cron   *cron.ScheduleCron
 }
 
-//+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=podreplicas,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=podreplicas/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=podreplicas/finalizers,verbs=update
+//+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=k8spodreplicas,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=k8spodreplicas/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=k8spodreplicas/finalizers,verbs=update
 
+// Reconcile is part of the main kubernetes reconciliation loop which aims to
+// move the current state of the cluster closer to the desired state.
+// TODO(user): Modify the Reconcile function to compare the state specified by
+// the K8sPodReplicas object against the actual cluster state, and then
+// perform operations to make the cluster state reflect the state specified by
+// the user.
+//
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.16.3/pkg/reconcile
-func (r *PodReplicasReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *K8sPodReplicasReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
 	logger.Info(fmt.Sprintf("reconciling object %#q", req.NamespacedName))
 
 	resourceName := ResourceName("PodReplicas", req.Name)
-	instance := &corev1alpha1.PodReplicas{}
+	instance := &corev1alpha1.K8sPodReplicas{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -96,11 +101,11 @@ func (r *PodReplicasReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	return ctrl.Result{}, nil
 }
 
-func (r *PodReplicasReconciler) setReplicas(ctx context.Context, spec corev1alpha1.PodReplicasSpec, action corev1alpha1.PodReplicasAction) {
+func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, spec corev1alpha1.K8sPodReplicasSpec, action corev1alpha1.K8sPodReplicasAction) {
 	logger := log.FromContext(ctx)
 	selector := labels.SelectorFromSet(spec.LabelSelector.MatchLabels)
 	switch kind := spec.ResourceType; kind {
-	case corev1alpha1.Deployment:
+	case corev1alpha1.K8sDeployment:
 		// retrive Deployments with specified labels
 		for _, namespace := range spec.Namespaces {
 			deploymentList := &appsv1.DeploymentList{}
@@ -124,7 +129,7 @@ func (r *PodReplicasReconciler) setReplicas(ctx context.Context, spec corev1alph
 				logger.Info(fmt.Sprintf("updated deployment %q/%q to %d replicas", deployment.Namespace, deployment.Name, action.Replicas))
 			}
 		}
-	case corev1alpha1.StatefulSet:
+	case corev1alpha1.K8sStatefulSet:
 		// retrive StatefulSets with specified labels
 		for _, namespace := range spec.Namespaces {
 			statefulSetList := &appsv1.StatefulSetList{}
@@ -152,9 +157,9 @@ func (r *PodReplicasReconciler) setReplicas(ctx context.Context, spec corev1alph
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *PodReplicasReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *K8sPodReplicasReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&corev1alpha1.PodReplicas{}).
+		For(&corev1alpha1.K8sPodReplicas{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Complete(r)
 }

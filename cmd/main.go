@@ -124,6 +124,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Starting cron
 	c := cron.New()
 	c.Start()
 	defer c.Stop()
@@ -136,20 +137,28 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "Schedule")
 		os.Exit(1)
 	}
-	if err = (&controller.PodReplicasReconciler{
+	if err = (&controller.K8sHpaReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 		Cron:   c,
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "PodReplicas")
+		setupLog.Error(err, "unable to create controller", "controller", "K8sHpa")
 		os.Exit(1)
 	}
-	if err = (&controller.AutoscalingReconciler{
+	if err = (&controller.K8sPodReplicasReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 		Cron:   c,
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Autoscaling")
+		setupLog.Error(err, "unable to create controller", "controller", "K8sPodReplicas")
+		os.Exit(1)
+	}
+	if err = (&controller.AwsRdsAuroraClusterReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+		Cron:   c,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "AwsRdsAuroraCluster")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

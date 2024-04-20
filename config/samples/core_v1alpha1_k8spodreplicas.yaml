@@ -1,25 +1,24 @@
 apiVersion: core.timeterra.d3vlo0p.dev/v1alpha1
-kind: Autoscaling
+kind: K8sPodReplicas
 metadata:
   labels:
-    app.kubernetes.io/name: autoscaling
-    app.kubernetes.io/instance: autoscaling-sample
+    app.kubernetes.io/name: k8spodreplicas
+    app.kubernetes.io/instance: k8spodreplicas-sample
     app.kubernetes.io/part-of: timeterra
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/created-by: timeterra
-  name: autoscaling-sample
+  name: k8spodreplicas-sample
 spec:
-  enabled: true
-  namespaces:
-    - default
+  actions:
+    scalein:
+      replicas: 1
+    scaleup:
+      replicas: 2
+  enabled: false
   labelSelector:
     matchLabels:
       app.kubernetes.io/name: hello-world
+  namespaces:
+    - default
+  resourceType: Deployment
   schedule: schedule-sample
-  actions:
-    scaleup:
-      minReplicas: 2
-      maxReplicas: 10
-    scalein:
-      minReplicas: 1
-      maxReplicas: 10

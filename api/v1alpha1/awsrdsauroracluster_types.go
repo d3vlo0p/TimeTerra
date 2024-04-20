@@ -23,54 +23,43 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// AutoscalingAction defines the desired number of replicas for each action
-type AutoscalingAction struct {
-	MinReplicas int `json:"minReplicas"`
-	MaxReplicas int `json:"maxReplicas"`
-}
-
-// AutoscalingSpec defines the desired state of Autoscaling
-type AutoscalingSpec struct {
+// AwsRdsAuroraClusterSpec defines the desired state of AwsRdsAuroraCluster
+type AwsRdsAuroraClusterSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	Enabled       *bool                        `json:"enabled,omitempty"`
-	Namespaces    []string                     `json:"namespaces"`
-	LabelSelector metav1.LabelSelector         `json:"labelSelector"`
-	Schedule      string                       `json:"schedule"`
-	Actions       map[string]AutoscalingAction `json:"actions"`
+	// Foo is an example field of AwsRdsAuroraCluster. Edit awsrdsauroracluster_types.go to remove/update
+	Foo string `json:"foo,omitempty"`
 }
 
-// AutoscalingStatus defines the observed state of Autoscaling
-type AutoscalingStatus struct {
+// AwsRdsAuroraClusterStatus defines the observed state of AwsRdsAuroraCluster
+type AwsRdsAuroraClusterStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-
-	Conditions []metav1.Condition `json:"conditions"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:scope=Cluster
 
-// Autoscaling is the Schema for the autoscalings API
-type Autoscaling struct {
+// AwsRdsAuroraCluster is the Schema for the awsrdsauroraclusters API
+type AwsRdsAuroraCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   AutoscalingSpec   `json:"spec,omitempty"`
-	Status AutoscalingStatus `json:"status,omitempty"`
+	Spec   AwsRdsAuroraClusterSpec   `json:"spec,omitempty"`
+	Status AwsRdsAuroraClusterStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// AutoscalingList contains a list of Autoscaling
-type AutoscalingList struct {
+// AwsRdsAuroraClusterList contains a list of AwsRdsAuroraCluster
+type AwsRdsAuroraClusterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Autoscaling `json:"items"`
+	Items           []AwsRdsAuroraCluster `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&Autoscaling{}, &AutoscalingList{})
+	SchemeBuilder.Register(&AwsRdsAuroraCluster{}, &AwsRdsAuroraClusterList{})
 }

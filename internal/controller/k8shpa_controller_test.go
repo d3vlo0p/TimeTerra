@@ -30,7 +30,7 @@ import (
 	corev1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 )
 
-var _ = Describe("PodReplicas Controller", func() {
+var _ = Describe("K8sHpa Controller", func() {
 	Context("When reconciling a resource", func() {
 		const resourceName = "test-resource"
 
@@ -40,13 +40,13 @@ var _ = Describe("PodReplicas Controller", func() {
 			Name:      resourceName,
 			Namespace: "default", // TODO(user):Modify as needed
 		}
-		podreplicas := &corev1alpha1.PodReplicas{}
+		k8shpa := &corev1alpha1.K8sHpa{}
 
 		BeforeEach(func() {
-			By("creating the custom resource for the Kind PodReplicas")
-			err := k8sClient.Get(ctx, typeNamespacedName, podreplicas)
+			By("creating the custom resource for the Kind K8sHpa")
+			err := k8sClient.Get(ctx, typeNamespacedName, k8shpa)
 			if err != nil && errors.IsNotFound(err) {
-				resource := &corev1alpha1.PodReplicas{
+				resource := &corev1alpha1.K8sHpa{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
 						Namespace: "default",
@@ -59,16 +59,16 @@ var _ = Describe("PodReplicas Controller", func() {
 
 		AfterEach(func() {
 			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &corev1alpha1.PodReplicas{}
+			resource := &corev1alpha1.K8sHpa{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 
-			By("Cleanup the specific resource instance PodReplicas")
+			By("Cleanup the specific resource instance K8sHpa")
 			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
 		})
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
-			controllerReconciler := &PodReplicasReconciler{
+			controllerReconciler := &K8sHpaReconciler{
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
 			}

@@ -24,7 +24,7 @@ resources:
   controller: true
   domain: timeterra.d3vlo0p.dev
   group: core
-  kind: PodReplicas
+  kind: K8sHpa
   path: github.com/d3vlo0p/TimeTerra/api/v1alpha1
   version: v1alpha1
 - api:
@@ -32,7 +32,15 @@ resources:
   controller: true
   domain: timeterra.d3vlo0p.dev
   group: core
-  kind: Autoscaling
+  kind: K8sPodReplicas
+  path: github.com/d3vlo0p/TimeTerra/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+  controller: true
+  domain: timeterra.d3vlo0p.dev
+  group: core
+  kind: AwsRdsAuroraCluster
   path: github.com/d3vlo0p/TimeTerra/api/v1alpha1
   version: v1alpha1
 version: "3"
