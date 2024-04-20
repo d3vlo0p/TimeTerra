@@ -59,7 +59,7 @@ func (r *K8sPodReplicasReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	logger.Info(fmt.Sprintf("reconciling object %#q", req.NamespacedName))
 
-	resourceName := ResourceName("PodReplicas", req.Name)
+	resourceName := ResourceName("K8sPodReplicas", req.Name)
 	instance := &corev1alpha1.K8sPodReplicas{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
@@ -114,7 +114,7 @@ func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, spec corev1a
 				Namespace:     namespace,
 			})
 			if err != nil {
-				logger.Info(fmt.Sprintf("failed to list deployments: %q", err))
+				logger.Error(err, "failed to list deployments")
 				return
 			}
 
@@ -123,7 +123,7 @@ func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, spec corev1a
 				deployment.Spec.Replicas = &replicasInt32
 				err := r.Update(ctx, &deployment)
 				if err != nil {
-					logger.Info(fmt.Sprintf("failed to update deployment: %q", err))
+					logger.Error(err, "failed to update deployment")
 					return
 				}
 				logger.Info(fmt.Sprintf("updated deployment %q/%q to %d replicas", deployment.Namespace, deployment.Name, action.Replicas))
@@ -138,7 +138,7 @@ func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, spec corev1a
 				Namespace:     namespace,
 			})
 			if err != nil {
-				logger.Info(fmt.Sprintf("failed to list statefulsets: %q", err))
+				logger.Error(err, "failed to list statefulsets")
 				return
 			}
 
@@ -147,7 +147,7 @@ func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, spec corev1a
 				statefulSet.Spec.Replicas = &replicasInt32
 				err := r.Update(ctx, &statefulSet)
 				if err != nil {
-					logger.Info(fmt.Sprintf("failed to update statefulset: %q", err))
+					logger.Error(err, "failed to update statefulset")
 					return
 				}
 				logger.Info(fmt.Sprintf("updated statefulset %q/%q to %d replicas", statefulSet.Namespace, statefulSet.Name, action.Replicas))

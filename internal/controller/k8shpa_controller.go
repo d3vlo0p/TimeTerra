@@ -60,7 +60,7 @@ func (r *K8sHpaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 
 	logger.Info(fmt.Sprintf("reconciling object %#q", req.NamespacedName))
 
-	resourceName := ResourceName("Autoscaling", req.Name)
+	resourceName := ResourceName("K8sHpa", req.Name)
 	instance := &corev1alpha1.K8sHpa{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
