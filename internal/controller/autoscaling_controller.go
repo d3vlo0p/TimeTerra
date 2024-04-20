@@ -57,6 +57,7 @@ func (r *AutoscalingReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			logger.Info("AutoScaling resource not found. object must be deleted.")
+			r.Cron.RemoveResource(resourceName)
 			return ctrl.Result{}, nil
 		}
 		logger.Info("Failed to get AutoScaling resource. Re-running reconcile.")
@@ -67,23 +68,23 @@ func (r *AutoscalingReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		instance.Status.Conditions = make([]metav1.Condition, 0)
 	}
 
-	condition, err := rec(ctx, r.Client, r.Cron, instance.Spec.Actions, instance.Spec, instance.Spec.Schedule, resourceName, r.setAutoscaling)
+	if instance.Spec.Enabled != nil && !*instance.Spec.Enabled {
+		r.Cron.RemoveResource(resourceName)
+		instance.Status.Conditions = addCondition(instance.Status.Conditions, metav1.Condition{
+			LastTransitionTime: metav1.Now(),
+			Type:               "Enabled",
+			Status:             metav1.ConditionFalse,
+			Reason:             "Disabled",
+			Message:            "This Resource target is disabled",
+		})
+	} else {
+		condition, err := reconcileResource(ctx, r.Client, r.Cron, instance.Spec.Actions, instance.Spec, instance.Spec.Schedule, resourceName, r.setAutoscaling)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
+		instance.Status.Conditions = addCondition(instance.Status.Conditions, condition)
+		}
 
-	if len(instance.Status.Conditions) > 0 {
-		// add condition if current status is false or if is different than last one
-		if condition.Status != metav1.ConditionTrue || condition.Status != instance.Status.Conditions[len(instance.Status.Conditions)-1].Status {
-			instance.Status.Conditions = append(instance.Status.Conditions, condition)
-		}
-		// keep only last ten conditions
-		if len(instance.Status.Conditions) > 10 {
-			instance.Status.Conditions = instance.Status.Conditions[len(instance.Status.Conditions)-10:]
-		}
-	} else {
-		instance.Status.Conditions = append(instance.Status.Conditions, condition)
-	}
 	err = r.Status().Update(ctx, instance)
 	if err != nil {
 		logger.Info("Failed to update AutoScaling resource. Re-running reconcile.")

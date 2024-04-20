@@ -70,24 +70,23 @@ func (r *PodReplicasReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if instance.Status.Conditions == nil {
 		instance.Status.Conditions = make([]metav1.Condition, 0)
 	}
-
-	condition, err := rec(ctx, r.Client, r.Cron, instance.Spec.Actions, instance.Spec, instance.Spec.Schedule, resourceName, r.setReplicas)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	if len(instance.Status.Conditions) > 0 {
-		// add condition if current status is false or if is different than last one
-		if condition.Status != metav1.ConditionTrue || condition.Status != instance.Status.Conditions[len(instance.Status.Conditions)-1].Status {
-			instance.Status.Conditions = append(instance.Status.Conditions, condition)
-		}
-		// keep only last ten conditions
-		if len(instance.Status.Conditions) > 10 {
-			instance.Status.Conditions = instance.Status.Conditions[len(instance.Status.Conditions)-10:]
-		}
+	if instance.Spec.Enabled != nil && !*instance.Spec.Enabled {
+		r.Cron.RemoveResource(resourceName)
+		instance.Status.Conditions = addCondition(instance.Status.Conditions, metav1.Condition{
+			LastTransitionTime: metav1.Now(),
+			Type:               "Enabled",
+			Status:             metav1.ConditionFalse,
+			Reason:             "Disabled",
+			Message:            "This Resource target is disabled",
+		})
 	} else {
-		instance.Status.Conditions = append(instance.Status.Conditions, condition)
+		condition, err := reconcileResource(ctx, r.Client, r.Cron, instance.Spec.Actions, instance.Spec, instance.Spec.Schedule, resourceName, r.setReplicas)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		instance.Status.Conditions = addCondition(instance.Status.Conditions, condition)
 	}
+
 	err = r.Status().Update(ctx, instance)
 	if err != nil {
 		logger.Info(fmt.Sprintf("failed to update status: %q", err))

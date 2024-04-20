@@ -25,7 +25,7 @@ func contains(actions []string, action string) bool {
 	return false
 }
 
-func rec[ActionType any, SpecType any](
+func reconcileResource[ActionType any, SpecType any](
 	ctx context.Context,
 	cli client.Client,
 	cron *sc.ScheduleCron,
@@ -101,4 +101,29 @@ func rec[ActionType any, SpecType any](
 		Type:               "Ready",
 		Reason:             "Ready",
 	}, nil
+}
+
+func addCondition(conditions []metav1.Condition, condition metav1.Condition) []metav1.Condition {
+	if len(conditions) == 0 {
+		conditions = append(conditions, condition)
+		return conditions
+	}
+
+	if len(conditions) > 0 {
+		lastCondition := conditions[len(conditions)-1]
+		if lastCondition.Type == condition.Type &&
+			lastCondition.Status == condition.Status &&
+			lastCondition.Reason == condition.Reason &&
+			lastCondition.Message == condition.Message {
+			// replace last condition
+			conditions[len(conditions)-1] = condition
+		} else {
+			conditions = append(conditions, condition)
+		}
+	}
+
+	if len(conditions) > 10 {
+		conditions = conditions[len(conditions)-10:]
+	}
+	return conditions
 }
