@@ -23,19 +23,38 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
+type AwsRdsAuroraClusterCommand string
+
+const (
+	AwsRdsAuroraClusterCommandStop  AwsRdsAuroraClusterCommand = "stop"
+	AwsRdsAuroraClusterCommandStart AwsRdsAuroraClusterCommand = "start"
+)
+
+func (r AwsRdsAuroraClusterCommand) String() string {
+	return string(r)
+}
+
+type AwsRdsAuroraClusterAction struct {
+	Command AwsRdsAuroraClusterCommand `json:"command"`
+}
+
+type AwsRdsAuroraClusterIdentifier struct {
+	Identifier string `json:"identifier"`
+	Region     string `json:"region"`
+}
+
 // AwsRdsAuroraClusterSpec defines the desired state of AwsRdsAuroraCluster
 type AwsRdsAuroraClusterSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of AwsRdsAuroraCluster. Edit awsrdsauroracluster_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	Enabled              *bool                                `json:"enabled,omitempty"`
+	Schedule             string                               `json:"schedule"`
+	ServiceEndpoint      *string                              `json:"serviceEndpoint,omitempty"`
+	DBClusterIdentifiers []AwsRdsAuroraClusterIdentifier      `json:"dbClusterIdentifiers"`
+	Actions              map[string]AwsRdsAuroraClusterAction `json:"actions"`
 }
 
 // AwsRdsAuroraClusterStatus defines the observed state of AwsRdsAuroraCluster
 type AwsRdsAuroraClusterStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	Conditions []metav1.Condition `json:"conditions"`
 }
 
 //+kubebuilder:object:root=true
