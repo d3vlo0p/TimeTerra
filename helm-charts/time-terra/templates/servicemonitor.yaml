@@ -1,0 +1,15 @@
+{{- if .Values.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "time-terra.fullname" . }}
+  labels:
+    {{- include "time-terra.labels" . | nindent 4 }}
+spec:
+  endpoints:
+    - path: /metrics
+      port: https
+  selector:
+    matchLabels:
+      {{- include "time-terra.selectorLabels" . | nindent 6 }}
+{{- end }}

@@ -1,0 +1,180 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "time-terra.fullname" . }}-role
+  labels:
+    {{- include "time-terra.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+- apiGroups:
+  - apps
+  resources:
+  - deployments/scale
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - apps
+  resources:
+  - statefulsets
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+- apiGroups:
+  - apps
+  resources:
+  - statefulsets/scale
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - autoscaling.k8s.io
+  resources:
+  - horizontalpodautoscalers
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - awsdocumentdbclusters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - awsdocumentdbclusters/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - awsdocumentdbclusters/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - awsrdsauroraclusters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - awsrdsauroraclusters/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - awsrdsauroraclusters/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - k8shpas
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - k8shpas/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - k8shpas/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - k8spodreplicas
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - k8spodreplicas/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - k8spodreplicas/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - schedules
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - schedules/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - schedules/status
+  verbs:
+  - get
+  - patch
+  - update
