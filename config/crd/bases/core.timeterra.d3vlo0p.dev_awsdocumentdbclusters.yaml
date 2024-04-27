@@ -4,20 +4,20 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.13.0
-  name: awsrdsauroraclusters.core.timeterra.d3vlo0p.dev
+  name: awsdocumentdbclusters.core.timeterra.d3vlo0p.dev
 spec:
   group: core.timeterra.d3vlo0p.dev
   names:
-    kind: AwsRdsAuroraCluster
-    listKind: AwsRdsAuroraClusterList
-    plural: awsrdsauroraclusters
-    singular: awsrdsauroracluster
+    kind: AwsDocumentDBCluster
+    listKind: AwsDocumentDBClusterList
+    plural: awsdocumentdbclusters
+    singular: awsdocumentdbcluster
   scope: Cluster
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: AwsRdsAuroraCluster is the Schema for the awsrdsauroraclusters
+        description: AwsDocumentDBCluster is the Schema for the awsdocumentdbclusters
           API
         properties:
           apiVersion:
@@ -33,7 +33,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: AwsRdsAuroraClusterSpec defines the desired state of AwsRdsAuroraCluster
+            description: AwsDocumentDBClusterSpec defines the desired state of AwsDocumentDBCluster
             properties:
               actions:
                 additionalProperties:
@@ -71,7 +71,8 @@ spec:
             - schedule
             type: object
           status:
-            description: AwsRdsAuroraClusterStatus defines the observed state of AwsRdsAuroraCluster
+            description: AwsDocumentDBClusterStatus defines the observed state of
+              AwsDocumentDBCluster
             properties:
               conditions:
                 items:

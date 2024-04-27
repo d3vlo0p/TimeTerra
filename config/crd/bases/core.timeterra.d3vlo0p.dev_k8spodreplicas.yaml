@@ -98,6 +98,9 @@ spec:
                   type: string
                 type: array
               resourceType:
+                enum:
+                - Deployment
+                - StatefulSet
                 type: string
               schedule:
                 type: string

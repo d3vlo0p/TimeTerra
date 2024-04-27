@@ -7,6 +7,32 @@ rules:
 - apiGroups:
   - core.timeterra.d3vlo0p.dev
   resources:
+  - awsdocumentdbclusters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - awsdocumentdbclusters/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - awsdocumentdbclusters/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
   - awsrdsauroraclusters
   verbs:
   - create
