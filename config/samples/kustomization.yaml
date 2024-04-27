@@ -6,4 +6,5 @@ resources:
 - core_v1alpha1_k8shpa.yaml
 - core_v1alpha1_k8spodreplicas.yaml
 - core_v1alpha1_awsrdsauroracluster.yaml
+- core_v1alpha1_awsdocumentdbcluster.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

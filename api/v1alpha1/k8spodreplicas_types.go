@@ -40,8 +40,9 @@ type K8sPodReplicasAction struct {
 
 // K8sPodReplicasSpec defines the desired state of K8sPodReplicas
 type K8sPodReplicasSpec struct {
-	Enabled       *bool                           `json:"enabled,omitempty"`
-	Namespaces    []string                        `json:"namespaces"`
+	Enabled    *bool    `json:"enabled,omitempty"`
+	Namespaces []string `json:"namespaces"`
+	// +kubebuilder:validation:Enum:=Deployment;StatefulSet
 	ResourceType  K8sPodReplicasResourceType      `json:"resourceType"`
 	LabelSelector metav1.LabelSelector            `json:"labelSelector"`
 	Schedule      string                          `json:"schedule"`

@@ -6,6 +6,7 @@ resources:
 - bases/core.timeterra.d3vlo0p.dev_k8shpas.yaml
 - bases/core.timeterra.d3vlo0p.dev_k8spodreplicas.yaml
 - bases/core.timeterra.d3vlo0p.dev_awsrdsauroraclusters.yaml
+- bases/core.timeterra.d3vlo0p.dev_awsdocumentdbclusters.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patches:
@@ -15,6 +16,7 @@ patches:
 #- path: patches/webhook_in_k8shpas.yaml
 #- path: patches/webhook_in_k8spodreplicas.yaml
 #- path: patches/webhook_in_awsrdsauroraclusters.yaml
+#- path: patches/webhook_in_awsdocumentdbclusters.yaml
 #+kubebuilder:scaffold:crdkustomizewebhookpatch
 
 # [CERTMANAGER] To enable cert-manager, uncomment all the sections with [CERTMANAGER] prefix.
@@ -23,6 +25,7 @@ patches:
 #- path: patches/cainjection_in_k8shpas.yaml
 #- path: patches/cainjection_in_k8spodreplicas.yaml
 #- path: patches/cainjection_in_awsrdsauroraclusters.yaml
+#- path: patches/cainjection_in_awsdocumentdbclusters.yaml
 #+kubebuilder:scaffold:crdkustomizecainjectionpatch
 
 # [WEBHOOK] To enable webhook, uncomment the following section

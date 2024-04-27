@@ -1,0 +1,12 @@
+apiVersion: core.timeterra.d3vlo0p.dev/v1alpha1
+kind: AwsDocumentDBCluster
+metadata:
+  labels:
+    app.kubernetes.io/name: awsdocumentdbcluster
+    app.kubernetes.io/instance: awsdocumentdbcluster-sample
+    app.kubernetes.io/part-of: timeterra
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: timeterra
+  name: awsdocumentdbcluster-sample
+spec:
+  # TODO(user): Add fields here

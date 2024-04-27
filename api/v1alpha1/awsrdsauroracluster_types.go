@@ -35,6 +35,7 @@ func (r AwsRdsAuroraClusterCommand) String() string {
 }
 
 type AwsRdsAuroraClusterAction struct {
+	// +kubebuilder:validation:Enum:=stop;start
 	Command AwsRdsAuroraClusterCommand `json:"command"`
 }
 
