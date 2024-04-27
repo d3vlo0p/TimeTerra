@@ -11,6 +11,8 @@ tasks:
       - make manifests
       
   run:
+    env:
+      AWS_PROFILE: timeterra
     cmds:
       - make install run
 
@@ -22,12 +24,13 @@ tasks:
     cmds:
       - make docker-buildx PLATFORMS="{{.PLATFROMS}}" docker-push IMG="{{.IMG}}"
 
-  create-aurora-cluster:
-    env:
-      AWS_ENDPOINT_URL: http://s3.localhost
-    cmds:
-      - awslocal rds create-db-cluster --db-cluster-identifier db1 --engine aurora-postgresql --database-name test --master-username myuser --master-user-password mypassword
-      # - awslocal rds wait db-cluster-available --db-cluster-identifier db1
-      # - awslocal rds describe-db-clusters --db-cluster-identifier db1
-      # - awslocal rds create-db-instance --db-instance-identifier db1-instance --db-cluster-identifier db1 --engine aurora-postgresql --db-instance-class db.t3.large
+  # create-aurora-cluster:
+  #   env:
+  #     # AWS_ENDPOINT_URL: http://s3.localhost
+  #     AWS_PROFILE: timeterra
+  #   cmds:
+  #     - aws rds create-db-cluster --db-cluster-identifier db1 --engine aurora-postgresql --database-name test --master-username myuser --master-user-password mypassword
+  #     # - aws rds wait db-cluster-available --db-cluster-identifier db1
+  #     # - aws rds describe-db-clusters --db-cluster-identifier db1
+  #     # - aws rds create-db-instance --db-instance-identifier db1-instance --db-cluster-identifier db1 --engine aurora-postgresql --db-instance-class db.t3.large
 

@@ -127,7 +127,7 @@ func (r *AwsRdsAuroraClusterReconciler) startStopCluster(ctx context.Context, sp
 			if err != nil {
 				logger.Error(err, "unable to start cluster", "indentifier", &cluster.Identifier)
 			}
-
+			logger.Info("Cluster started", "identifier", &cluster.Identifier)
 		case corev1alpha1.AwsRdsAuroraClusterCommandStop:
 			_, err := rdsClient.StopDBCluster(ctx, &rds.StopDBClusterInput{
 				DBClusterIdentifier: &cluster.Identifier,
@@ -135,7 +135,7 @@ func (r *AwsRdsAuroraClusterReconciler) startStopCluster(ctx context.Context, sp
 			if err != nil {
 				logger.Error(err, "unable to stop cluster", "indentifier", &cluster.Identifier)
 			}
-
+			logger.Info("Cluster stopped", "identifier", &cluster.Identifier)
 		}
 	}
 }
