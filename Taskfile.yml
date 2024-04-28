@@ -1,8 +1,9 @@
 version: '3'
 
 vars:
-  IMG: ttl.sh/d3vlo0p/timeterra-operator:1h
-  PLATFROMS: linux/arm64,linux/amd64
+  PLATFROMS: linux/amd64
+  IMG: ttl.sh/d3vlo0p/timeterra-operator
+  TAG: 1h
 
 tasks:
   update:
@@ -15,11 +16,35 @@ tasks:
       AWS_PROFILE: timeterra
     cmds:
       - make install run
+  
+  dockerx-build-push:
+    cmds:
+      - make docker-buildx PLATFORMS="{{.PLATFROMS}}" IMG="{{.IMG}}:{{.TAG}}"
 
-  deploy-to-k8s:
+  k8s-depoly:
     cmds:
       - make deploy IMG="{{.IMG}}"
 
-  dockerx-build-push:
+  k8s-undeploy:
     cmds:
-      - make docker-buildx PLATFORMS="{{.PLATFROMS}}" IMG="{{.IMG}}"
+      - make undeploy
+
+  helm-depoly:
+    cmds:
+      - task: dockerx-build-push
+      - kubectl apply -f ./config/crd/bases/*.yaml
+      - helm upgrade -n timeterra --create-namespace --install operator ./helm-charts/time-terra --set image.repository={{.IMG}} --set image.tag={{.TAG}}
+
+  helm-undepoly:
+    cmds:
+      - helm uninstall -n timeterra operator
+      - kubectl delete -f ./config/crd/bases/*.yaml
+      - kubectl delete namespace timeterra
+
+  githhub-pub:
+    cmds: 
+      - task: dockerx-build-push
+        vars:
+          IMG: ghcr.io/d3vlo0p/timeterra
+          TAG: 0.0.1
+          PLATFROMS: linux/arm64,linux/amd64
