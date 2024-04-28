@@ -126,8 +126,10 @@ func main() {
 
 	// Starting cron
 	c := cron.New()
-	c.Start()
-	defer c.Stop()
+	if err = mgr.Add(c); err != nil {
+		setupLog.Error(err, "unable to add cron")
+		os.Exit(1)
+	}
 
 	if err = (&controller.ScheduleReconciler{
 		Client: mgr.GetClient(),
@@ -164,6 +166,7 @@ func main() {
 	if err = (&controller.AwsDocumentDBClusterReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
+		Cron:   c,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AwsDocumentDBCluster")
 		os.Exit(1)

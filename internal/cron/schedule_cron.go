@@ -1,16 +1,19 @@
 package cron
 
 import (
-	cron "github.com/robfig/cron/v3"
-	ctrl "sigs.k8s.io/controller-runtime"
-)
+	"context"
+	"time"
 
-var log = ctrl.Log.WithName("schedule_cron")
+	"github.com/go-logr/logr"
+	cron "github.com/robfig/cron/v3"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+)
 
 type ScheduleCron struct {
 	// map of schedule => map of action => map of resource => list of cron ids
-	m map[string]map[string]map[string]int
-	c *cron.Cron
+	m      map[string]map[string]map[string]int
+	c      *cron.Cron
+	logger logr.Logger
 }
 
 func New() *ScheduleCron {
@@ -20,12 +23,31 @@ func New() *ScheduleCron {
 	}
 }
 
-func (sm *ScheduleCron) Start() {
-	sm.c.Start()
+// start only if the manager is the leader
+func (sm *ScheduleCron) NeedLeaderElection() bool {
+	return true
 }
 
-func (sm *ScheduleCron) Stop() {
-	sm.c.Stop()
+func (sm *ScheduleCron) Start(ctx context.Context) error {
+	sm.logger = log.FromContext(ctx)
+	sm.c.Start()
+
+	// stop internal cron when ctx is done
+	stopSignal := make(chan struct{})
+	go func() {
+		<-ctx.Done()
+		sm.logger.Info("Shutting down cron jobs with timeout of 1 minute")
+		cronCtx, cancel := context.WithTimeout(sm.c.Stop(), 1*time.Minute)
+		defer cancel()
+		<-cronCtx.Done()
+		sm.logger.Info("stopped cron")
+		close(stopSignal)
+	}()
+	sm.logger.Info("started cron")
+
+	// wait for stop signal
+	<-stopSignal
+	return nil
 }
 
 func (sm *ScheduleCron) Get(entry int) cron.Entry {
@@ -45,7 +67,7 @@ func (sm *ScheduleCron) Add(schedule string, action string, resource string, spe
 		sm.m[schedule][action] = make(map[string]int)
 	}
 	sm.m[schedule][action][resource] = int(id)
-	log.Info("added cron", "schedule", schedule, "action", action, "resource", resource, "spec", spec, "id", sm.m[schedule][action][resource])
+	sm.logger.Info("added cron", "schedule", schedule, "action", action, "resource", resource, "spec", spec, "id", sm.m[schedule][action][resource])
 
 	return int(id), nil
 }
@@ -62,12 +84,12 @@ func (sm *ScheduleCron) Remove(schedule string, action string, resource string) 
 	}
 	sm.c.Remove(cron.EntryID(sm.m[schedule][action][resource]))
 	delete(sm.m[schedule][action], resource)
-	log.Info("removed cron", "schedule", schedule, "action", action, "resource", resource)
+	sm.logger.Info("removed cron", "schedule", schedule, "action", action, "resource", resource)
 }
 
 func (sm *ScheduleCron) GetActions(schedule string) map[string]map[string]int {
 	if _, ok := sm.m[schedule]; !ok {
-		log.Info("no actions for schedule", "schedule", schedule)
+		sm.logger.Info("no actions for schedule", "schedule", schedule)
 		return make(map[string]map[string]int)
 	}
 	return sm.m[schedule]
@@ -75,11 +97,11 @@ func (sm *ScheduleCron) GetActions(schedule string) map[string]map[string]int {
 
 func (sm *ScheduleCron) GetActionIds(schedule string, action string) []int {
 	if _, ok := sm.m[schedule]; !ok {
-		log.Info("no actions for schedule", "schedule", schedule)
+		sm.logger.Info("no actions for schedule", "schedule", schedule)
 		return []int{}
 	}
 	if _, ok := sm.m[schedule][action]; !ok {
-		log.Info("no actions for schedule", "schedule", schedule, "action", action)
+		sm.logger.Info("no actions for schedule", "schedule", schedule, "action", action)
 		return []int{}
 	}
 	var ids []int
@@ -91,7 +113,7 @@ func (sm *ScheduleCron) GetActionIds(schedule string, action string) []int {
 
 func (sm *ScheduleCron) GetActionsOfResource(schedule string, resource string) map[string]int {
 	if _, ok := sm.m[schedule]; !ok {
-		log.Info("no actions for schedule", "schedule", schedule)
+		sm.logger.Info("no actions for schedule", "schedule", schedule)
 		return make(map[string]int)
 	}
 	resourceMap := make(map[string]int)
