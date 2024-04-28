@@ -29,16 +29,20 @@ tasks:
     cmds:
       - make undeploy
 
-  helm-depoly:
+  helm-deploy:
     cmds:
-      - task: dockerx-build-push
-      - kubectl apply -f ./config/crd/bases/*.yaml
+      - kubectl apply -f ./config/crd/bases
       - helm upgrade -n timeterra --create-namespace --install operator ./helm-charts/time-terra --set image.repository={{.IMG}} --set image.tag={{.TAG}}
+  
+  helm-deploy-build:
+    cmds: 
+      - task: dockerx-build-push
+      - task: helm-deploy
 
-  helm-undepoly:
+  helm-undeploy:
     cmds:
       - helm uninstall -n timeterra operator
-      - kubectl delete -f ./config/crd/bases/*.yaml
+      - kubectl delete -f ./config/crd/bases
       - kubectl delete namespace timeterra
 
   githhub-pub:
