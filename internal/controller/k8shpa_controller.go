@@ -44,7 +44,7 @@ type K8sHpaReconciler struct {
 //+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=k8shpas,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=k8shpas/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=k8shpas/finalizers,verbs=update
-//+kubebuilder:rbac:groups=autoscaling.k8s.io,resources=horizontalpodautoscalers,verbs=get;list;update;patch
+//+kubebuilder:rbac:groups=autoscaling,resources=horizontalpodautoscalers,verbs=get;list;watch;update;patch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

@@ -44,9 +44,9 @@ type K8sPodReplicasReconciler struct {
 //+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=k8spodreplicas,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=k8spodreplicas/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=k8spodreplicas/finalizers,verbs=update
-//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;update;patch
+//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=apps,resources=deployments/scale,verbs=get;update;patch
-//+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;update;patch
+//+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=apps,resources=statefulsets/scale,verbs=get;update;patch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
