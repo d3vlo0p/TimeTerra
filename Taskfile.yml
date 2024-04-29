@@ -2,9 +2,11 @@ version: '3'
 
 vars:
   PLATFROMS: linux/amd64
-  IMG: ttl.sh/d3vlo0p/timeterra-operator
-  TAG: 1h
+  REPO: ttl.sh
+  IMG: d3vlo0p/timeterra-operator
+  VERSION: "0.0.1"
   CHART_VERSION: "0.0.1"
+  TAG: 1h
 
 tasks:
   update:
@@ -20,11 +22,11 @@ tasks:
   
   dockerx-build-push:
     cmds:
-      - make docker-buildx PLATFORMS="{{.PLATFROMS}}" IMG="{{.IMG}}:{{.TAG}}"
+      - make docker-buildx PLATFORMS="{{.PLATFROMS}}" IMG="{{.REPO}}/{{.IMG}}:{{.TAG}}"
 
   k8s-depoly:
     cmds:
-      - make deploy IMG="{{.IMG}}"
+      - make deploy IMG="{{.REPO}}/{{.IMG}}"
 
   k8s-undeploy:
     cmds:
@@ -32,12 +34,12 @@ tasks:
 
   helm-build:
     cmds:
-      - helm package ./helm-charts/timeterra
+      - helm package ./helm-charts/timeterra --app-version {{.VERSION}}
 
   helm-deploy:
     cmds:
       - kubectl apply -f ./config/crd/bases
-      - helm upgrade -n timeterra --create-namespace --install operator ./helm-charts/timeterra --set image.repository={{.IMG}} --set image.tag={{.TAG}}
+      - helm upgrade -n timeterra --create-namespace --install operator ./helm-charts/timeterra --set image.repository={{.REPO}}/{{.IMG}} --set image.tag={{.TAG}}
   
   helm-deploy-build:
     cmds: 
@@ -50,16 +52,21 @@ tasks:
       - kubectl delete -f ./config/crd/bases
       - kubectl delete namespace timeterra
 
-  githhub-pub:
+  github-release-image:
     cmds: 
       - task: dockerx-build-push
         vars:
-          IMG: ghcr.io/d3vlo0p/timeterra
-          TAG: 0.0.1
+          REPO: ghcr.io
+          TAG: "{{.VERSION}}"
           PLATFROMS: linux/arm64,linux/amd64
   
-  githhub-pub-helm:
+  github-release-helm:
     cmds:
       - task: helm-build
       - helm push timeterra-{{.CHART_VERSION}}.tgz oci://ghcr.io/d3vlo0p
       - rm timeterra-{{.CHART_VERSION}}.tgz
+
+  github-release:
+    cmds:
+      - task: github-release-image
+      - task: github-release-helm
