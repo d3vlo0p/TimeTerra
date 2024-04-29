@@ -13,6 +13,11 @@ With TimeTerra, you can define a schedule with actions and their corresponding c
 - **Start and stop AWS RDS clusters**.
 - **Start and stop AWS DocumentDB clusters**.
 
+### Use Cases
+
+- Reduce the cloud cost during periods of non-use
+- Prepare the environment to support expected peaks
+
 ## Getting Started
 
 To use TimeTerra, follow these steps:
