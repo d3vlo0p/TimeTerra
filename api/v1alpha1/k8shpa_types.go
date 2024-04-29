@@ -31,7 +31,7 @@ type K8sHpaAction struct {
 // K8sHpaSpec defines the desired state of K8sHpa
 type K8sHpaSpec struct {
 	Enabled       *bool                   `json:"enabled,omitempty"`
-	Namespaces    []string                `json:"namespaces"`
+	Namespaces    []string                `json:"namespaces,omitempty"`
 	LabelSelector metav1.LabelSelector    `json:"labelSelector"`
 	Schedule      string                  `json:"schedule"`
 	Actions       map[string]K8sHpaAction `json:"actions"`

@@ -106,15 +106,16 @@ func (r *K8sHpaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 func (r *K8sHpaReconciler) setAutoscaling(ctx context.Context, spec corev1alpha1.K8sHpaSpec, action corev1alpha1.K8sHpaAction) {
 	logger := log.FromContext(ctx)
 	selector := labels.SelectorFromSet(spec.LabelSelector.MatchLabels)
-
+	if len(spec.Namespaces) == 0 {
+		spec.Namespaces = []string{metav1.NamespaceAll}
+	}
 	for _, namespace := range spec.Namespaces {
 		list := &autoscalingv2.HorizontalPodAutoscalerList{}
 		err := r.List(ctx, list, &client.ListOptions{Namespace: namespace, LabelSelector: selector})
 		if err != nil {
-			logger.Error(err, "Failed to list HorizontalPodAutoscaler")
+			logger.Error(err, "Failed to list HorizontalPodAutoscalers")
 			return
 		}
-		logger.Info(fmt.Sprintf("updating HorizontalPodAutoscaler in namespace %q", namespace))
 		minReplicas := int32(action.MinReplicas)
 		maxReplicas := int32(action.MaxReplicas)
 		for _, hpa := range list.Items {
@@ -122,8 +123,9 @@ func (r *K8sHpaReconciler) setAutoscaling(ctx context.Context, spec corev1alpha1
 			hpa.Spec.MaxReplicas = maxReplicas
 			err = r.Update(ctx, &hpa)
 			if err != nil {
-				logger.Error(err, "Failed to update HorizontalPodAutoscaler")
+				logger.Error(err, fmt.Sprintf("Failed to update HorizontalPodAutoscaler %q/%q", hpa.Namespace, hpa.Name))
 			}
+			logger.Info(fmt.Sprintf("HorizontalPodAutoscaler %q/%q updated min:%d max:%d", hpa.Namespace, hpa.Name, minReplicas, maxReplicas))
 		}
 	}
 }

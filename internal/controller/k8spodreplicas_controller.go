@@ -108,10 +108,13 @@ func (r *K8sPodReplicasReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, spec corev1alpha1.K8sPodReplicasSpec, action corev1alpha1.K8sPodReplicasAction) {
 	logger := log.FromContext(ctx)
 	selector := labels.SelectorFromSet(spec.LabelSelector.MatchLabels)
-	switch kind := spec.ResourceType; kind {
-	case corev1alpha1.K8sDeployment:
-		// retrive Deployments with specified labels
-		for _, namespace := range spec.Namespaces {
+	if len(spec.Namespaces) == 0 {
+		spec.Namespaces = []string{metav1.NamespaceAll}
+	}
+	for _, namespace := range spec.Namespaces {
+		switch kind := spec.ResourceType; kind {
+		case corev1alpha1.K8sDeployment:
+			// retrive Deployments with specified labels
 			deploymentList := &appsv1.DeploymentList{}
 			err := r.List(ctx, deploymentList, &client.ListOptions{
 				LabelSelector: selector,
@@ -127,15 +130,13 @@ func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, spec corev1a
 				deployment.Spec.Replicas = &replicasInt32
 				err := r.Update(ctx, &deployment)
 				if err != nil {
-					logger.Error(err, "failed to update deployment")
+					logger.Error(err, fmt.Sprintf("failed to update deployment %q/%q", deployment.Namespace, deployment.Name))
 					return
 				}
 				logger.Info(fmt.Sprintf("updated deployment %q/%q to %d replicas", deployment.Namespace, deployment.Name, action.Replicas))
 			}
-		}
-	case corev1alpha1.K8sStatefulSet:
-		// retrive StatefulSets with specified labels
-		for _, namespace := range spec.Namespaces {
+		case corev1alpha1.K8sStatefulSet:
+			// retrive StatefulSets with specified labels
 			statefulSetList := &appsv1.StatefulSetList{}
 			err := r.List(ctx, statefulSetList, &client.ListOptions{
 				LabelSelector: selector,
@@ -151,7 +152,7 @@ func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, spec corev1a
 				statefulSet.Spec.Replicas = &replicasInt32
 				err := r.Update(ctx, &statefulSet)
 				if err != nil {
-					logger.Error(err, "failed to update statefulset")
+					logger.Error(err, fmt.Sprintf("failed to update statefulset %q/%q", statefulSet.Namespace, statefulSet.Name))
 					return
 				}
 				logger.Info(fmt.Sprintf("updated statefulset %q/%q to %d replicas", statefulSet.Namespace, statefulSet.Name, action.Replicas))

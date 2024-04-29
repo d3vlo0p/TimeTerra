@@ -107,7 +107,6 @@ spec:
             required:
             - actions
             - labelSelector
-            - namespaces
             - resourceType
             - schedule
             type: object
