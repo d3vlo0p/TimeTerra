@@ -2,14 +2,14 @@
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: {{ include "time-terra.fullname" . }}
+  name: {{ include "timeterra.fullname" . }}
   labels:
-    {{- include "time-terra.labels" . | nindent 4 }}
+    {{- include "timeterra.labels" . | nindent 4 }}
 spec:
   endpoints:
     - path: /metrics
       port: https
   selector:
     matchLabels:
-      {{- include "time-terra.selectorLabels" . | nindent 6 }}
+      {{- include "timeterra.selectorLabels" . | nindent 6 }}
 {{- end }}

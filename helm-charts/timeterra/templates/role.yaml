@@ -1,9 +1,9 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "time-terra.fullname" . }}-role
+  name: {{ include "timeterra.fullname" . }}-role
   labels:
-    {{- include "time-terra.labels" . | nindent 4 }}
+    {{- include "timeterra.labels" . | nindent 4 }}
 rules:
 - apiGroups:
   - apps

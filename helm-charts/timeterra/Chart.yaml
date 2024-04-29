@@ -1,6 +1,6 @@
 apiVersion: v2
-name: time-terra
-description: A Helm chart for Time Terra Operator
+name: timeterra
+description: A Helm chart for TimeTerra Operator
 
 # A chart can be either an 'application' or a 'library' chart.
 #
