@@ -1,77 +1,95 @@
-# timeterra
-// TODO(user): Add simple overview of use/purpose
+# TimeTerra
+
+TimeTerra is a cron scheduler that allows you to define a schedule to execute actions at specific times.
 
 ## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+
+With TimeTerra, you can define a schedule with actions and their corresponding cron expressions, and then implement the desired action.
+
+### Supported Actions
+
+- **Set the number of replicas** for Deployments and StatefulSets.
+- **Set the minimum and maximum number of replicas** for Horizontal Pod Autoscaling.
+- **Start and stop AWS RDS clusters**.
+- **Start and stop AWS DocumentDB clusters**.
 
 ## Getting Started
 
-### Prerequisites
-- go version v1.20.0+
-- docker version 17.03+.
-- kubectl version v1.11.3+.
-- Access to a Kubernetes v1.11.3+ cluster.
+To use TimeTerra, follow these steps:
+
+1. Install TimeTerra on your cluster.
+2. Define a schedule with the desired actions.
+3. Associate each action with a valid cron expression.
+4. Define through the available resources (CRs) the actions defined in the schedule.
 
 ### To Deploy on the cluster
-**Build and push your image to the location specified by `IMG`:**
+**Install the CRDs:**
 
 ```sh
-make docker-build docker-push IMG=<some-registry>/timeterra:tag
+kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/core.timeterra.d3vlo0p.dev_awsdocumentdbclusters.yaml
+kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/core.timeterra.d3vlo0p.dev_awsrdsauroraclusters.yaml
+kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/core.timeterra.d3vlo0p.dev_k8shpas.yaml
+kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/core.timeterra.d3vlo0p.dev_k8spodreplicas.yaml
+kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/core.timeterra.d3vlo0p.dev_schedules.yaml
 ```
 
-**NOTE:** This image ought to be published in the personal registry you specified. 
-And it is required to have access to pull the image from the working environment. 
-Make sure you have the proper permission to the registry if the above commands don’t work.
-
-**Install the CRDs into the cluster:**
+**Install the operator with Helm:**
 
 ```sh
-make install
+helm upgrade -n timeterra --create-namespace --install operator oci://ghcr.io/d3vlo0p/timeterra
 ```
-
-**Deploy the Manager to the cluster with the image specified by `IMG`:**
-
-```sh
-make deploy IMG=<some-registry>/timeterra:tag
-```
-
-> **NOTE**: If you encounter RBAC errors, you may need to grant yourself cluster-admin 
-privileges or be logged in as admin.
-
-**Create instances of your solution**
-You can apply the samples (examples) from the config/sample:
-
-```sh
-kubectl apply -k config/samples/
-```
-
->**NOTE**: Ensure that the samples has default values to test it out.
 
 ### To Uninstall
-**Delete the instances (CRs) from the cluster:**
+**Unistall the helm chart**
 
 ```sh
-kubectl delete -k config/samples/
+helm uninstall -n timeterra operator
+kubectl delete namespace timeterra
 ```
 
-**Delete the APIs(CRDs) from the cluster:**
+**Delete the CRDs from the cluster:**
 
 ```sh
-make uninstall
+kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/core.timeterra.d3vlo0p.dev_awsdocumentdbclusters.yaml
+kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/core.timeterra.d3vlo0p.dev_awsrdsauroraclusters.yaml
+kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/core.timeterra.d3vlo0p.dev_k8shpas.yaml
+kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/core.timeterra.d3vlo0p.dev_k8spodreplicas.yaml
+kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/core.timeterra.d3vlo0p.dev_schedules.yaml
 ```
 
-**UnDeploy the controller from the cluster:**
+### Define a Schedule
 
-```sh
-make undeploy
+```yaml
+apiVersion: core.timeterra.d3vlo0p.dev/v1alpha1
+kind: Schedule
+metadata:
+  name: schedule-sample
+spec:
+  actions:
+    scaleup:
+      cron: '0/4 * * * *'
+    scalein:
+      cron: '2/4 * * * *'
+---
+apiVersion: core.timeterra.d3vlo0p.dev/v1alpha1
+kind: K8sPodReplicas
+metadata:
+  name: k8spodreplicas-sample
+spec:
+  enabled: True
+  resourceType: Deployment
+  labelSelector:
+    matchLabels:
+      app.kubernetes.io/name: hello-world
+  namespaces:
+    - default
+  schedule: schedule-sample
+  actions:
+    scalein:
+      replicas: 1
+    scaleup:
+      replicas: 2
 ```
-
-## Contributing
-// TODO(user): Add detailed information on how you would like others to contribute to this project
-
-**NOTE:** Run `make help` for more information on all potential `make` targets
-
-More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
 
 ## License
 

@@ -4,6 +4,7 @@ vars:
   PLATFROMS: linux/amd64
   IMG: ttl.sh/d3vlo0p/timeterra-operator
   TAG: 1h
+  CHART_VERSION: "0.0.1"
 
 tasks:
   update:
@@ -29,10 +30,14 @@ tasks:
     cmds:
       - make undeploy
 
+  helm-build:
+    cmds:
+      - helm package ./helm-charts/timeterra
+
   helm-deploy:
     cmds:
       - kubectl apply -f ./config/crd/bases
-      - helm upgrade -n timeterra --create-namespace --install operator ./helm-charts/time-terra --set image.repository={{.IMG}} --set image.tag={{.TAG}}
+      - helm upgrade -n timeterra --create-namespace --install operator ./helm-charts/timeterra --set image.repository={{.IMG}} --set image.tag={{.TAG}}
   
   helm-deploy-build:
     cmds: 
@@ -52,3 +57,9 @@ tasks:
           IMG: ghcr.io/d3vlo0p/timeterra
           TAG: 0.0.1
           PLATFROMS: linux/arm64,linux/amd64
+  
+  githhub-pub-helm:
+    cmds:
+      - task: helm-build
+      - helm push timeterra-{{.CHART_VERSION}}.tgz oci://ghcr.io/d3vlo0p
+      - rm timeterra-{{.CHART_VERSION}}.tgz
