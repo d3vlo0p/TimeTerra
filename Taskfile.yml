@@ -70,3 +70,8 @@ tasks:
     cmds:
       - task: github-release-image
       - task: github-release-helm
+
+  github-helm-deploy:
+    cmds:
+      - kubectl apply -f ./config/crd/bases
+      - helm upgrade -n timeterra --create-namespace --install operator oci://ghcr.io/d3vlo0p/timeterra
