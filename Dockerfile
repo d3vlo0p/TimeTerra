@@ -26,8 +26,6 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o ma
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 FROM gcr.io/distroless/static:nonroot
-LABEL org.opencontainers.image.source=https://github.com/d3vlo0p/TimeTerra
-LABEL org.opencontainers.image.description="TimeTerra container image"
 WORKDIR /
 COPY --from=builder /workspace/manager .
 USER 65532:65532
