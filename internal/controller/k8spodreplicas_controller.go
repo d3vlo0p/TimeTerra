@@ -84,7 +84,7 @@ func (r *K8sPodReplicasReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		r.Cron.RemoveResource(resourceName)
 		instance.Status.Conditions = addCondition(instance.Status.Conditions, metav1.Condition{
 			LastTransitionTime: metav1.Now(),
-			Type:               "Enabled",
+			Type:               "Ready",
 			Status:             metav1.ConditionFalse,
 			Reason:             "Disabled",
 			Message:            "This Resource target is disabled",
