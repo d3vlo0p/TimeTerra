@@ -25,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -89,7 +90,7 @@ func (r *K8sPodReplicasReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			Message:            "This Resource target is disabled",
 		})
 	} else {
-		condition, err := reconcileResource(ctx, r.Client, r.Cron, instance.Spec.Actions, instance.Spec, instance.Spec.Schedule, resourceName, r.setReplicas)
+		condition, err := reconcileResource(ctx, req, r.Client, r.Cron, instance.Spec.Actions, instance.Spec.Schedule, resourceName, r.setReplicas)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -105,14 +106,31 @@ func (r *K8sPodReplicasReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	return ctrl.Result{}, nil
 }
 
-func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, spec corev1alpha1.K8sPodReplicasSpec, action corev1alpha1.K8sPodReplicasAction) {
+func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, key types.NamespacedName, actionName string) {
 	logger := log.FromContext(ctx)
-	selector := labels.SelectorFromSet(spec.LabelSelector.MatchLabels)
-	if len(spec.Namespaces) == 0 {
-		spec.Namespaces = []string{metav1.NamespaceAll}
+
+	obj := &corev1alpha1.K8sPodReplicas{}
+	err := r.Get(ctx, key, obj)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			logger.Error(err, "PodReplicas resource not found. object must be deleted.")
+			return
+		}
+		logger.Error(err, "Failed to get PodReplicas resource.")
+		return
 	}
-	for _, namespace := range spec.Namespaces {
-		switch kind := spec.ResourceType; kind {
+	action, ok := obj.Spec.Actions[actionName]
+	if !ok {
+		logger.Info("Action not found")
+		return
+	}
+
+	selector := labels.SelectorFromSet(obj.Spec.LabelSelector.MatchLabels)
+	if len(obj.Spec.Namespaces) == 0 {
+		obj.Spec.Namespaces = []string{metav1.NamespaceAll}
+	}
+	for _, namespace := range obj.Spec.Namespaces {
+		switch kind := obj.Spec.ResourceType; kind {
 		case corev1alpha1.K8sDeployment:
 			// retrive Deployments with specified labels
 			deploymentList := &appsv1.DeploymentList{}

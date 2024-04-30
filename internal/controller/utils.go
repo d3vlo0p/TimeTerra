@@ -8,6 +8,8 @@ import (
 	sc "github.com/d3vlo0p/TimeTerra/internal/cron"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -25,15 +27,15 @@ func contains(actions []string, action string) bool {
 	return false
 }
 
-func reconcileResource[ActionType any, SpecType any](
+func reconcileResource[ActionType any](
 	ctx context.Context,
+	req ctrl.Request,
 	cli client.Client,
 	cron *sc.ScheduleCron,
 	instanceActions map[string]ActionType,
-	instanceSpec SpecType,
 	scheduleName string,
 	resourceName string,
-	job func(ctx context.Context, instanceSpec SpecType, action ActionType),
+	job func(ctx context.Context, key types.NamespacedName, actionName string),
 ) (metav1.Condition, error) {
 	logger := log.FromContext(ctx)
 
@@ -68,9 +70,8 @@ func reconcileResource[ActionType any, SpecType any](
 		}
 	}
 
-	for actionName, action := range instanceActions {
+	for actionName := range instanceActions {
 		actionName := actionName
-		action := action
 		if !contains(scheduledActions, actionName) {
 			scheduleAction, found := schedule.Spec.Actions[actionName]
 			if !found {
@@ -86,7 +87,7 @@ func reconcileResource[ActionType any, SpecType any](
 			logger.Info(fmt.Sprintf("action %q is not scheduled, scheduling it with %q", actionName, scheduleAction.Cron))
 			_, err := cron.Add(scheduleName, actionName, resourceName, scheduleAction.Cron, func() {
 				logger.Info(fmt.Sprintf("action %q is running", actionName))
-				job(ctx, instanceSpec, action)
+				job(ctx, req.NamespacedName, actionName)
 			})
 			if err != nil {
 				logger.Info(fmt.Sprintf("failed to add cron job: %q", err))
@@ -109,21 +110,46 @@ func addCondition(conditions []metav1.Condition, condition metav1.Condition) []m
 		return conditions
 	}
 
+	oldConditionIndex := 0
+	counterSameConditionType := 0
 	if len(conditions) > 0 {
-		lastCondition := conditions[len(conditions)-1]
-		if lastCondition.Type == condition.Type &&
-			lastCondition.Status == condition.Status &&
-			lastCondition.Reason == condition.Reason &&
-			lastCondition.Message == condition.Message {
-			// replace last condition
-			conditions[len(conditions)-1] = condition
-		} else {
+		// replace condition in array only if Type Status and Reason are the same, otherwise add it
+		add := true
+		for i, cond := range conditions {
+			if cond.Type == condition.Type {
+				if counterSameConditionType == 0 {
+					oldConditionIndex = i
+				}
+				counterSameConditionType++
+			}
+
+			if cond.Type == condition.Type &&
+				cond.Status == condition.Status &&
+				cond.Reason == condition.Reason &&
+				cond.Message == condition.Message {
+				conditions[i] = condition
+				add = false
+				break
+			}
+		}
+		if add {
 			conditions = append(conditions, condition)
 		}
 	}
 
-	if len(conditions) > 10 {
-		conditions = conditions[len(conditions)-10:]
+	// remove old condition if there are more than 10 of the same type
+	if counterSameConditionType > 10 {
+		conditions = append(conditions[:oldConditionIndex], conditions[oldConditionIndex+1:]...)
 	}
+
+	// order asc conditions by lastTransitionTime
+	for i := 0; i < len(conditions); i++ {
+		for j := i + 1; j < len(conditions); j++ {
+			if conditions[i].LastTransitionTime.After(conditions[j].LastTransitionTime.Time) {
+				conditions[i], conditions[j] = conditions[j], conditions[i]
+			}
+		}
+	}
+
 	return conditions
 }

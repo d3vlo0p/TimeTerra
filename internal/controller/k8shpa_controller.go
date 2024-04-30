@@ -25,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -66,11 +67,11 @@ func (r *K8sHpaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			logger.Info("AutoScaling resource not found. object must be deleted.")
+			logger.Info("K8sHpa resource not found. object must be deleted.")
 			r.Cron.RemoveResource(resourceName)
 			return ctrl.Result{}, nil
 		}
-		logger.Info("Failed to get AutoScaling resource. Re-running reconcile.")
+		logger.Info("Failed to get K8sHpa resource. Re-running reconcile.")
 		return ctrl.Result{}, err
 	}
 
@@ -82,13 +83,13 @@ func (r *K8sHpaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		r.Cron.RemoveResource(resourceName)
 		instance.Status.Conditions = addCondition(instance.Status.Conditions, metav1.Condition{
 			LastTransitionTime: metav1.Now(),
-			Type:               "Enabled",
+			Type:               "Ready",
 			Status:             metav1.ConditionFalse,
 			Reason:             "Disabled",
 			Message:            "This Resource target is disabled",
 		})
 	} else {
-		condition, err := reconcileResource(ctx, r.Client, r.Cron, instance.Spec.Actions, instance.Spec, instance.Spec.Schedule, resourceName, r.setAutoscaling)
+		condition, err := reconcileResource(ctx, req, r.Client, r.Cron, instance.Spec.Actions, instance.Spec.Schedule, resourceName, r.setAutoscaling)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -97,19 +98,36 @@ func (r *K8sHpaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 
 	err = r.Status().Update(ctx, instance)
 	if err != nil {
-		logger.Info("Failed to update AutoScaling resource. Re-running reconcile.")
+		logger.Info("Failed to update K8sHpa resource. Re-running reconcile.")
 		return ctrl.Result{}, err
 	}
 	return ctrl.Result{}, nil
 }
 
-func (r *K8sHpaReconciler) setAutoscaling(ctx context.Context, spec corev1alpha1.K8sHpaSpec, action corev1alpha1.K8sHpaAction) {
+func (r *K8sHpaReconciler) setAutoscaling(ctx context.Context, key types.NamespacedName, actionName string) {
 	logger := log.FromContext(ctx)
-	selector := labels.SelectorFromSet(spec.LabelSelector.MatchLabels)
-	if len(spec.Namespaces) == 0 {
-		spec.Namespaces = []string{metav1.NamespaceAll}
+
+	obj := &corev1alpha1.K8sHpa{}
+	err := r.Get(ctx, key, obj)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			logger.Info("K8sHpa resource not found. object must be deleted.")
+			return
+		}
+		logger.Info("Failed to get K8sHpa resource.")
+		return
 	}
-	for _, namespace := range spec.Namespaces {
+	action, ok := obj.Spec.Actions[actionName]
+	if !ok {
+		logger.Info("Action not found")
+		return
+	}
+
+	selector := labels.SelectorFromSet(obj.Spec.LabelSelector.MatchLabels)
+	if len(obj.Spec.Namespaces) == 0 {
+		obj.Spec.Namespaces = []string{metav1.NamespaceAll}
+	}
+	for _, namespace := range obj.Spec.Namespaces {
 		list := &autoscalingv2.HorizontalPodAutoscalerList{}
 		err := r.List(ctx, list, &client.ListOptions{Namespace: namespace, LabelSelector: selector})
 		if err != nil {

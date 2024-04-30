@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -64,11 +65,11 @@ func (r *AwsDocumentDBClusterReconciler) Reconcile(ctx context.Context, req ctrl
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			logger.Info("AutoScaling resource not found. object must be deleted.")
+			logger.Info("AwsDocumentDBCluster resource not found. object must be deleted.")
 			r.Cron.RemoveResource(resourceName)
 			return ctrl.Result{}, nil
 		}
-		logger.Info("Failed to get AutoScaling resource. Re-running reconcile.")
+		logger.Info("Failed to get AwsDocumentDBCluster resource. Re-running reconcile.")
 		return ctrl.Result{}, err
 	}
 
@@ -80,13 +81,13 @@ func (r *AwsDocumentDBClusterReconciler) Reconcile(ctx context.Context, req ctrl
 		r.Cron.RemoveResource(resourceName)
 		instance.Status.Conditions = addCondition(instance.Status.Conditions, metav1.Condition{
 			LastTransitionTime: metav1.Now(),
-			Type:               "Enabled",
+			Type:               "Ready",
 			Status:             metav1.ConditionFalse,
 			Reason:             "Disabled",
 			Message:            "This Resource target is disabled",
 		})
 	} else {
-		condition, err := reconcileResource(ctx, r.Client, r.Cron, instance.Spec.Actions, instance.Spec, instance.Spec.Schedule, resourceName, r.startStopCluster)
+		condition, err := reconcileResource(ctx, req, r.Client, r.Cron, instance.Spec.Actions, instance.Spec.Schedule, resourceName, r.startStopCluster)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -95,14 +96,31 @@ func (r *AwsDocumentDBClusterReconciler) Reconcile(ctx context.Context, req ctrl
 
 	err = r.Status().Update(ctx, instance)
 	if err != nil {
-		logger.Info("Failed to update AutoScaling resource. Re-running reconcile.")
+		logger.Info("Failed to update AwsDocumentDBCluster resource. Re-running reconcile.")
 		return ctrl.Result{}, err
 	}
 	return ctrl.Result{}, nil
 }
 
-func (r *AwsDocumentDBClusterReconciler) startStopCluster(ctx context.Context, spec corev1alpha1.AwsDocumentDBClusterSpec, action corev1alpha1.AwsDocumentDBClusterAction) {
+func (r *AwsDocumentDBClusterReconciler) startStopCluster(ctx context.Context, key types.NamespacedName, actionName string) {
 	logger := log.FromContext(ctx)
+
+	obj := &corev1alpha1.AwsDocumentDBCluster{}
+	err := r.Get(ctx, key, obj)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			logger.Error(err, "AwsDocumentDBCluster resource not found. object must be deleted.")
+			return
+		}
+		logger.Error(err, "Failed to get AwsDocumentDBCluster resource.")
+		return
+	}
+	action, ok := obj.Spec.Actions[actionName]
+	if !ok {
+		logger.Info("Action not found")
+		return
+	}
+
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		logger.Error(err, "unable to load SDK config")
@@ -110,11 +128,11 @@ func (r *AwsDocumentDBClusterReconciler) startStopCluster(ctx context.Context, s
 	}
 
 	docDbClient := docdb.NewFromConfig(cfg)
-	for _, cluster := range spec.DBClusterIdentifiers {
+	for _, cluster := range obj.Spec.DBClusterIdentifiers {
 		opts := func(o *docdb.Options) {
 			o.Region = cluster.Region
-			if spec.ServiceEndpoint != nil {
-				o.BaseEndpoint = spec.ServiceEndpoint
+			if obj.Spec.ServiceEndpoint != nil {
+				o.BaseEndpoint = obj.Spec.ServiceEndpoint
 			}
 		}
 
