@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -78,20 +79,12 @@ func (r *AwsDocumentDBClusterReconciler) Reconcile(ctx context.Context, req ctrl
 	}
 
 	if instance.Spec.Enabled != nil && !*instance.Spec.Enabled {
-		r.Cron.RemoveResource(resourceName)
-		instance.Status.Conditions = addCondition(instance.Status.Conditions, metav1.Condition{
-			LastTransitionTime: metav1.Now(),
-			Type:               "Ready",
-			Status:             metav1.ConditionFalse,
-			Reason:             "Disabled",
-			Message:            "This Resource target is disabled",
-		})
+		disableResource(r.Cron, &instance.Status.Conditions, resourceName)
 	} else {
-		condition, err := reconcileResource(ctx, req, r.Client, r.Cron, instance.Spec.Actions, instance.Spec.Schedule, resourceName, r.startStopCluster)
+		err := reconcileResource(ctx, req, r.Client, r.Cron, instance.Spec.Actions, instance.Spec.Schedule, resourceName, r.startStopCluster, &instance.Status.Conditions)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
-		instance.Status.Conditions = addCondition(instance.Status.Conditions, condition)
 	}
 
 	err = r.Status().Update(ctx, instance)
@@ -127,6 +120,8 @@ func (r *AwsDocumentDBClusterReconciler) startStopCluster(ctx context.Context, k
 		return
 	}
 
+	actionType := ConditionTypeForAction(actionName)
+	errorsList := make([]string, 0)
 	docDbClient := docdb.NewFromConfig(cfg)
 	for _, cluster := range obj.Spec.DBClusterIdentifiers {
 		opts := func(o *docdb.Options) {
@@ -143,19 +138,41 @@ func (r *AwsDocumentDBClusterReconciler) startStopCluster(ctx context.Context, k
 				DBClusterIdentifier: &cluster.Identifier,
 			}, opts)
 			if err != nil {
-				logger.Error(err, "unable to start cluster", "indentifier", &cluster.Identifier)
+				msg := fmt.Sprintf("unable to start cluster %s", cluster.Identifier)
+				logger.Error(err, msg)
+				errorsList = append(errorsList, msg)
 			}
-			logger.Info("Cluster started", "identifier", &cluster.Identifier)
+			logger.Info("Cluster is starting", "identifier", &cluster.Identifier)
 		case corev1alpha1.AwsDocumentDBClusterCommandStop:
 			_, err := docDbClient.StopDBCluster(ctx, &docdb.StopDBClusterInput{
 				DBClusterIdentifier: &cluster.Identifier,
 			}, opts)
 			if err != nil {
-				logger.Error(err, "unable to stop cluster", "indentifier", &cluster.Identifier)
+				msg := fmt.Sprintf("unable to stop cluster %s", cluster.Identifier)
+				logger.Error(err, msg)
+				errorsList = append(errorsList, msg)
 			}
-			logger.Info("Cluster stopped", "identifier", &cluster.Identifier)
+			logger.Info("Cluster is stopping", "identifier", &cluster.Identifier)
 		}
 	}
+	if len(errorsList) > 0 {
+		addToConditions(&obj.Status.Conditions, metav1.Condition{
+			LastTransitionTime: metav1.Now(),
+			Type:               actionType,
+			Status:             metav1.ConditionFalse,
+			Reason:             "Failed",
+			Message:            strings.Join(errorsList, ";"),
+		})
+	} else {
+		addToConditions(&obj.Status.Conditions, metav1.Condition{
+			LastTransitionTime: metav1.Now(),
+			Type:               actionType,
+			Status:             metav1.ConditionTrue,
+			Reason:             "Success",
+			Message:            fmt.Sprintf("Action %q executed with success", actionName),
+		})
+	}
+	r.Status().Update(ctx, obj)
 }
 
 // SetupWithManager sets up the controller with the Manager.

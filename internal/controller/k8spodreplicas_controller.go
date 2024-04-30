@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -81,20 +82,12 @@ func (r *K8sPodReplicasReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		instance.Status.Conditions = make([]metav1.Condition, 0)
 	}
 	if instance.Spec.Enabled != nil && !*instance.Spec.Enabled {
-		r.Cron.RemoveResource(resourceName)
-		instance.Status.Conditions = addCondition(instance.Status.Conditions, metav1.Condition{
-			LastTransitionTime: metav1.Now(),
-			Type:               "Ready",
-			Status:             metav1.ConditionFalse,
-			Reason:             "Disabled",
-			Message:            "This Resource target is disabled",
-		})
+		disableResource(r.Cron, &instance.Status.Conditions, resourceName)
 	} else {
-		condition, err := reconcileResource(ctx, req, r.Client, r.Cron, instance.Spec.Actions, instance.Spec.Schedule, resourceName, r.setReplicas)
+		err := reconcileResource(ctx, req, r.Client, r.Cron, instance.Spec.Actions, instance.Spec.Schedule, resourceName, r.setReplicas, &instance.Status.Conditions)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
-		instance.Status.Conditions = addCondition(instance.Status.Conditions, condition)
 	}
 
 	err = r.Status().Update(ctx, instance)
@@ -124,11 +117,12 @@ func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, key types.Na
 		logger.Info("Action not found")
 		return
 	}
-
 	selector := labels.SelectorFromSet(obj.Spec.LabelSelector.MatchLabels)
 	if len(obj.Spec.Namespaces) == 0 {
 		obj.Spec.Namespaces = []string{metav1.NamespaceAll}
 	}
+	actionType := ConditionTypeForAction(actionName)
+	errorsList := make([]string, 0)
 	for _, namespace := range obj.Spec.Namespaces {
 		switch kind := obj.Spec.ResourceType; kind {
 		case corev1alpha1.K8sDeployment:
@@ -139,19 +133,21 @@ func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, key types.Na
 				Namespace:     namespace,
 			})
 			if err != nil {
-				logger.Error(err, "failed to list deployments")
-				return
-			}
-
-			replicasInt32 := int32(action.Replicas)
-			for _, deployment := range deploymentList.Items {
-				deployment.Spec.Replicas = &replicasInt32
-				err := r.Update(ctx, &deployment)
-				if err != nil {
-					logger.Error(err, fmt.Sprintf("failed to update deployment %q/%q", deployment.Namespace, deployment.Name))
-					return
+				msg := fmt.Sprintf("Action %q failed to list deployments for namespace %q", actionName, namespace)
+				logger.Error(err, msg)
+				errorsList = append(errorsList, msg)
+			} else {
+				replicasInt32 := int32(action.Replicas)
+				for _, deployment := range deploymentList.Items {
+					deployment.Spec.Replicas = &replicasInt32
+					err := r.Update(ctx, &deployment)
+					if err != nil {
+						msg := fmt.Sprintf("failed to update deployment %q/%q", deployment.Namespace, deployment.Name)
+						logger.Error(err, msg)
+						errorsList = append(errorsList, msg)
+					}
+					logger.Info(fmt.Sprintf("updated deployment %q/%q to %d replicas", deployment.Namespace, deployment.Name, action.Replicas))
 				}
-				logger.Info(fmt.Sprintf("updated deployment %q/%q to %d replicas", deployment.Namespace, deployment.Name, action.Replicas))
 			}
 		case corev1alpha1.K8sStatefulSet:
 			// retrive StatefulSets with specified labels
@@ -161,22 +157,43 @@ func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, key types.Na
 				Namespace:     namespace,
 			})
 			if err != nil {
-				logger.Error(err, "failed to list statefulsets")
-				return
+				msg := fmt.Sprintf("Action %q failed to list statefulsets for namespace %q", actionName, namespace)
+				logger.Error(err, msg)
+				errorsList = append(errorsList, msg)
+			} else {
+				replicasInt32 := int32(action.Replicas)
+				for _, statefulSet := range statefulSetList.Items {
+					statefulSet.Spec.Replicas = &replicasInt32
+					err := r.Update(ctx, &statefulSet)
+					if err != nil {
+						msg := fmt.Sprintf("failed to update statefulset %q/%q", statefulSet.Namespace, statefulSet.Name)
+						logger.Error(err, msg)
+						errorsList = append(errorsList, msg)
+					}
+					logger.Info(fmt.Sprintf("updated statefulset %q/%q to %d replicas", statefulSet.Namespace, statefulSet.Name, action.Replicas))
+				}
 			}
 
-			replicasInt32 := int32(action.Replicas)
-			for _, statefulSet := range statefulSetList.Items {
-				statefulSet.Spec.Replicas = &replicasInt32
-				err := r.Update(ctx, &statefulSet)
-				if err != nil {
-					logger.Error(err, fmt.Sprintf("failed to update statefulset %q/%q", statefulSet.Namespace, statefulSet.Name))
-					return
-				}
-				logger.Info(fmt.Sprintf("updated statefulset %q/%q to %d replicas", statefulSet.Namespace, statefulSet.Name, action.Replicas))
-			}
 		}
 	}
+	if len(errorsList) > 0 {
+		addToConditions(&obj.Status.Conditions, metav1.Condition{
+			LastTransitionTime: metav1.Now(),
+			Type:               actionType,
+			Status:             metav1.ConditionFalse,
+			Reason:             "Failed",
+			Message:            strings.Join(errorsList, ";"),
+		})
+	} else {
+		addToConditions(&obj.Status.Conditions, metav1.Condition{
+			LastTransitionTime: metav1.Now(),
+			Type:               actionType,
+			Status:             metav1.ConditionTrue,
+			Reason:             "Success",
+			Message:            fmt.Sprintf("Action %q executed with success", actionName),
+		})
+	}
+	r.Status().Update(ctx, obj)
 }
 
 // SetupWithManager sets up the controller with the Manager.

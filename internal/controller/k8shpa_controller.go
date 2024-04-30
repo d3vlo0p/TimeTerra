@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -80,20 +81,12 @@ func (r *K8sHpaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	}
 
 	if instance.Spec.Enabled != nil && !*instance.Spec.Enabled {
-		r.Cron.RemoveResource(resourceName)
-		instance.Status.Conditions = addCondition(instance.Status.Conditions, metav1.Condition{
-			LastTransitionTime: metav1.Now(),
-			Type:               "Ready",
-			Status:             metav1.ConditionFalse,
-			Reason:             "Disabled",
-			Message:            "This Resource target is disabled",
-		})
+		disableResource(r.Cron, &instance.Status.Conditions, resourceName)
 	} else {
-		condition, err := reconcileResource(ctx, req, r.Client, r.Cron, instance.Spec.Actions, instance.Spec.Schedule, resourceName, r.setAutoscaling)
+		err := reconcileResource(ctx, req, r.Client, r.Cron, instance.Spec.Actions, instance.Spec.Schedule, resourceName, r.setAutoscaling, &instance.Status.Conditions)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
-		instance.Status.Conditions = addCondition(instance.Status.Conditions, condition)
 	}
 
 	err = r.Status().Update(ctx, instance)
@@ -127,25 +120,49 @@ func (r *K8sHpaReconciler) setAutoscaling(ctx context.Context, key types.Namespa
 	if len(obj.Spec.Namespaces) == 0 {
 		obj.Spec.Namespaces = []string{metav1.NamespaceAll}
 	}
+	actionType := ConditionTypeForAction(actionName)
+	errorsList := make([]string, 0)
 	for _, namespace := range obj.Spec.Namespaces {
 		list := &autoscalingv2.HorizontalPodAutoscalerList{}
 		err := r.List(ctx, list, &client.ListOptions{Namespace: namespace, LabelSelector: selector})
 		if err != nil {
-			logger.Error(err, "Failed to list HorizontalPodAutoscalers")
-			return
-		}
-		minReplicas := int32(action.MinReplicas)
-		maxReplicas := int32(action.MaxReplicas)
-		for _, hpa := range list.Items {
-			hpa.Spec.MinReplicas = &minReplicas
-			hpa.Spec.MaxReplicas = maxReplicas
-			err = r.Update(ctx, &hpa)
-			if err != nil {
-				logger.Error(err, fmt.Sprintf("Failed to update HorizontalPodAutoscaler %q/%q", hpa.Namespace, hpa.Name))
+			msg := fmt.Sprintf("Failed to list HorizontalPodAutoscaler in namespace %q", namespace)
+			logger.Error(err, msg)
+			errorsList = append(errorsList, msg)
+		} else {
+			minReplicas := int32(action.MinReplicas)
+			maxReplicas := int32(action.MaxReplicas)
+			for _, hpa := range list.Items {
+				hpa.Spec.MinReplicas = &minReplicas
+				hpa.Spec.MaxReplicas = maxReplicas
+				err = r.Update(ctx, &hpa)
+				if err != nil {
+					msg := fmt.Sprintf("Failed to update HorizontalPodAutoscaler %q/%q", hpa.Namespace, hpa.Name)
+					logger.Error(err, msg)
+					errorsList = append(errorsList, msg)
+				}
+				logger.Info(fmt.Sprintf("HorizontalPodAutoscaler %q/%q updated min:%d max:%d", hpa.Namespace, hpa.Name, minReplicas, maxReplicas))
 			}
-			logger.Info(fmt.Sprintf("HorizontalPodAutoscaler %q/%q updated min:%d max:%d", hpa.Namespace, hpa.Name, minReplicas, maxReplicas))
 		}
 	}
+	if len(errorsList) > 0 {
+		addToConditions(&obj.Status.Conditions, metav1.Condition{
+			LastTransitionTime: metav1.Now(),
+			Type:               actionType,
+			Status:             metav1.ConditionFalse,
+			Reason:             "Failed",
+			Message:            strings.Join(errorsList, ";"),
+		})
+	} else {
+		addToConditions(&obj.Status.Conditions, metav1.Condition{
+			LastTransitionTime: metav1.Now(),
+			Type:               actionType,
+			Status:             metav1.ConditionTrue,
+			Reason:             "Success",
+			Message:            fmt.Sprintf("Action %q executed with success", actionName),
+		})
+	}
+	r.Status().Update(ctx, obj)
 }
 
 // SetupWithManager sets up the controller with the Manager.
