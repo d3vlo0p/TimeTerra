@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -97,7 +98,7 @@ func (r *AwsRdsAuroraClusterReconciler) Reconcile(ctx context.Context, req ctrl.
 
 func (r *AwsRdsAuroraClusterReconciler) startStopCluster(ctx context.Context, key types.NamespacedName, actionName string) {
 	logger := log.FromContext(ctx)
-
+	start := time.Now()
 	obj := &corev1alpha1.AwsRdsAuroraCluster{}
 	err := r.Get(ctx, key, obj)
 	if err != nil {
@@ -169,7 +170,7 @@ func (r *AwsRdsAuroraClusterReconciler) startStopCluster(ctx context.Context, ke
 			Type:               actionType,
 			Status:             metav1.ConditionTrue,
 			Reason:             "Success",
-			Message:            fmt.Sprintf("Action %q executed with success", actionName),
+			Message:            fmt.Sprintf("Action %q, last execution started:%q ended:%q", actionName, start.Format(time.RFC3339), time.Now().Format(time.RFC3339)),
 		})
 	}
 	r.Status().Update(ctx, obj)

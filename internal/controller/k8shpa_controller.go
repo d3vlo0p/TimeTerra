@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -99,7 +100,7 @@ func (r *K8sHpaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 
 func (r *K8sHpaReconciler) setAutoscaling(ctx context.Context, key types.NamespacedName, actionName string) {
 	logger := log.FromContext(ctx)
-
+	start := time.Now()
 	obj := &corev1alpha1.K8sHpa{}
 	err := r.Get(ctx, key, obj)
 	if err != nil {
@@ -159,7 +160,7 @@ func (r *K8sHpaReconciler) setAutoscaling(ctx context.Context, key types.Namespa
 			Type:               actionType,
 			Status:             metav1.ConditionTrue,
 			Reason:             "Success",
-			Message:            fmt.Sprintf("Action %q executed with success", actionName),
+			Message:            fmt.Sprintf("Action %q, last execution start:%q end:%q", actionName, start.Format(time.RFC3339), time.Now().Format(time.RFC3339)),
 		})
 	}
 	r.Status().Update(ctx, obj)

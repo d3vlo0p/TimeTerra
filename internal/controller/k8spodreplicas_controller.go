@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -101,7 +102,7 @@ func (r *K8sPodReplicasReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, key types.NamespacedName, actionName string) {
 	logger := log.FromContext(ctx)
-
+	start := time.Now()
 	obj := &corev1alpha1.K8sPodReplicas{}
 	err := r.Get(ctx, key, obj)
 	if err != nil {
@@ -190,7 +191,7 @@ func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, key types.Na
 			Type:               actionType,
 			Status:             metav1.ConditionTrue,
 			Reason:             "Success",
-			Message:            fmt.Sprintf("Action %q executed with success", actionName),
+			Message:            fmt.Sprintf("Action %q, last execution start:%q end:%q", actionName, start.Format(time.RFC3339), time.Now().Format(time.RFC3339)),
 		})
 	}
 	r.Status().Update(ctx, obj)
