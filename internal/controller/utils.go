@@ -85,6 +85,14 @@ func reconcileResource[ActionType any](
 		return err
 	}
 
+	removedActions := cron.RemoveActionsOfResourceFromNonCurrentSchedule(scheduleName, resourceName)
+	if len(removedActions) > 0 {
+		logger.Info("Schedule has been changed, removed cron jobs of previous schedule")
+		for _, action := range removedActions {
+			removeFromConditions(conditions, ConditionTypeForAction(action))
+		}
+	}
+
 	scheduledActions := make([]string, 0)
 	for action, id := range cron.GetActionsOfResource(scheduleName, resourceName) {
 		entry := cron.Get(id)

@@ -123,6 +123,21 @@ func (sm *ScheduleCron) GetActionsOfResource(schedule string, resource string) m
 	return resourceMap
 }
 
+func (sm *ScheduleCron) RemoveActionsOfResourceFromNonCurrentSchedule(currentSchedule string, resource string) []string {
+	actionsRemoved := make([]string, 0)
+	for schedule, actions := range sm.m {
+		if schedule != currentSchedule {
+			for action, resources := range actions {
+				if _, ok := resources[resource]; ok {
+					sm.Remove(schedule, action, resource)
+					actionsRemoved = append(actionsRemoved, action)
+				}
+			}
+		}
+	}
+	return actionsRemoved
+}
+
 func (sm *ScheduleCron) RemoveResource(resource string) {
 	for schedule, actions := range sm.m {
 		for action, resources := range actions {
