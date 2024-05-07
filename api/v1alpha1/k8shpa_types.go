@@ -23,9 +23,18 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
+func (r K8sHpaAction) IsActive() bool {
+	return r.Enabled == nil || *r.Enabled
+}
+
 type K8sHpaAction struct {
-	MinReplicas int `json:"minReplicas"`
-	MaxReplicas int `json:"maxReplicas"`
+	Enabled     *bool `json:"enabled,omitempty"`
+	MinReplicas int   `json:"minReplicas"`
+	MaxReplicas int   `json:"maxReplicas"`
+}
+
+func (r K8sHpaSpec) IsActive() bool {
+	return r.Enabled == nil || *r.Enabled
 }
 
 // K8sHpaSpec defines the desired state of K8sHpa

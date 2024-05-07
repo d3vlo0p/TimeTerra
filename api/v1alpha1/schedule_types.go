@@ -23,9 +23,18 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
+func (r ScheduleAction) IsActive() bool {
+	return r.Enabled == nil || *r.Enabled
+}
+
 // ScheduleAction defines the time to performe an action
 type ScheduleAction struct {
-	Cron string `json:"cron,omitempty"`
+	Enabled *bool  `json:"enabled,omitempty"`
+	Cron    string `json:"cron,omitempty"`
+}
+
+func (r ScheduleSpec) IsActive() bool {
+	return r.Enabled == nil || *r.Enabled
 }
 
 // ScheduleSpec defines the desired state of Schedule
@@ -33,6 +42,7 @@ type ScheduleSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
+	Enabled *bool                     `json:"enabled,omitempty"`
 	Actions map[string]ScheduleAction `json:"actions,omitempty"`
 }
 

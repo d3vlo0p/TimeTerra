@@ -34,7 +34,12 @@ func (r AwsDocumentDBClusterCommand) String() string {
 	return string(r)
 }
 
+func (r AwsDocumentDBClusterAction) IsActive() bool {
+	return r.Enabled == nil || *r.Enabled
+}
+
 type AwsDocumentDBClusterAction struct {
+	Enabled *bool `json:"enabled,omitempty"`
 	// +kubebuilder:validation:Enum:=stop;start
 	Command AwsDocumentDBClusterCommand `json:"command"`
 }
@@ -42,6 +47,10 @@ type AwsDocumentDBClusterAction struct {
 type AwsDocumentDBClusterIdentifier struct {
 	Identifier string `json:"identifier"`
 	Region     string `json:"region"`
+}
+
+func (r AwsDocumentDBClusterSpec) IsActive() bool {
+	return r.Enabled == nil || *r.Enabled
 }
 
 // AwsDocumentDBClusterSpec defines the desired state of AwsDocumentDBCluster

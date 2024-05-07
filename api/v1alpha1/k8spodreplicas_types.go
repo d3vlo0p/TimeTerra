@@ -34,8 +34,17 @@ func (r K8sPodReplicasResourceType) String() string {
 	return string(r)
 }
 
+func (r K8sPodReplicasAction) IsActive() bool {
+	return r.Enabled == nil || *r.Enabled
+}
+
 type K8sPodReplicasAction struct {
-	Replicas int `json:"replicas"`
+	Enabled  *bool `json:"enabled,omitempty"`
+	Replicas int   `json:"replicas"`
+}
+
+func (r K8sPodReplicasSpec) IsActive() bool {
+	return r.Enabled == nil || *r.Enabled
 }
 
 // K8sPodReplicasSpec defines the desired state of K8sPodReplicas

@@ -34,7 +34,12 @@ func (r AwsRdsAuroraClusterCommand) String() string {
 	return string(r)
 }
 
+func (r AwsRdsAuroraClusterAction) IsActive() bool {
+	return r.Enabled == nil || *r.Enabled
+}
+
 type AwsRdsAuroraClusterAction struct {
+	Enabled *bool `json:"enabled,omitempty"`
 	// +kubebuilder:validation:Enum:=stop;start
 	Command AwsRdsAuroraClusterCommand `json:"command"`
 }
@@ -42,6 +47,10 @@ type AwsRdsAuroraClusterAction struct {
 type AwsRdsAuroraClusterIdentifier struct {
 	Identifier string `json:"identifier"`
 	Region     string `json:"region"`
+}
+
+func (r AwsRdsAuroraClusterSpec) IsActive() bool {
+	return r.Enabled == nil || *r.Enabled
 }
 
 // AwsRdsAuroraClusterSpec defines the desired state of AwsRdsAuroraCluster

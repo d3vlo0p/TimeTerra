@@ -54,7 +54,11 @@ func disableResource(cron *sc.ScheduleCron, conditions *[]metav1.Condition, reso
 	})
 }
 
-func reconcileResource[ActionType any](
+type Activable interface {
+	IsActive() bool
+}
+
+func reconcileResource[ActionType Activable](
 	ctx context.Context,
 	req ctrl.Request,
 	cli client.Client,
@@ -108,8 +112,20 @@ func reconcileResource[ActionType any](
 		}
 	}
 
-	for actionName := range instanceActions {
+	for actionName, action := range instanceActions {
 		actionName := actionName
+		if !action.IsActive() {
+			logger.Info(fmt.Sprintf("Action %q is not active, removing it from cron", actionName))
+			cron.Remove(scheduleName, actionName, resourceName)
+			addToConditions(conditions, metav1.Condition{
+				LastTransitionTime: metav1.Now(),
+				Type:               ConditionTypeForAction(actionName),
+				Status:             metav1.ConditionFalse,
+				Reason:             "Disabled",
+				Message:            "This Action target is disabled",
+			})
+			continue
+		}
 		if !contains(scheduledActions, actionName) {
 			scheduleAction, found := schedule.Spec.Actions[actionName]
 			if !found {
@@ -121,15 +137,34 @@ func reconcileResource[ActionType any](
 					Reason:             "Acttion not found",
 					Message:            fmt.Sprintf("action %s not found in %s", actionName, scheduleName),
 				})
-				return nil
+				continue
 			}
 			logger.Info(fmt.Sprintf("action %q is not scheduled, scheduling it with %q", actionName, scheduleAction.Cron))
 			_, err := cron.Add(scheduleName, actionName, resourceName, scheduleAction.Cron, func() {
-				logger.Info(fmt.Sprintf("action %q is running", actionName))
+				// retrive schedule for cheking if it is active
+				// we do the check here because the check is simpler, and it avoids us having to delete and create objects in cron schedule
+				s := &corev1alpha1.Schedule{}
+				err := cli.Get(ctx, client.ObjectKey{Name: scheduleName}, s)
+				if err != nil {
+					logger.Error(err, "Cron run, failed to get schedule", "name", scheduleName)
+					return
+				}
+
+				if !s.Spec.IsActive() {
+					logger.Info(fmt.Sprintf("schedule %q is not active, skipping execution", scheduleName))
+					return
+				}
+
+				if a, ok := s.Spec.Actions[actionName]; !ok || !a.IsActive() {
+					logger.Info(fmt.Sprintf("action %q is not active, skipping execution", actionName))
+					return
+				}
+
+				logger.Info(fmt.Sprintf("action %q is starting for resource %q", actionName, resourceName))
 				job(ctx, req.NamespacedName, actionName)
 			})
 			if err != nil {
-				logger.Info(fmt.Sprintf("failed to add cron job: %q", err))
+				logger.Error(err, "failed to add cron job")
 				return err
 			}
 			logger.Info(fmt.Sprintf("action %q is scheduled", actionName))
