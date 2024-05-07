@@ -65,23 +65,11 @@ func (r *ScheduleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		instance.Status.Conditions = make([]metav1.Condition, 0)
 	}
 
-	condition, err := r.reconcile(ctx, instance)
+	err = r.reconcile(ctx, instance)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	if len(instance.Status.Conditions) > 0 {
-		// add condition if current status is false or if is different than last one
-		if condition.Status != metav1.ConditionTrue || condition.Status != instance.Status.Conditions[len(instance.Status.Conditions)-1].Status {
-			instance.Status.Conditions = append(instance.Status.Conditions, condition)
-		}
-		// keep only last ten conditions
-		if len(instance.Status.Conditions) > 10 {
-			instance.Status.Conditions = instance.Status.Conditions[len(instance.Status.Conditions)-10:]
-		}
-	} else {
-		instance.Status.Conditions = append(instance.Status.Conditions, condition)
-	}
 	err = r.Status().Update(ctx, instance)
 	if err != nil {
 		logger.Info("Failed to update Schedule resource status. Re-running reconcile.")
@@ -91,20 +79,21 @@ func (r *ScheduleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	return ctrl.Result{}, nil
 }
 
-func (r *ScheduleReconciler) reconcile(ctx context.Context, instance *corev1alpha1.Schedule) (metav1.Condition, error) {
+func (r *ScheduleReconciler) reconcile(ctx context.Context, instance *corev1alpha1.Schedule) error {
 	logger := log.FromContext(ctx)
 	scheduleName := instance.Name
 	// checking if the cron expression of the actions is correct
 	for action, c := range instance.Spec.Actions {
 		if !r.Cron.IsValidCron(c.Cron) {
 			logger.Info(fmt.Sprintf("cron expression of action %s is invalid", action))
-			return metav1.Condition{
+			addToConditions(&instance.Status.Conditions, metav1.Condition{
 				LastTransitionTime: metav1.Now(),
 				Status:             metav1.ConditionFalse,
 				Type:               "Ready",
 				Reason:             "Action is invalid",
 				Message:            fmt.Sprintf("cron expression of action %s is invalid", action),
-			}, nil
+			})
+			return nil
 		}
 	}
 
@@ -116,13 +105,14 @@ func (r *ScheduleReconciler) reconcile(ctx context.Context, instance *corev1alph
 			// check if some activities has been removed from the cron but there are still active
 			if _, ok := instance.Spec.Actions[action]; !ok {
 				logger.Info(fmt.Sprintf("action %s has been removed from the schedule", action))
-				return metav1.Condition{
+				addToConditions(&instance.Status.Conditions, metav1.Condition{
 					LastTransitionTime: metav1.Now(),
 					Status:             metav1.ConditionFalse,
 					Type:               "Ready",
 					Reason:             "Action is used",
 					Message:            fmt.Sprintf("action %s is used by %s, but was removed from the schedule", action, resource),
-				}, nil
+				})
+				return nil
 			}
 			// proceed to update spec on active cron
 			updated := r.Cron.UpdateCronSpec(scheduleName, action, resource, instance.Spec.Actions[action].Cron)
@@ -134,12 +124,13 @@ func (r *ScheduleReconciler) reconcile(ctx context.Context, instance *corev1alph
 		}
 	}
 
-	return metav1.Condition{
+	addToConditions(&instance.Status.Conditions, metav1.Condition{
 		LastTransitionTime: metav1.Now(),
 		Status:             metav1.ConditionTrue,
 		Type:               "Ready",
 		Reason:             "Ready",
-	}, nil
+	})
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
