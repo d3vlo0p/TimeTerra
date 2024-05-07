@@ -32,6 +32,10 @@ tasks:
     cmds:
       - make undeploy
 
+  helm-crds:
+    cmds:
+      - cp -rf ./config/crd/bases/. ./helm-charts/timeterra/crds/
+
   helm-build:
     cmds:
       - helm package ./helm-charts/timeterra --app-version {{.VERSION}}
