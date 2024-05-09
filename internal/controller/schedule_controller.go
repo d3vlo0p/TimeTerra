@@ -150,12 +150,21 @@ func (r *ScheduleReconciler) reconcile(ctx context.Context, instance *corev1alph
 		}
 	}
 
-	addToConditions(&instance.Status.Conditions, metav1.Condition{
-		LastTransitionTime: metav1.Now(),
-		Status:             metav1.ConditionTrue,
-		Type:               "Ready",
-		Reason:             "Ready",
-	})
+	if instance.Spec.IsActive() {
+		addToConditions(&instance.Status.Conditions, metav1.Condition{
+			LastTransitionTime: metav1.Now(),
+			Status:             metav1.ConditionTrue,
+			Type:               "Ready",
+			Reason:             "Ready",
+		})
+	} else {
+		addToConditions(&instance.Status.Conditions, metav1.Condition{
+			LastTransitionTime: metav1.Now(),
+			Status:             metav1.ConditionFalse,
+			Type:               "Ready",
+			Reason:             "Disabled",
+		})
+	}
 	return nil
 }
 
