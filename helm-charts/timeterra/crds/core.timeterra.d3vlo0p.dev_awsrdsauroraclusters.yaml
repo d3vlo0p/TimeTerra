@@ -14,7 +14,14 @@ spec:
     singular: awsrdsauroracluster
   scope: Cluster
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .spec.schedule
+      name: Schedule
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Ready")].status
+      name: Ready
+      type: boolean
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: AwsRdsAuroraCluster is the Schema for the awsrdsauroraclusters

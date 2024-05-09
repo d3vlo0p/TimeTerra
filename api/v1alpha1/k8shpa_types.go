@@ -54,6 +54,8 @@ type K8sHpaStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:scope=Cluster
+//+kubebuilder:printcolumn:name="Schedule",type="string",JSONPath=`.spec.schedule`
+//+kubebuilder:printcolumn:name="Ready",type="boolean",JSONPath=`.status.conditions[?(@.type=="Ready")].status`
 
 // K8sHpa is the Schema for the k8shpas API
 type K8sHpa struct {

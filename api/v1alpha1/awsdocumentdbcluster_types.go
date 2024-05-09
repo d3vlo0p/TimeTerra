@@ -70,6 +70,8 @@ type AwsDocumentDBClusterStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:scope=Cluster
+//+kubebuilder:printcolumn:name="Schedule",type="string",JSONPath=`.spec.schedule`
+//+kubebuilder:printcolumn:name="Ready",type="boolean",JSONPath=`.status.conditions[?(@.type=="Ready")].status`
 
 // AwsDocumentDBCluster is the Schema for the awsdocumentdbclusters API
 type AwsDocumentDBCluster struct {
