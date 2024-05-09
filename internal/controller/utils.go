@@ -80,7 +80,7 @@ func reconcileResource[ActionType Activable](
 				LastTransitionTime: metav1.Now(),
 				Type:               "Ready",
 				Status:             metav1.ConditionFalse,
-				Reason:             "Schedule not found",
+				Reason:             "Error",
 				Message:            fmt.Sprintf("Schedule %s not found", scheduleName),
 			})
 			return nil
@@ -134,7 +134,7 @@ func reconcileResource[ActionType Activable](
 					LastTransitionTime: metav1.Now(),
 					Type:               "Ready",
 					Status:             metav1.ConditionFalse,
-					Reason:             "Acttion not found",
+					Reason:             "MissingAction",
 					Message:            fmt.Sprintf("action %s not found in %s", actionName, scheduleName),
 				})
 				continue
@@ -192,4 +192,25 @@ func addToConditions(conditions *[]metav1.Condition, condition metav1.Condition)
 
 func removeFromConditions(conditions *[]metav1.Condition, conditionType string) {
 	meta.RemoveStatusCondition(conditions, conditionType)
+}
+
+func removeMissingActionFromConditions(conditions *[]metav1.Condition, actions []string) {
+	// remove from orphanedConditions all current action, so will remain only conditions without actions
+	orphanedConditions := *conditions
+	for _, action := range actions {
+		cond := meta.FindStatusCondition(orphanedConditions, ConditionTypeForAction(action))
+		if cond != nil {
+			// find cond inside orphanedConditions and remove it
+			for _, c := range orphanedConditions {
+				if c.Type == cond.Type {
+					removeFromConditions(&orphanedConditions, c.Type)
+					break
+				}
+			}
+		}
+	}
+	// remove orphaned conditions
+	for _, c := range orphanedConditions {
+		removeFromConditions(conditions, c.Type)
+	}
 }

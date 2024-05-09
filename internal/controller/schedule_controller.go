@@ -83,43 +83,69 @@ func (r *ScheduleReconciler) reconcile(ctx context.Context, instance *corev1alph
 	logger := log.FromContext(ctx)
 	scheduleName := instance.Name
 	// checking if the cron expression of the actions is correct
+	ret := false
+	specActions := make([]string, 0)
 	for action, c := range instance.Spec.Actions {
+		specActions = append(specActions, action)
+		actionType := ConditionTypeForAction(action)
 		if !r.Cron.IsValidCron(c.Cron) {
 			logger.Info(fmt.Sprintf("cron expression of action %s is invalid", action))
 			addToConditions(&instance.Status.Conditions, metav1.Condition{
 				LastTransitionTime: metav1.Now(),
 				Status:             metav1.ConditionFalse,
-				Type:               "Ready",
-				Reason:             "Action is invalid",
+				Type:               actionType,
+				Reason:             "Invalid",
 				Message:            fmt.Sprintf("cron expression of action %s is invalid", action),
 			})
-			return nil
+			ret = true
+		} else if !c.IsActive() {
+			logger.Info(fmt.Sprintf("action %s is not active", action))
+			addToConditions(&instance.Status.Conditions, metav1.Condition{
+				LastTransitionTime: metav1.Now(),
+				Status:             metav1.ConditionFalse,
+				Type:               actionType,
+				Reason:             "NotActive",
+				Message:            fmt.Sprintf("action %s is not active", action),
+			})
+		} else {
+			logger.Info(fmt.Sprintf("action %s is active", action))
+			addToConditions(&instance.Status.Conditions, metav1.Condition{
+				LastTransitionTime: metav1.Now(),
+				Status:             metav1.ConditionTrue,
+				Type:               actionType,
+				Reason:             "Ready",
+				Message:            fmt.Sprintf("action %s is ready", action),
+			})
 		}
 	}
 
-	activeActions := r.Cron.GetActions(scheduleName)
-	for action, resources := range activeActions {
-		logger.Info(fmt.Sprintf("action %s is active", action))
+	removeMissingActionFromConditions(&instance.Status.Conditions, specActions)
+
+	if ret {
+		return nil
+	}
+
+	scheduledActions := r.Cron.GetActions(scheduleName)
+	for action, resources := range scheduledActions {
 		for resource := range resources {
-			logger.Info(fmt.Sprintf("action %s is used by %s", action, resource))
 			// check if some activities has been removed from the cron but there are still active
 			if _, ok := instance.Spec.Actions[action]; !ok {
-				logger.Info(fmt.Sprintf("action %s has been removed from the schedule", action))
+				logger.Info(fmt.Sprintf("action %s is used by %s, but was removed from the schedule", action, resource))
 				addToConditions(&instance.Status.Conditions, metav1.Condition{
 					LastTransitionTime: metav1.Now(),
 					Status:             metav1.ConditionFalse,
 					Type:               "Ready",
-					Reason:             "Action is used",
+					Reason:             "MissingAction",
 					Message:            fmt.Sprintf("action %s is used by %s, but was removed from the schedule", action, resource),
 				})
 				return nil
 			}
-			// proceed to update spec on active cron
+			// proceed to refresh spec on active cron
 			updated := r.Cron.UpdateCronSpec(scheduleName, action, resource, instance.Spec.Actions[action].Cron)
 			if !updated {
 				logger.Info(fmt.Sprintf("failed to update resource %s cron spec for action %s", resource, action))
 			} else {
-				logger.Info(fmt.Sprintf("resource %s cron spec for action %s updated", resource, action))
+				logger.Info(fmt.Sprintf("resource %s cron spec for action %s has been updated", resource, action))
 			}
 		}
 	}
