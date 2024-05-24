@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -40,13 +41,15 @@ import (
 // K8sHpaReconciler reconciles a K8sHpa object
 type K8sHpaReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	Cron   *cron.ScheduleCron
+	Scheme   *runtime.Scheme
+	Cron     *cron.ScheduleCron
+	Recorder record.EventRecorder
 }
 
 //+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=k8shpas,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=k8shpas/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=k8shpas/finalizers,verbs=update
+//+kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 //+kubebuilder:rbac:groups=autoscaling,resources=horizontalpodautoscalers,verbs=get;list;watch;update;patch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -69,7 +72,7 @@ func (r *K8sHpaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			logger.Info("K8sHpa resource not found. object must be deleted.")
+			logger.Info("K8sHpa resource not found. object must has been deleted.")
 			r.Cron.RemoveResource(resourceName)
 			return ctrl.Result{}, nil
 		}
@@ -105,7 +108,7 @@ func (r *K8sHpaReconciler) setAutoscaling(ctx context.Context, key types.Namespa
 	err := r.Get(ctx, key, obj)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			logger.Info("K8sHpa resource not found. object must be deleted.")
+			logger.Info("K8sHpa resource not found. object must has been deleted.")
 			return
 		}
 		logger.Info("Failed to get K8sHpa resource.")
@@ -130,6 +133,7 @@ func (r *K8sHpaReconciler) setAutoscaling(ctx context.Context, key types.Namespa
 			msg := fmt.Sprintf("Failed to list HorizontalPodAutoscaler in namespace %q", namespace)
 			logger.Error(err, msg)
 			errorsList = append(errorsList, msg)
+			r.Recorder.Event(obj, "Warning", "Failed", msg)
 		} else {
 			minReplicas := int32(action.MinReplicas)
 			maxReplicas := int32(action.MaxReplicas)
@@ -141,6 +145,9 @@ func (r *K8sHpaReconciler) setAutoscaling(ctx context.Context, key types.Namespa
 					msg := fmt.Sprintf("Failed to update HorizontalPodAutoscaler %q/%q", hpa.Namespace, hpa.Name)
 					logger.Error(err, msg)
 					errorsList = append(errorsList, msg)
+					r.Recorder.Event(obj, "Warning", "Failed", msg)
+				} else {
+					r.Recorder.Eventf(obj, "Normal", "Updated", "HorizontalPodAutoscaler %q/%q updated min:%d max:%d", hpa.Namespace, hpa.Name, minReplicas, maxReplicas)
 				}
 				logger.Info(fmt.Sprintf("HorizontalPodAutoscaler %q/%q updated min:%d max:%d", hpa.Namespace, hpa.Name, minReplicas, maxReplicas))
 			}

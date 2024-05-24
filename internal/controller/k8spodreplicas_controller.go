@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -40,13 +41,15 @@ import (
 // K8sPodReplicasReconciler reconciles a K8sPodReplicas object
 type K8sPodReplicasReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	Cron   *cron.ScheduleCron
+	Scheme   *runtime.Scheme
+	Cron     *cron.ScheduleCron
+	Recorder record.EventRecorder
 }
 
 //+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=k8spodreplicas,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=k8spodreplicas/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=k8spodreplicas/finalizers,verbs=update
+//+kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=apps,resources=deployments/scale,verbs=get;update;patch
 //+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;update;patch
@@ -71,7 +74,7 @@ func (r *K8sPodReplicasReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			logger.Info("PodReplicas resource not found. object must be deleted.")
+			logger.Info("PodReplicas resource not found. object must has been deleted.")
 			r.Cron.RemoveResource(resourceName)
 			return ctrl.Result{}, nil
 		}
@@ -107,7 +110,7 @@ func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, key types.Na
 	err := r.Get(ctx, key, obj)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			logger.Error(err, "PodReplicas resource not found. object must be deleted.")
+			logger.Error(err, "PodReplicas resource not found. object must has been deleted.")
 			return
 		}
 		logger.Error(err, "Failed to get PodReplicas resource.")
@@ -137,6 +140,7 @@ func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, key types.Na
 				msg := fmt.Sprintf("Action %q failed to list deployments for namespace %q", actionName, namespace)
 				logger.Error(err, msg)
 				errorsList = append(errorsList, msg)
+				r.Recorder.Eventf(obj, "Warning", "Failed", msg)
 			} else {
 				replicasInt32 := int32(action.Replicas)
 				for _, deployment := range deploymentList.Items {
@@ -146,6 +150,9 @@ func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, key types.Na
 						msg := fmt.Sprintf("failed to update deployment %q/%q", deployment.Namespace, deployment.Name)
 						logger.Error(err, msg)
 						errorsList = append(errorsList, msg)
+						r.Recorder.Eventf(obj, "Warning", "Failed", msg)
+					} else {
+						r.Recorder.Eventf(obj, "Normal", "Success", "updated deployment %q/%q to %d replicas", deployment.Namespace, deployment.Name, action.Replicas)
 					}
 					logger.Info(fmt.Sprintf("updated deployment %q/%q to %d replicas", deployment.Namespace, deployment.Name, action.Replicas))
 				}
@@ -161,6 +168,7 @@ func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, key types.Na
 				msg := fmt.Sprintf("Action %q failed to list statefulsets for namespace %q", actionName, namespace)
 				logger.Error(err, msg)
 				errorsList = append(errorsList, msg)
+				r.Recorder.Eventf(obj, "Warning", "Failed", msg)
 			} else {
 				replicasInt32 := int32(action.Replicas)
 				for _, statefulSet := range statefulSetList.Items {
@@ -170,6 +178,9 @@ func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, key types.Na
 						msg := fmt.Sprintf("failed to update statefulset %q/%q", statefulSet.Namespace, statefulSet.Name)
 						logger.Error(err, msg)
 						errorsList = append(errorsList, msg)
+						r.Recorder.Eventf(obj, "Warning", "Failed", msg)
+					} else {
+						r.Recorder.Eventf(obj, "Normal", "Success", "updated statefulset %q/%q to %d replicas", statefulSet.Namespace, statefulSet.Name, action.Replicas)
 					}
 					logger.Info(fmt.Sprintf("updated statefulset %q/%q to %d replicas", statefulSet.Namespace, statefulSet.Name, action.Replicas))
 				}

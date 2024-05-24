@@ -24,6 +24,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -36,13 +37,15 @@ import (
 // ScheduleReconciler reconciles a Schedule object
 type ScheduleReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	Cron   *sc.ScheduleCron
+	Scheme   *runtime.Scheme
+	Cron     *sc.ScheduleCron
+	Recorder record.EventRecorder
 }
 
 //+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=schedules,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=schedules/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=schedules/finalizers,verbs=update
+//+kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.16.3/pkg/reconcile
@@ -54,7 +57,7 @@ func (r *ScheduleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			logger.Info("Schedule resource not found. object must be deleted.")
+			logger.Info("Schedule resource not found. object must has been deleted.")
 			return ctrl.Result{}, nil
 		}
 		logger.Info("Failed to get Schedule resource. Re-running reconcile.")
@@ -138,14 +141,17 @@ func (r *ScheduleReconciler) reconcile(ctx context.Context, instance *corev1alph
 					Reason:             "MissingAction",
 					Message:            fmt.Sprintf("action %s is used by %s, but was removed from the schedule", action, resource),
 				})
+				r.Recorder.Eventf(instance, "Warning", "MissingAction", "action %s is used by %s, but was removed from the schedule", action, resource)
 				return nil
 			}
 			// proceed to refresh spec on active cron
 			updated := r.Cron.UpdateCronSpec(scheduleName, action, resource, instance.Spec.Actions[action].Cron)
 			if !updated {
 				logger.Info(fmt.Sprintf("failed to update resource %s cron spec for action %s", resource, action))
+				r.Recorder.Eventf(instance, "Warning", "FailedUpdate", "failed to update resource %s cron spec for action %s", resource, action)
 			} else {
 				logger.Info(fmt.Sprintf("resource %s cron spec for action %s has been updated", resource, action))
+				r.Recorder.Eventf(instance, "Normal", "Updated", "resource %s cron spec for action %s has been updated", resource, action)
 			}
 		}
 	}

@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -40,13 +41,15 @@ import (
 // AwsRdsAuroraClusterReconciler reconciles a AwsRdsAuroraCluster object
 type AwsRdsAuroraClusterReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	Cron   *cron.ScheduleCron
+	Scheme   *runtime.Scheme
+	Cron     *cron.ScheduleCron
+	Recorder record.EventRecorder
 }
 
 //+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=awsrdsauroraclusters,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=awsrdsauroraclusters/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=awsrdsauroraclusters/finalizers,verbs=update
+//+kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -67,7 +70,7 @@ func (r *AwsRdsAuroraClusterReconciler) Reconcile(ctx context.Context, req ctrl.
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			logger.Info("AwsRdsAuroraCluster resource not found. object must be deleted.")
+			logger.Info("AwsRdsAuroraCluster resource not found. object must has been deleted.")
 			r.Cron.RemoveResource(resourceName)
 			return ctrl.Result{}, nil
 		}
@@ -103,7 +106,7 @@ func (r *AwsRdsAuroraClusterReconciler) startStopCluster(ctx context.Context, ke
 	err := r.Get(ctx, key, obj)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			logger.Error(err, "AwsRdsAuroraCluster resource not found. object must be deleted.")
+			logger.Error(err, "AwsRdsAuroraCluster resource not found. object must has been deleted.")
 			return
 		}
 		logger.Error(err, "Failed to get AwsRdsAuroraCluster resource. Re-running reconcile.")
@@ -142,8 +145,11 @@ func (r *AwsRdsAuroraClusterReconciler) startStopCluster(ctx context.Context, ke
 				msg := fmt.Sprintf("unable to start cluster %s", cluster.Identifier)
 				logger.Error(err, msg)
 				errorsList = append(errorsList, msg)
+				r.Recorder.Eventf(obj, "Warning", "StartClusterFailed", msg)
+			} else {
+				r.Recorder.Eventf(obj, "Normal", "StartClusterSucceeded", "Cluster %s is starting", cluster.Identifier)
 			}
-			logger.Info("Cluster is starting", "identifier", &cluster.Identifier)
+			logger.Info("Cluster is starting", "identifier", cluster.Identifier)
 		case corev1alpha1.AwsRdsAuroraClusterCommandStop:
 			_, err := rdsClient.StopDBCluster(ctx, &rds.StopDBClusterInput{
 				DBClusterIdentifier: &cluster.Identifier,
@@ -152,8 +158,11 @@ func (r *AwsRdsAuroraClusterReconciler) startStopCluster(ctx context.Context, ke
 				msg := fmt.Sprintf("unable to stop cluster %s", cluster.Identifier)
 				logger.Error(err, msg)
 				errorsList = append(errorsList, msg)
+				r.Recorder.Eventf(obj, "Warning", "StopClusterFailed", msg)
+			} else {
+				r.Recorder.Eventf(obj, "Normal", "StopClusterSucceeded", "Cluster %s is stopping", cluster.Identifier)
 			}
-			logger.Info("Cluster is stopping", "identifier", &cluster.Identifier)
+			logger.Info("Cluster is stopping", "identifier", cluster.Identifier)
 		}
 	}
 	if len(errorsList) > 0 {
