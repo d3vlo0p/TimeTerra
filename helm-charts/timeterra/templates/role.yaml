@@ -113,6 +113,32 @@ rules:
 - apiGroups:
   - core.timeterra.d3vlo0p.dev
   resources:
+  - awstransferfamilies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - awstransferfamilies/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - awstransferfamilies/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
   - k8shpas
   verbs:
   - create
