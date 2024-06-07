@@ -59,4 +59,12 @@ resources:
   kind: AwsTransferFamily
   path: github.com/d3vlo0p/TimeTerra/api/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+  controller: true
+  domain: timeterra.d3vlo0p.dev
+  group: core
+  kind: AwsEc2Instance
+  path: github.com/d3vlo0p/TimeTerra/api/v1alpha1
+  version: v1alpha1
 version: "3"

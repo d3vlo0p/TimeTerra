@@ -87,6 +87,32 @@ rules:
 - apiGroups:
   - core.timeterra.d3vlo0p.dev
   resources:
+  - awsec2instances
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - awsec2instances/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - awsec2instances/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
   - awsrdsauroraclusters
   verbs:
   - create
