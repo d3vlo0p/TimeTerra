@@ -118,7 +118,6 @@ spec:
                 type: string
             required:
             - actions
-            - labelSelector
             - resourceType
             - schedule
             type: object

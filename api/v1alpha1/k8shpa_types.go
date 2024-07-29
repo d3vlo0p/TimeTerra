@@ -41,7 +41,7 @@ func (r K8sHpaSpec) IsActive() bool {
 type K8sHpaSpec struct {
 	Enabled       *bool                   `json:"enabled,omitempty"`
 	Namespaces    []string                `json:"namespaces,omitempty"`
-	LabelSelector metav1.LabelSelector    `json:"labelSelector"`
+	LabelSelector metav1.LabelSelector    `json:"labelSelector,omitempty"`
 	Schedule      string                  `json:"schedule"`
 	Actions       map[string]K8sHpaAction `json:"actions"`
 }

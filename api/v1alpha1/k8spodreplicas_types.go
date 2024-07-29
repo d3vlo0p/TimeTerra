@@ -53,7 +53,7 @@ type K8sPodReplicasSpec struct {
 	Namespaces []string `json:"namespaces,omitempty"`
 	// +kubebuilder:validation:Enum:=Deployment;StatefulSet
 	ResourceType  K8sPodReplicasResourceType      `json:"resourceType"`
-	LabelSelector metav1.LabelSelector            `json:"labelSelector"`
+	LabelSelector metav1.LabelSelector            `json:"labelSelector,omitempty"`
 	Schedule      string                          `json:"schedule"`
 	Actions       map[string]K8sPodReplicasAction `json:"actions"`
 }
