@@ -32,7 +32,9 @@ To use TimeTerra, follow these steps:
 
 ```sh
 kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/core.timeterra.d3vlo0p.dev_awsdocumentdbclusters.yaml
+kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/core.timeterra.d3vlo0p.dev_awsec2instances.yaml
 kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/core.timeterra.d3vlo0p.dev_awsrdsauroraclusters.yaml
+kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/core.timeterra.d3vlo0p.dev_awstransferfamilies.yaml
 kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/core.timeterra.d3vlo0p.dev_k8shpas.yaml
 kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/core.timeterra.d3vlo0p.dev_k8spodreplicas.yaml
 kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/core.timeterra.d3vlo0p.dev_schedules.yaml
@@ -56,7 +58,9 @@ kubectl delete namespace timeterra
 
 ```sh
 kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/core.timeterra.d3vlo0p.dev_awsdocumentdbclusters.yaml
+kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/core.timeterra.d3vlo0p.dev_awsec2instances.yaml
 kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/core.timeterra.d3vlo0p.dev_awsrdsauroraclusters.yaml
+kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/core.timeterra.d3vlo0p.dev_awstransferfamilies.yaml
 kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/core.timeterra.d3vlo0p.dev_k8shpas.yaml
 kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/core.timeterra.d3vlo0p.dev_k8spodreplicas.yaml
 kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/core.timeterra.d3vlo0p.dev_schedules.yaml
