@@ -1,10 +1,10 @@
 # TimeTerra
 
-TimeTerra is a cron scheduler that allows you to define a schedule to execute actions at specific times.
+TimeTerra is a cron scheduling kubernetes operator that allows you to define a schedule for executing actions at specific times and associate those actions with different resources
 
 ## Description
 
-With TimeTerra, you can define a schedule with actions and their corresponding cron expressions, and then implement the desired action.
+With TimeTerra, you can create a schedule using cron expressions on which you can implement the desired actions on different types of kubernetes and cloud resources.
 
 ### Supported Actions
 
@@ -12,6 +12,8 @@ With TimeTerra, you can define a schedule with actions and their corresponding c
 - **Set the minimum and maximum number of replicas** for Horizontal Pod Autoscaling.
 - **Start and stop AWS RDS clusters**.
 - **Start and stop AWS DocumentDB clusters**.
+- **Start and stop AWS Ec2 instances**.
+- **Start and stop AWS Transfer Family servers**.
 
 ### Use Cases
 
