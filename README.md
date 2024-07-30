@@ -99,6 +99,7 @@ spec:
     scaleup:
       replicas: 2
 ```
+more samples [here](./config/samples/)
 
 ## License
 
