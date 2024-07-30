@@ -9,4 +9,12 @@ metadata:
     app.kubernetes.io/created-by: timeterra
   name: awsec2instance-sample
 spec:
-  # TODO(user): Add fields here
+  schedule: schedule-sample
+  instances:
+    - id: i-xxxxxxxxxxxxx
+      region: eu-central-1
+  actions:
+    start:
+      command: start
+    stop:
+      command: stop

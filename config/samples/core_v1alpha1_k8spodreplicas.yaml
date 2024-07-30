@@ -14,7 +14,7 @@ spec:
       replicas: 1
     scaleup:
       replicas: 2
-  enabled: false
+  enabled: true
   labelSelector:
     matchLabels:
       app.kubernetes.io/name: hello-world
