@@ -9,4 +9,5 @@ resources:
 - core_v1alpha1_awsdocumentdbcluster.yaml
 - core_v1alpha1_awstransferfamily.yaml
 - core_v1alpha1_awsec2instance.yaml
+- core_v1alpha1_k8srunjob.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

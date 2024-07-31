@@ -194,6 +194,15 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "AwsEc2Instance")
 		os.Exit(1)
 	}
+	if err = (&controller.K8sRunJobReconciler{
+		Client:   mgr.GetClient(),
+		Scheme:   mgr.GetScheme(),
+		Cron:     c,
+		Recorder: mgr.GetEventRecorderFor("k8srunjob-controller"),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "K8sRunJob")
+		os.Exit(1)
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
