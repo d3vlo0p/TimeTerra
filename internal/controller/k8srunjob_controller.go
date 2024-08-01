@@ -19,6 +19,8 @@ package controller
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,6 +34,7 @@ import (
 
 	corev1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 	"github.com/d3vlo0p/TimeTerra/internal/cron"
+	batchv1 "k8s.io/api/batch/v1"
 )
 
 // K8sRunJobReconciler reconciles a K8sRunJob object
@@ -97,8 +100,99 @@ func (r *K8sRunJobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 }
 
 func (r *K8sRunJobReconciler) runJob(ctx context.Context, key types.NamespacedName, actionName string) {
-	// TODO: implement job execution logic
+	logger := log.FromContext(ctx)
+	start := time.Now()
+	obj := &corev1alpha1.K8sRunJob{}
+	err := r.Get(ctx, key, obj)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			logger.Error(err, "RunJob resource not found. object must has been deleted.")
+			return
+		}
+		logger.Error(err, "Failed to get RunJob resource.")
+		return
+	}
 
+	action, ok := obj.Spec.Actions[actionName]
+	if !ok {
+		logger.Info("Action not found")
+		return
+	}
+
+	actionType := ConditionTypeForAction(actionName)
+	errorsList := make([]string, 0)
+
+	namespaces := obj.Spec.Namespaces
+	if len(namespaces) == 0 {
+		namespaces = []string{obj.Namespace}
+	}
+
+	for _, namespace := range namespaces {
+		jobName := fmt.Sprintf("%s-%s", obj.Name, actionName)
+		job := &batchv1.Job{}
+		err := r.Get(ctx, types.NamespacedName{Name: jobName, Namespace: namespace}, job)
+		if err != nil {
+			if !errors.IsNotFound(err) {
+				msg := fmt.Sprintf("Failed to check if job exists: %s", err)
+				errorsList = append(errorsList, msg)
+				logger.Error(err, msg)
+				continue
+			}
+			err = r.Delete(ctx, job)
+			if err != nil {
+				msg := fmt.Sprintf("Failed to delete job: %s", err)
+				errorsList = append(errorsList, msg)
+				logger.Error(err, msg)
+				continue
+			}
+		}
+
+		job = &batchv1.Job{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      jobName,
+				Namespace: namespace,
+				Labels: map[string]string{
+					"timeterra.d3vlo0p.dev/action":   actionName,
+					"timeterra.d3vlo0p.dev/schedule": obj.Spec.Schedule,
+				},
+			},
+			Spec: action.Job,
+		}
+
+		err = ctrl.SetControllerReference(obj, job, r.Scheme)
+		if err != nil {
+			msg := fmt.Sprintf("Failed to set controller reference: %s", err)
+			errorsList = append(errorsList, msg)
+			logger.Error(err, msg)
+			continue
+		}
+		err = r.Create(ctx, job)
+		if err != nil {
+			msg := fmt.Sprintf("Failed to create job: %s", err)
+			errorsList = append(errorsList, msg)
+			logger.Error(err, msg)
+			continue
+		}
+	}
+
+	if len(errorsList) > 0 {
+		addToConditions(&obj.Status.Conditions, metav1.Condition{
+			LastTransitionTime: metav1.Now(),
+			Type:               actionType,
+			Status:             metav1.ConditionFalse,
+			Reason:             "Failed",
+			Message:            strings.Join(errorsList, ";"),
+		})
+	} else {
+		addToConditions(&obj.Status.Conditions, metav1.Condition{
+			LastTransitionTime: metav1.Now(),
+			Type:               actionType,
+			Status:             metav1.ConditionTrue,
+			Reason:             "Success",
+			Message:            fmt.Sprintf("Action %q, last execution start:%q end:%q", actionName, start.Format(time.RFC3339), time.Now().Format(time.RFC3339)),
+		})
+	}
+	r.Status().Update(ctx, obj)
 }
 
 // SetupWithManager sets up the controller with the Manager.
