@@ -10,10 +10,11 @@ With TimeTerra, you can create a schedule using cron expressions on which you ca
 
 - **Set the number of replicas** for Deployments and StatefulSets.
 - **Set the minimum and maximum number of replicas** for Horizontal Pod Autoscaling.
-- **Start and stop AWS RDS clusters**.
-- **Start and stop AWS DocumentDB clusters**.
-- **Start and stop AWS Ec2 instances**.
-- **Start and stop AWS Transfer Family servers**.
+- **Run Jobs** with your own logic and permissions.
+- **Start and stop RDS clusters** on AWS.
+- **Start and stop DocumentDB clusters** on AWS.
+- **Start and stop Ec2 instances** on AWS.
+- **Start and stop Transfer Family servers** on AWS.
 
 ### Use Cases
 
