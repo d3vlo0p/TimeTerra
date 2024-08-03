@@ -9,4 +9,28 @@ metadata:
     app.kubernetes.io/created-by: timeterra
   name: k8srunjob-sample
 spec:
-  # TODO(user): Add fields here
+  enabled: true
+  schedule: schedule-sample
+  namespaces:
+    - default
+  actions:
+    scalein:
+      job:
+        ttlSecondsAfterFinished: 300
+        template:
+          spec:
+            containers:
+              - name: demo-job
+                image: busybox:latest
+                command: ["/bin/sh", "-c", "echo 'Action scalein';"]
+            restartPolicy: OnFailure
+    scaleup:
+      job:
+        ttlSecondsAfterFinished: 300
+        template:
+          spec:
+            containers:
+              - name: demo-job
+                image: busybox:latest
+                command: ["/bin/sh", "-c", "echo 'Action scaleup';"]
+            restartPolicy: OnFailure

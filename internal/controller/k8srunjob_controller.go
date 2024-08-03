@@ -127,27 +127,19 @@ func (r *K8sRunJobReconciler) runJob(ctx context.Context, key types.NamespacedNa
 		namespaces = []string{obj.Namespace}
 	}
 
-	for _, namespace := range namespaces {
-		jobName := fmt.Sprintf("%s-%s", obj.Name, actionName)
-		job := &batchv1.Job{}
-		err := r.Get(ctx, types.NamespacedName{Name: jobName, Namespace: namespace}, job)
-		if err != nil {
-			if !errors.IsNotFound(err) {
-				msg := fmt.Sprintf("Failed to check if job exists: %s", err)
-				errorsList = append(errorsList, msg)
-				logger.Error(err, msg)
-				continue
-			}
-			err = r.Delete(ctx, job)
-			if err != nil {
-				msg := fmt.Sprintf("Failed to delete job: %s", err)
-				errorsList = append(errorsList, msg)
-				logger.Error(err, msg)
-				continue
-			}
-		}
+	//generate string suffix date with format YYYYMMDDHHmm
+	suffix := time.Now().Format("200601021504")
+	jobName := fmt.Sprintf("%s-%s-%s", obj.Name, actionName, suffix)
 
-		job = &batchv1.Job{
+	//set default TTL
+	if action.Job.TTLSecondsAfterFinished == nil {
+		defaultTTLSeconds := new(int32)
+		*defaultTTLSeconds = 86400
+		action.Job.TTLSecondsAfterFinished = defaultTTLSeconds
+	}
+
+	for _, namespace := range namespaces {
+		job := &batchv1.Job{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      jobName,
 				Namespace: namespace,
