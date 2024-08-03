@@ -64,12 +64,6 @@ rules:
   - jobs
   verbs:
   - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
 - apiGroups:
   - core.timeterra.d3vlo0p.dev
   resources:
