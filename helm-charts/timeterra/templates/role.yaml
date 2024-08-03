@@ -59,6 +59,12 @@ rules:
   - update
   - watch
 - apiGroups:
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - create
+- apiGroups:
   - core.timeterra.d3vlo0p.dev
   resources:
   - awsdocumentdbclusters
@@ -210,6 +216,32 @@ rules:
   - core.timeterra.d3vlo0p.dev
   resources:
   - k8spodreplicas/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - k8srunjobs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - k8srunjobs/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - k8srunjobs/status
   verbs:
   - get
   - patch

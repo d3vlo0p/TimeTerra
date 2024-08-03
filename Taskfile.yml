@@ -4,8 +4,8 @@ vars:
   PLATFROMS: linux/amd64
   REPO: ttl.sh
   IMG: d3vlo0p/timeterra-operator
-  VERSION: "0.1.0"
-  CHART_VERSION: "0.1.0"
+  VERSION: "0.2.0"
+  CHART_VERSION: "0.2.0"
   TAG: 1h
 
 tasks:
@@ -23,7 +23,7 @@ tasks:
     cmds:
       - make docker-buildx PLATFORMS="{{.PLATFROMS}}" IMG="{{.REPO}}/{{.IMG}}:{{.TAG}}"
 
-  k8s-depoly:
+  k8s-deploy:
     cmds:
       - make deploy IMG="{{.REPO}}/{{.IMG}}"
 
@@ -37,11 +37,13 @@ tasks:
 
   helm-build:
     cmds:
+      - task: helm-crds
       - helm package ./helm-charts/timeterra --app-version {{.VERSION}}
 
   helm-deploy:
     cmds:
-      - kubectl apply -f ./config/crd/bases
+      - task: helm-crds
+      - kubectl apply --server-side -f ./helm-charts/timeterra/crds/
       - helm upgrade -n timeterra --create-namespace --install operator ./helm-charts/timeterra --set image.repository={{.REPO}}/{{.IMG}} --set image.tag={{.TAG}}
   
   helm-deploy-build:
@@ -76,5 +78,5 @@ tasks:
 
   github-helm-deploy:
     cmds:
-      - kubectl apply -f ./config/crd/bases
+      - kubectl apply --server-side -f ./helm-charts/timeterra/crds/
       - helm upgrade -n timeterra --create-namespace --install operator oci://ghcr.io/d3vlo0p/timeterra

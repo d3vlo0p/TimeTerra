@@ -39,6 +39,7 @@ kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config
 kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/core.timeterra.d3vlo0p.dev_awstransferfamilies.yaml
 kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/core.timeterra.d3vlo0p.dev_k8shpas.yaml
 kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/core.timeterra.d3vlo0p.dev_k8spodreplicas.yaml
+kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/core.timeterra.d3vlo0p.dev_k8srunjobs.yaml
 kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/core.timeterra.d3vlo0p.dev_schedules.yaml
 ```
 
@@ -65,6 +66,7 @@ kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/confi
 kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/core.timeterra.d3vlo0p.dev_awstransferfamilies.yaml
 kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/core.timeterra.d3vlo0p.dev_k8shpas.yaml
 kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/core.timeterra.d3vlo0p.dev_k8spodreplicas.yaml
+kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/core.timeterra.d3vlo0p.dev_k8srunjobs.yaml
 kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/core.timeterra.d3vlo0p.dev_schedules.yaml
 ```
 
