@@ -159,6 +159,7 @@ func (r *K8sRunJobReconciler) runJob(ctx context.Context, key types.NamespacedNa
 			r.Recorder.Eventf(obj, "Warning", "Failed", msg)
 			continue
 		}
+
 		err = r.Create(ctx, job)
 		if err != nil {
 			msg := fmt.Sprintf("Failed to create job: %s", err)
@@ -166,9 +167,10 @@ func (r *K8sRunJobReconciler) runJob(ctx context.Context, key types.NamespacedNa
 			logger.Error(err, msg)
 			r.Recorder.Eventf(obj, "Warning", "Failed", msg)
 			continue
-		} else {
-			r.Recorder.Eventf(obj, "Normal", "Success", fmt.Sprintf("Job %q created in namespace %q", jobName, namespace))
 		}
+
+		r.Recorder.Eventf(obj, "Normal", "Success", fmt.Sprintf("Job %q created in namespace %q", jobName, namespace))
+		logger.Info("Job created", "Job", jobName, "Namespace", namespace)
 	}
 
 	if len(errorsList) > 0 {

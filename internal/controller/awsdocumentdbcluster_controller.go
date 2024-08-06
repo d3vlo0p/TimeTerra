@@ -146,10 +146,12 @@ func (r *AwsDocumentDBClusterReconciler) startStopCluster(ctx context.Context, k
 				logger.Error(err, msg)
 				errorsList = append(errorsList, msg)
 				r.Recorder.Eventf(obj, "Warning", "StartClusterFailed", msg)
-			} else {
-				r.Recorder.Eventf(obj, "Normal", "StartClusterSucceeded", "Cluster %s is starting", cluster.Identifier)
+				continue
 			}
+
+			r.Recorder.Eventf(obj, "Normal", "StartClusterSucceeded", "Cluster %s is starting", cluster.Identifier)
 			logger.Info("Cluster is starting", "identifier", cluster.Identifier)
+
 		case corev1alpha1.AwsDocumentDBClusterCommandStop:
 			_, err := docDbClient.StopDBCluster(ctx, &docdb.StopDBClusterInput{
 				DBClusterIdentifier: &cluster.Identifier,
@@ -159,9 +161,10 @@ func (r *AwsDocumentDBClusterReconciler) startStopCluster(ctx context.Context, k
 				logger.Error(err, msg)
 				errorsList = append(errorsList, msg)
 				r.Recorder.Eventf(obj, "Warning", "StopClusterFailed", msg)
-			} else {
-				r.Recorder.Eventf(obj, "Normal", "StopClusterSucceeded", "Cluster %s is stopping", cluster.Identifier)
+				continue
 			}
+
+			r.Recorder.Eventf(obj, "Normal", "StopClusterSucceeded", "Cluster %s is stopping", cluster.Identifier)
 			logger.Info("Cluster is stopping", "identifier", cluster.Identifier)
 		}
 	}

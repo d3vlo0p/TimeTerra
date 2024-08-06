@@ -134,23 +134,25 @@ func (r *K8sHpaReconciler) setAutoscaling(ctx context.Context, key types.Namespa
 			logger.Error(err, msg)
 			errorsList = append(errorsList, msg)
 			r.Recorder.Event(obj, "Warning", "Failed", msg)
-		} else {
-			minReplicas := int32(action.MinReplicas)
-			maxReplicas := int32(action.MaxReplicas)
-			for _, hpa := range list.Items {
-				hpa.Spec.MinReplicas = &minReplicas
-				hpa.Spec.MaxReplicas = maxReplicas
-				err = r.Update(ctx, &hpa)
-				if err != nil {
-					msg := fmt.Sprintf("Failed to update HorizontalPodAutoscaler %q/%q", hpa.Namespace, hpa.Name)
-					logger.Error(err, msg)
-					errorsList = append(errorsList, msg)
-					r.Recorder.Event(obj, "Warning", "Failed", msg)
-				} else {
-					r.Recorder.Eventf(obj, "Normal", "Updated", "HorizontalPodAutoscaler %q/%q updated min:%d max:%d", hpa.Namespace, hpa.Name, minReplicas, maxReplicas)
-				}
-				logger.Info(fmt.Sprintf("HorizontalPodAutoscaler %q/%q updated min:%d max:%d", hpa.Namespace, hpa.Name, minReplicas, maxReplicas))
+			continue
+		}
+
+		minReplicas := int32(action.MinReplicas)
+		maxReplicas := int32(action.MaxReplicas)
+		for _, hpa := range list.Items {
+			hpa.Spec.MinReplicas = &minReplicas
+			hpa.Spec.MaxReplicas = maxReplicas
+			err = r.Update(ctx, &hpa)
+			if err != nil {
+				msg := fmt.Sprintf("Failed to update HorizontalPodAutoscaler %q/%q", hpa.Namespace, hpa.Name)
+				logger.Error(err, msg)
+				errorsList = append(errorsList, msg)
+				r.Recorder.Event(obj, "Warning", "Failed", msg)
+				continue
 			}
+
+			r.Recorder.Eventf(obj, "Normal", "Updated", "HorizontalPodAutoscaler %q/%q updated min:%d max:%d", hpa.Namespace, hpa.Name, minReplicas, maxReplicas)
+			logger.Info(fmt.Sprintf("HorizontalPodAutoscaler %q/%q updated min:%d max:%d", hpa.Namespace, hpa.Name, minReplicas, maxReplicas))
 		}
 	}
 	if len(errorsList) > 0 {

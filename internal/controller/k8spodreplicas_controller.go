@@ -141,22 +141,25 @@ func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, key types.Na
 				logger.Error(err, msg)
 				errorsList = append(errorsList, msg)
 				r.Recorder.Eventf(obj, "Warning", "Failed", msg)
-			} else {
-				replicasInt32 := int32(action.Replicas)
-				for _, deployment := range deploymentList.Items {
-					deployment.Spec.Replicas = &replicasInt32
-					err := r.Update(ctx, &deployment)
-					if err != nil {
-						msg := fmt.Sprintf("failed to update deployment %q/%q", deployment.Namespace, deployment.Name)
-						logger.Error(err, msg)
-						errorsList = append(errorsList, msg)
-						r.Recorder.Eventf(obj, "Warning", "Failed", msg)
-					} else {
-						r.Recorder.Eventf(obj, "Normal", "Success", "updated deployment %q/%q to %d replicas", deployment.Namespace, deployment.Name, action.Replicas)
-					}
-					logger.Info(fmt.Sprintf("updated deployment %q/%q to %d replicas", deployment.Namespace, deployment.Name, action.Replicas))
-				}
+				continue
 			}
+
+			replicasInt32 := int32(action.Replicas)
+			for _, deployment := range deploymentList.Items {
+				deployment.Spec.Replicas = &replicasInt32
+				err := r.Update(ctx, &deployment)
+				if err != nil {
+					msg := fmt.Sprintf("failed to update deployment %q/%q", deployment.Namespace, deployment.Name)
+					logger.Error(err, msg)
+					errorsList = append(errorsList, msg)
+					r.Recorder.Eventf(obj, "Warning", "Failed", msg)
+					continue
+				}
+
+				r.Recorder.Eventf(obj, "Normal", "Success", "updated deployment %q/%q to %d replicas", deployment.Namespace, deployment.Name, action.Replicas)
+				logger.Info(fmt.Sprintf("updated deployment %q/%q to %d replicas", deployment.Namespace, deployment.Name, action.Replicas))
+			}
+
 		case corev1alpha1.K8sStatefulSet:
 			// retrive StatefulSets with specified labels
 			statefulSetList := &appsv1.StatefulSetList{}
@@ -169,23 +172,24 @@ func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, key types.Na
 				logger.Error(err, msg)
 				errorsList = append(errorsList, msg)
 				r.Recorder.Eventf(obj, "Warning", "Failed", msg)
-			} else {
-				replicasInt32 := int32(action.Replicas)
-				for _, statefulSet := range statefulSetList.Items {
-					statefulSet.Spec.Replicas = &replicasInt32
-					err := r.Update(ctx, &statefulSet)
-					if err != nil {
-						msg := fmt.Sprintf("failed to update statefulset %q/%q", statefulSet.Namespace, statefulSet.Name)
-						logger.Error(err, msg)
-						errorsList = append(errorsList, msg)
-						r.Recorder.Eventf(obj, "Warning", "Failed", msg)
-					} else {
-						r.Recorder.Eventf(obj, "Normal", "Success", "updated statefulset %q/%q to %d replicas", statefulSet.Namespace, statefulSet.Name, action.Replicas)
-					}
-					logger.Info(fmt.Sprintf("updated statefulset %q/%q to %d replicas", statefulSet.Namespace, statefulSet.Name, action.Replicas))
-				}
+				continue
 			}
 
+			replicasInt32 := int32(action.Replicas)
+			for _, statefulSet := range statefulSetList.Items {
+				statefulSet.Spec.Replicas = &replicasInt32
+				err := r.Update(ctx, &statefulSet)
+				if err != nil {
+					msg := fmt.Sprintf("failed to update statefulset %q/%q", statefulSet.Namespace, statefulSet.Name)
+					logger.Error(err, msg)
+					errorsList = append(errorsList, msg)
+					r.Recorder.Eventf(obj, "Warning", "Failed", msg)
+					continue
+				}
+
+				r.Recorder.Eventf(obj, "Normal", "Success", "updated statefulset %q/%q to %d replicas", statefulSet.Namespace, statefulSet.Name, action.Replicas)
+				logger.Info(fmt.Sprintf("updated statefulset %q/%q to %d replicas", statefulSet.Namespace, statefulSet.Name, action.Replicas))
+			}
 		}
 	}
 	if len(errorsList) > 0 {
