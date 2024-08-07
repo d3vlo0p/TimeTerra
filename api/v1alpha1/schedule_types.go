@@ -30,27 +30,32 @@ func (r ScheduleAction) IsActive() bool {
 // ScheduleAction defines the time to performe an action
 type ScheduleAction struct {
 	Enabled *bool  `json:"enabled,omitempty"`
-	Cron    string `json:"cron,omitempty"`
+	Cron    string `json:"cron"`
 }
 
 func (r ScheduleSpec) IsActive() bool {
 	return r.Enabled == nil || *r.Enabled
 }
 
+type TimePeriod struct {
+	// +kubebuilder:validation:Type=string
+	// +kubebuilder:validation:Format=date-time
+	Start metav1.Time `json:"start"`
+	// +kubebuilder:validation:Type=string
+	// +kubebuilder:validation:Format=date-time
+	End metav1.Time `json:"end"`
+}
+
 // ScheduleSpec defines the desired state of Schedule
 type ScheduleSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	Enabled *bool                     `json:"enabled,omitempty"`
-	Actions map[string]ScheduleAction `json:"actions,omitempty"`
+	Enabled         *bool                     `json:"enabled,omitempty"`
+	Actions         map[string]ScheduleAction `json:"actions,omitempty"`
+	ActivePeriods   []TimePeriod              `json:"activePeriods,omitempty"`
+	InactivePeriods []TimePeriod              `json:"inactivePeriods,omitempty"`
 }
 
 // ScheduleStatus defines the observed state of Schedule
 type ScheduleStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
 	Conditions []metav1.Condition `json:"conditions"`
 }
 

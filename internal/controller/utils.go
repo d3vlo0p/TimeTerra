@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	corev1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 	sc "github.com/d3vlo0p/TimeTerra/internal/cron"
@@ -158,6 +159,37 @@ func reconcileResource[ActionType Activable](
 				if a, ok := s.Spec.Actions[actionName]; !ok || !a.IsActive() {
 					logger.Info(fmt.Sprintf("action %q is not active, skipping execution", actionName))
 					return
+				}
+
+				//logic for managing time periods
+				now := time.Now()
+				if len(s.Spec.ActivePeriods) > 0 {
+					active := false
+					// chack if current date is inside an Active Period, if not then skip exec
+					for _, p := range s.Spec.ActivePeriods {
+						if (now.After(p.Start.Time) && now.Before(p.End.Time)) || now.Equal(p.Start.Time) || now.Equal(p.End.Time) {
+							active = true
+							break
+						}
+					}
+					if !active {
+						logger.Info(fmt.Sprintf("Schedule %q is outside an active period, skipping execution", scheduleName))
+						return
+					}
+				}
+				if len(s.Spec.InactivePeriods) > 0 {
+					active := true
+					// chack if current date is inside an Inactive Period, if it is then skip exec
+					for _, p := range s.Spec.InactivePeriods {
+						if (now.After(p.Start.Time) && now.Before(p.End.Time)) || now.Equal(p.Start.Time) || now.Equal(p.End.Time) {
+							active = false
+							break
+						}
+					}
+					if !active {
+						logger.Info(fmt.Sprintf("Schedule %q is inside an inactive period, skipping execution", scheduleName))
+						return
+					}
 				}
 
 				logger.Info(fmt.Sprintf("action %q is starting for resource %q", actionName, resourceName))

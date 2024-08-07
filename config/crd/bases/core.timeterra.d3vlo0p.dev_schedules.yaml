@@ -51,10 +51,40 @@ spec:
                       type: string
                     enabled:
                       type: boolean
+                  required:
+                  - cron
                   type: object
                 type: object
+              activePeriods:
+                items:
+                  properties:
+                    end:
+                      format: date-time
+                      type: string
+                    start:
+                      format: date-time
+                      type: string
+                  required:
+                  - end
+                  - start
+                  type: object
+                type: array
               enabled:
                 type: boolean
+              inactivePeriods:
+                items:
+                  properties:
+                    end:
+                      format: date-time
+                      type: string
+                    start:
+                      format: date-time
+                      type: string
+                  required:
+                  - end
+                  - start
+                  type: object
+                type: array
             type: object
           status:
             description: ScheduleStatus defines the observed state of Schedule
