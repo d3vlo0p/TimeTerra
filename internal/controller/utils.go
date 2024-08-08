@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	corev1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 	sc "github.com/d3vlo0p/TimeTerra/internal/cron"
@@ -139,7 +140,7 @@ func reconcileResource[ActionType Activable](
 				})
 				continue
 			}
-			logger.Info(fmt.Sprintf("action %q is not scheduled, scheduling it with %q", actionName, scheduleAction.Cron))
+			logger.Info(fmt.Sprintf("Action %q is not scheduled, scheduling it with %q", actionName, scheduleAction.Cron))
 			_, err := cron.Add(scheduleName, actionName, resourceName, scheduleAction.Cron, func() {
 				// retrive schedule for cheking if it is active
 				// we do the check here because the check is simpler, and it avoids us having to delete and create objects in cron schedule
@@ -151,16 +152,49 @@ func reconcileResource[ActionType Activable](
 				}
 
 				if !s.Spec.IsActive() {
-					logger.Info(fmt.Sprintf("schedule %q is not active, skipping execution", scheduleName))
+					logger.Info(fmt.Sprintf("Achedule %q is not active, skipping execution", scheduleName))
 					return
 				}
 
 				if a, ok := s.Spec.Actions[actionName]; !ok || !a.IsActive() {
-					logger.Info(fmt.Sprintf("action %q is not active, skipping execution", actionName))
+					logger.Info(fmt.Sprintf("Action %q is not active, skipping execution", actionName))
 					return
 				}
 
-				logger.Info(fmt.Sprintf("action %q is starting for resource %q", actionName, resourceName))
+				//Logic for managing time periods
+				//Inactive periods have priority over active ones, no active periods means always active.
+				//Truncate time to minute to reflect cron precision
+				now := time.Now().Truncate(time.Minute)
+				if len(s.Spec.ActivePeriods) > 0 {
+					active := false
+					// check if current date is inside an Active Period, if not then skip exec
+					for _, p := range s.Spec.ActivePeriods {
+						if (now.After(p.Start.Time) && now.Before(p.End.Time)) || now.Equal(p.Start.Time) || now.Equal(p.End.Time) {
+							active = true
+							break
+						}
+					}
+					if !active {
+						logger.Info(fmt.Sprintf("Scheduled action %q is outside an active period, skipping execution", actionName))
+						return
+					}
+				}
+				if len(s.Spec.InactivePeriods) > 0 {
+					active := true
+					// check if current date is inside an Inactive Period, if it is then skip exec
+					for _, p := range s.Spec.InactivePeriods {
+						if (now.After(p.Start.Time) && now.Before(p.End.Time)) || now.Equal(p.Start.Time) || now.Equal(p.End.Time) {
+							active = false
+							break
+						}
+					}
+					if !active {
+						logger.Info(fmt.Sprintf("Scheduled action %q is inside an inactive period, skipping execution", actionName))
+						return
+					}
+				}
+
+				logger.Info(fmt.Sprintf("Scheduled action %q is starting for resource %q", actionName, resourceName))
 				job(ctx, req.NamespacedName, actionName)
 			})
 			if err != nil {
