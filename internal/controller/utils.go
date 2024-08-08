@@ -140,7 +140,7 @@ func reconcileResource[ActionType Activable](
 				})
 				continue
 			}
-			logger.Info(fmt.Sprintf("action %q is not scheduled, scheduling it with %q", actionName, scheduleAction.Cron))
+			logger.Info(fmt.Sprintf("Action %q is not scheduled, scheduling it with %q", actionName, scheduleAction.Cron))
 			_, err := cron.Add(scheduleName, actionName, resourceName, scheduleAction.Cron, func() {
 				// retrive schedule for cheking if it is active
 				// we do the check here because the check is simpler, and it avoids us having to delete and create objects in cron schedule
@@ -152,17 +152,18 @@ func reconcileResource[ActionType Activable](
 				}
 
 				if !s.Spec.IsActive() {
-					logger.Info(fmt.Sprintf("schedule %q is not active, skipping execution", scheduleName))
+					logger.Info(fmt.Sprintf("Achedule %q is not active, skipping execution", scheduleName))
 					return
 				}
 
 				if a, ok := s.Spec.Actions[actionName]; !ok || !a.IsActive() {
-					logger.Info(fmt.Sprintf("action %q is not active, skipping execution", actionName))
+					logger.Info(fmt.Sprintf("Action %q is not active, skipping execution", actionName))
 					return
 				}
 
 				//logic for managing time periods
-				now := time.Now()
+				//truncate time to minute to reflect cron precision
+				now := time.Now().Truncate(time.Minute)
 				if len(s.Spec.ActivePeriods) > 0 {
 					active := false
 					// chack if current date is inside an Active Period, if not then skip exec
@@ -173,7 +174,7 @@ func reconcileResource[ActionType Activable](
 						}
 					}
 					if !active {
-						logger.Info(fmt.Sprintf("Schedule %q is outside an active period, skipping execution", scheduleName))
+						logger.Info(fmt.Sprintf("Scheduled action %q is outside an active period, skipping execution", actionName))
 						return
 					}
 				}
@@ -187,12 +188,12 @@ func reconcileResource[ActionType Activable](
 						}
 					}
 					if !active {
-						logger.Info(fmt.Sprintf("Schedule %q is inside an inactive period, skipping execution", scheduleName))
+						logger.Info(fmt.Sprintf("Scheduled action %q is inside an inactive period, skipping execution", actionName))
 						return
 					}
 				}
 
-				logger.Info(fmt.Sprintf("action %q is starting for resource %q", actionName, resourceName))
+				logger.Info(fmt.Sprintf("Scheduled action %q is starting for resource %q", actionName, resourceName))
 				job(ctx, req.NamespacedName, actionName)
 			})
 			if err != nil {
