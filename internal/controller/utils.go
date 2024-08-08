@@ -161,12 +161,13 @@ func reconcileResource[ActionType Activable](
 					return
 				}
 
-				//logic for managing time periods
-				//truncate time to minute to reflect cron precision
+				//Logic for managing time periods
+				//Inactive periods have priority over active ones, no active periods means always active.
+				//Truncate time to minute to reflect cron precision
 				now := time.Now().Truncate(time.Minute)
 				if len(s.Spec.ActivePeriods) > 0 {
 					active := false
-					// chack if current date is inside an Active Period, if not then skip exec
+					// check if current date is inside an Active Period, if not then skip exec
 					for _, p := range s.Spec.ActivePeriods {
 						if (now.After(p.Start.Time) && now.Before(p.End.Time)) || now.Equal(p.Start.Time) || now.Equal(p.End.Time) {
 							active = true
@@ -180,7 +181,7 @@ func reconcileResource[ActionType Activable](
 				}
 				if len(s.Spec.InactivePeriods) > 0 {
 					active := true
-					// chack if current date is inside an Inactive Period, if it is then skip exec
+					// check if current date is inside an Inactive Period, if it is then skip exec
 					for _, p := range s.Spec.InactivePeriods {
 						if (now.After(p.Start.Time) && now.Before(p.End.Time)) || now.Equal(p.Start.Time) || now.Equal(p.End.Time) {
 							active = false
