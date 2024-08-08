@@ -68,6 +68,40 @@ func (r *ScheduleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		instance.Status.Conditions = make([]metav1.Condition, 0)
 	}
 
+	// Check periods
+	update := false
+	if len(instance.Spec.ActivePeriods) > 0 {
+		for i := 0; i < len(instance.Spec.ActivePeriods); i++ {
+			period := instance.Spec.ActivePeriods[0]
+			if period.Start.After(period.End.Time) {
+				logger.Info("Start date is after end date, switching them")
+				instance.Spec.ActivePeriods[i].End = period.Start
+				instance.Spec.ActivePeriods[i].Start = period.End
+				update = true
+			}
+		}
+	}
+	if len(instance.Spec.InactivePeriods) > 0 {
+		for i := 0; i < len(instance.Spec.InactivePeriods); i++ {
+			period := instance.Spec.InactivePeriods[0]
+			if period.Start.After(period.End.Time) {
+				logger.Info("Start date is after end date, switching them")
+				instance.Spec.InactivePeriods[i].End = period.Start
+				instance.Spec.InactivePeriods[i].Start = period.End
+				update = true
+			}
+		}
+	}
+	if update {
+		err = r.Update(ctx, instance)
+		if err != nil {
+			logger.Info("Failed to update Schedule resource. Re-running reconcile.")
+			return ctrl.Result{}, err
+		}
+		// return and trigger another reconcile for the update
+		return ctrl.Result{}, nil
+	}
+
 	err = r.reconcile(ctx, instance)
 	if err != nil {
 		return ctrl.Result{}, err
