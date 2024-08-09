@@ -79,6 +79,11 @@ kind: Schedule
 metadata:
   name: schedule-sample
 spec:
+  enabled: True
+  activePeriods: []
+  inactivePeriods: 
+    - start: '2024-12-24T00:00:00Z'
+      end: '2024-12-26T00:00:00Z'
   actions:
     scaleup:
       cron: '0/4 * * * *'
