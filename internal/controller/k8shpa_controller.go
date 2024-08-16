@@ -101,7 +101,7 @@ func (r *K8sHpaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	return ctrl.Result{}, nil
 }
 
-func (r *K8sHpaReconciler) setAutoscaling(ctx context.Context, key types.NamespacedName, actionName string) {
+func (r *K8sHpaReconciler) setAutoscaling(ctx context.Context, key types.NamespacedName, actionName string) JobResult {
 	logger := log.FromContext(ctx)
 	start := time.Now()
 	obj := &corev1alpha1.K8sHpa{}
@@ -109,15 +109,15 @@ func (r *K8sHpaReconciler) setAutoscaling(ctx context.Context, key types.Namespa
 	if err != nil {
 		if errors.IsNotFound(err) {
 			logger.Info("K8sHpa resource not found. object must has been deleted.")
-			return
+			return JobResultError
 		}
 		logger.Info("Failed to get K8sHpa resource.")
-		return
+		return JobResultError
 	}
 	action, ok := obj.Spec.Actions[actionName]
 	if !ok {
 		logger.Info("Action not found")
-		return
+		return JobResultError
 	}
 
 	selector := labels.SelectorFromSet(obj.Spec.LabelSelector.MatchLabels)
@@ -163,16 +163,19 @@ func (r *K8sHpaReconciler) setAutoscaling(ctx context.Context, key types.Namespa
 			Reason:             "Failed",
 			Message:            strings.Join(errorsList, ";"),
 		})
-	} else {
-		addToConditions(&obj.Status.Conditions, metav1.Condition{
-			LastTransitionTime: metav1.Now(),
-			Type:               actionType,
-			Status:             metav1.ConditionTrue,
-			Reason:             "Success",
-			Message:            fmt.Sprintf("Action %q, last execution start:%q end:%q", actionName, start.Format(time.RFC3339), time.Now().Format(time.RFC3339)),
-		})
+		r.Status().Update(ctx, obj)
+		return JobResultFailure
 	}
+
+	addToConditions(&obj.Status.Conditions, metav1.Condition{
+		LastTransitionTime: metav1.Now(),
+		Type:               actionType,
+		Status:             metav1.ConditionTrue,
+		Reason:             "Success",
+		Message:            fmt.Sprintf("Action %q, last execution start:%q end:%q", actionName, start.Format(time.RFC3339), time.Now().Format(time.RFC3339)),
+	})
 	r.Status().Update(ctx, obj)
+	return JobResultSuccess
 }
 
 // SetupWithManager sets up the controller with the Manager.

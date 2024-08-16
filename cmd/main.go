@@ -22,6 +22,7 @@ import (
 	"os"
 
 	"github.com/d3vlo0p/TimeTerra/internal/cron"
+	"github.com/d3vlo0p/TimeTerra/monitoring"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -50,6 +51,8 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(corev1alpha1.AddToScheme(scheme))
+
+	monitoring.RegisterMetrics()
 	//+kubebuilder:scaffold:scheme
 }
 

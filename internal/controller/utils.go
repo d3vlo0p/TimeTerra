@@ -8,6 +8,7 @@ import (
 
 	corev1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 	sc "github.com/d3vlo0p/TimeTerra/internal/cron"
+	"github.com/d3vlo0p/TimeTerra/monitoring"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -59,6 +60,19 @@ type Activable interface {
 	IsActive() bool
 }
 
+type JobResult string
+
+const (
+	JobResultSuccess JobResult = "Success"
+	JobResultFailure JobResult = "Failure"
+	JobResultError   JobResult = "Error"
+	JobResultSkipped JobResult = "Skipped"
+)
+
+func (jr JobResult) String() string {
+	return string(jr)
+}
+
 func reconcileResource[ActionType Activable](
 	ctx context.Context,
 	req ctrl.Request,
@@ -67,7 +81,7 @@ func reconcileResource[ActionType Activable](
 	instanceActions map[string]ActionType,
 	scheduleName string,
 	resourceName string,
-	job func(ctx context.Context, key types.NamespacedName, actionName string),
+	job func(ctx context.Context, key types.NamespacedName, actionName string) JobResult,
 	conditions *[]metav1.Condition,
 ) error {
 	logger := log.FromContext(ctx)
@@ -144,27 +158,31 @@ func reconcileResource[ActionType Activable](
 			_, err := cron.Add(scheduleName, actionName, resourceName, scheduleAction.Cron, func() {
 				// retrive schedule for cheking if it is active
 				// we do the check here because the check is simpler, and it avoids us having to delete and create objects in cron schedule
+				start := time.Now()
 				s := &corev1alpha1.Schedule{}
 				err := cli.Get(ctx, client.ObjectKey{Name: scheduleName}, s)
 				if err != nil {
 					logger.Error(err, "Cron run, failed to get schedule", "name", scheduleName)
+					monitoring.TimeterraActionExecutionSeconds.WithLabelValues(scheduleName, actionName, resourceName, JobResultError.String()).Observe(time.Since(start).Seconds())
 					return
 				}
 
 				if !s.Spec.IsActive() {
 					logger.Info(fmt.Sprintf("Achedule %q is not active, skipping execution", scheduleName))
+					monitoring.TimeterraActionExecutionSeconds.WithLabelValues(scheduleName, actionName, resourceName, JobResultSkipped.String()).Observe(time.Since(start).Seconds())
 					return
 				}
 
 				if a, ok := s.Spec.Actions[actionName]; !ok || !a.IsActive() {
 					logger.Info(fmt.Sprintf("Action %q is not active, skipping execution", actionName))
+					monitoring.TimeterraActionExecutionSeconds.WithLabelValues(scheduleName, actionName, resourceName, JobResultSkipped.String()).Observe(time.Since(start).Seconds())
 					return
 				}
 
 				//Logic for managing time periods
 				//Inactive periods have priority over active ones, no active periods means always active.
 				//Truncate time to minute to reflect cron precision
-				now := time.Now().Truncate(time.Minute)
+				now := start.Truncate(time.Minute)
 				if len(s.Spec.ActivePeriods) > 0 {
 					active := false
 					// check if current date is inside an Active Period, if not then skip exec
@@ -176,6 +194,7 @@ func reconcileResource[ActionType Activable](
 					}
 					if !active {
 						logger.Info(fmt.Sprintf("Scheduled action %q is outside an active period, skipping execution", actionName))
+						monitoring.TimeterraActionExecutionSeconds.WithLabelValues(scheduleName, actionName, resourceName, JobResultSkipped.String()).Observe(time.Since(start).Seconds())
 						return
 					}
 				}
@@ -190,12 +209,14 @@ func reconcileResource[ActionType Activable](
 					}
 					if !active {
 						logger.Info(fmt.Sprintf("Scheduled action %q is inside an inactive period, skipping execution", actionName))
+						monitoring.TimeterraActionExecutionSeconds.WithLabelValues(scheduleName, actionName, resourceName, JobResultSkipped.String()).Observe(time.Since(start).Seconds())
 						return
 					}
 				}
 
 				logger.Info(fmt.Sprintf("Scheduled action %q is starting for resource %q", actionName, resourceName))
-				job(ctx, req.NamespacedName, actionName)
+				status := job(ctx, req.NamespacedName, actionName)
+				monitoring.TimeterraActionExecutionSeconds.WithLabelValues(scheduleName, actionName, resourceName, status.String()).Observe(time.Since(start).Seconds())
 			})
 			if err != nil {
 				logger.Error(err, "failed to add cron job")
