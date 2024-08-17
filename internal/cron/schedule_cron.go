@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/d3vlo0p/TimeTerra/monitoring"
 	"github.com/go-logr/logr"
 	cron "github.com/robfig/cron/v3"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -68,6 +69,7 @@ func (sm *ScheduleCron) Add(schedule string, action string, resource string, spe
 	}
 	sm.m[schedule][action][resource] = int(id)
 	sm.logger.Info("added cron", "schedule", schedule, "action", action, "resource", resource, "spec", spec, "id", sm.m[schedule][action][resource])
+	monitoring.TimeterraScheduledCronJobs.WithLabelValues(schedule, action).Inc()
 
 	return int(id), nil
 }
@@ -85,6 +87,7 @@ func (sm *ScheduleCron) Remove(schedule string, action string, resource string) 
 	sm.c.Remove(cron.EntryID(sm.m[schedule][action][resource]))
 	delete(sm.m[schedule][action], resource)
 	sm.logger.Info("removed cron", "schedule", schedule, "action", action, "resource", resource)
+	monitoring.TimeterraScheduledCronJobs.WithLabelValues(schedule, action).Dec()
 }
 
 func (sm *ScheduleCron) GetActions(schedule string) map[string]map[string]int {

@@ -99,7 +99,7 @@ func (r *AwsEc2InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	return ctrl.Result{}, nil
 }
 
-func (r *AwsEc2InstanceReconciler) startStopInstances(ctx context.Context, key types.NamespacedName, actionName string) {
+func (r *AwsEc2InstanceReconciler) startStopInstances(ctx context.Context, key types.NamespacedName, actionName string) JobResult {
 	logger := log.FromContext(ctx)
 	start := time.Now()
 	obj := &corev1alpha1.AwsEc2Instance{}
@@ -107,21 +107,21 @@ func (r *AwsEc2InstanceReconciler) startStopInstances(ctx context.Context, key t
 	if err != nil {
 		if errors.IsNotFound(err) {
 			logger.Error(err, "AwsEc2Instance resource not found. object must has been deleted.")
-			return
+			return JobResultError
 		}
 		logger.Error(err, "Failed to get AwsEc2Instance resource.")
-		return
+		return JobResultError
 	}
 	action, ok := obj.Spec.Actions[actionName]
 	if !ok {
 		logger.Info("Action not found")
-		return
+		return JobResultError
 	}
 
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		logger.Error(err, "unable to load SDK config")
-		return
+		return JobResultError
 	}
 
 	actionType := ConditionTypeForAction(actionName)
@@ -179,16 +179,19 @@ func (r *AwsEc2InstanceReconciler) startStopInstances(ctx context.Context, key t
 			Reason:             "Failed",
 			Message:            strings.Join(errorsList, ";"),
 		})
-	} else {
-		addToConditions(&obj.Status.Conditions, metav1.Condition{
-			LastTransitionTime: metav1.Now(),
-			Type:               actionType,
-			Status:             metav1.ConditionTrue,
-			Reason:             "Success",
-			Message:            fmt.Sprintf("Action %q, last execution start:%q end:%q", actionName, start.Format(time.RFC3339), time.Now().Format(time.RFC3339)),
-		})
+		r.Status().Update(ctx, obj)
+		return JobResultFailure
 	}
+
+	addToConditions(&obj.Status.Conditions, metav1.Condition{
+		LastTransitionTime: metav1.Now(),
+		Type:               actionType,
+		Status:             metav1.ConditionTrue,
+		Reason:             "Success",
+		Message:            fmt.Sprintf("Action %q, last execution start:%q end:%q", actionName, start.Format(time.RFC3339), time.Now().Format(time.RFC3339)),
+	})
 	r.Status().Update(ctx, obj)
+	return JobResultSuccess
 }
 
 // SetupWithManager sets up the controller with the Manager.
