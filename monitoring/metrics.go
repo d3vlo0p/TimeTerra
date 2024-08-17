@@ -10,7 +10,7 @@ var (
 		prometheus.HistogramOpts{
 			Name:    "timeterra_action_execution_seconds",
 			Help:    "Time taken to execute a Timeterra action.",
-			Buckets: []float64{0.1, 0.2, 0.3, 0.5, 1, 2, 5, 10, 30, 60, 120, 180, 300},
+			Buckets: []float64{0.01, 0.025, 0.05, 0.1, 0.2, 0.3, 0.5, 1, 2, 3, 5, 10, 20, 30, 60},
 		},
 		[]string{"schedule", "action", "resource", "status"},
 	)
