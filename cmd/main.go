@@ -23,6 +23,7 @@ import (
 
 	"github.com/d3vlo0p/TimeTerra/internal/cron"
 	"github.com/d3vlo0p/TimeTerra/monitoring"
+	"github.com/d3vlo0p/TimeTerra/notification"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -134,6 +135,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Starting Notification Service
+	ns := notification.New()
+	if err = mgr.Add(ns); err != nil {
+		setupLog.Error(err, "unable to add notification service")
+		os.Exit(1)
+	}
+
 	if err = (&controller.ScheduleReconciler{
 		Client:   mgr.GetClient(),
 		Scheme:   mgr.GetScheme(),
@@ -144,66 +152,82 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&controller.K8sHpaReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Cron:     c,
-		Recorder: mgr.GetEventRecorderFor("k8shpa-controller"),
+		Client:              mgr.GetClient(),
+		Scheme:              mgr.GetScheme(),
+		Cron:                c,
+		NotificationService: ns,
+		Recorder:            mgr.GetEventRecorderFor("k8shpa-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "K8sHpa")
 		os.Exit(1)
 	}
 	if err = (&controller.K8sPodReplicasReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Cron:     c,
-		Recorder: mgr.GetEventRecorderFor("k8spodreplicas-controller"),
+		Client:              mgr.GetClient(),
+		Scheme:              mgr.GetScheme(),
+		Cron:                c,
+		NotificationService: ns,
+		Recorder:            mgr.GetEventRecorderFor("k8spodreplicas-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "K8sPodReplicas")
 		os.Exit(1)
 	}
 	if err = (&controller.AwsRdsAuroraClusterReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Cron:     c,
-		Recorder: mgr.GetEventRecorderFor("awsrdsauroracluster-controller"),
+		Client:              mgr.GetClient(),
+		Scheme:              mgr.GetScheme(),
+		Cron:                c,
+		NotificationService: ns,
+		Recorder:            mgr.GetEventRecorderFor("awsrdsauroracluster-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AwsRdsAuroraCluster")
 		os.Exit(1)
 	}
 	if err = (&controller.AwsDocumentDBClusterReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Cron:     c,
-		Recorder: mgr.GetEventRecorderFor("awsdocumentdbcluster-controller"),
+		Client:              mgr.GetClient(),
+		Scheme:              mgr.GetScheme(),
+		Cron:                c,
+		NotificationService: ns,
+		Recorder:            mgr.GetEventRecorderFor("awsdocumentdbcluster-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AwsDocumentDBCluster")
 		os.Exit(1)
 	}
 	if err = (&controller.AwsTransferFamilyReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Cron:     c,
-		Recorder: mgr.GetEventRecorderFor("awstransferfamily-controller"),
+		Client:              mgr.GetClient(),
+		Scheme:              mgr.GetScheme(),
+		Cron:                c,
+		NotificationService: ns,
+		Recorder:            mgr.GetEventRecorderFor("awstransferfamily-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AwsTransferFamily")
 		os.Exit(1)
 	}
 	if err = (&controller.AwsEc2InstanceReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Cron:     c,
-		Recorder: mgr.GetEventRecorderFor("awsec2instance-controller"),
+		Client:              mgr.GetClient(),
+		Scheme:              mgr.GetScheme(),
+		Cron:                c,
+		NotificationService: ns,
+		Recorder:            mgr.GetEventRecorderFor("awsec2instance-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AwsEc2Instance")
 		os.Exit(1)
 	}
 	if err = (&controller.K8sRunJobReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Cron:     c,
-		Recorder: mgr.GetEventRecorderFor("k8srunjob-controller"),
+		Client:              mgr.GetClient(),
+		Scheme:              mgr.GetScheme(),
+		Cron:                c,
+		NotificationService: ns,
+		Recorder:            mgr.GetEventRecorderFor("k8srunjob-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "K8sRunJob")
+		os.Exit(1)
+	}
+	if err = (&controller.NotificationPolicyReconciler{
+		Client:              mgr.GetClient(),
+		Scheme:              mgr.GetScheme(),
+		NotificationService: ns,
+		Recorder:            mgr.GetEventRecorderFor("notificationpolicy-controller"),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "NotificationPolicy")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

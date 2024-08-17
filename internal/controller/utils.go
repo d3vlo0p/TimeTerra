@@ -9,6 +9,7 @@ import (
 	corev1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 	sc "github.com/d3vlo0p/TimeTerra/internal/cron"
 	"github.com/d3vlo0p/TimeTerra/monitoring"
+	"github.com/d3vlo0p/TimeTerra/notification"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -78,6 +79,7 @@ func reconcileResource[ActionType Activable](
 	req ctrl.Request,
 	cli client.Client,
 	cron *sc.ScheduleCron,
+	notificationService *notification.NotificationService,
 	instanceActions map[string]ActionType,
 	scheduleName string,
 	resourceName string,
@@ -217,6 +219,14 @@ func reconcileResource[ActionType Activable](
 				logger.Info(fmt.Sprintf("Scheduled action %q is starting for resource %q", actionName, resourceName))
 				status := job(ctx, req.NamespacedName, actionName)
 				monitoring.TimeterraActionExecutionSeconds.WithLabelValues(scheduleName, actionName, resourceName, status.String()).Observe(time.Since(start).Seconds())
+				// TODO: add message to notification
+				notificationService.Send(notification.NotificationBody{
+					Schedule: scheduleName,
+					Action:   actionName,
+					Resource: resourceName,
+					Message:  "",
+					Status:   status.String(),
+				})
 			})
 			if err != nil {
 				logger.Error(err, "failed to add cron job")

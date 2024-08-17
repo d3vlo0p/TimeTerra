@@ -36,14 +36,16 @@ import (
 
 	corev1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 	"github.com/d3vlo0p/TimeTerra/internal/cron"
+	"github.com/d3vlo0p/TimeTerra/notification"
 )
 
 // K8sPodReplicasReconciler reconciles a K8sPodReplicas object
 type K8sPodReplicasReconciler struct {
 	client.Client
-	Scheme   *runtime.Scheme
-	Cron     *cron.ScheduleCron
-	Recorder record.EventRecorder
+	Scheme              *runtime.Scheme
+	Cron                *cron.ScheduleCron
+	NotificationService *notification.NotificationService
+	Recorder            record.EventRecorder
 }
 
 //+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=k8spodreplicas,verbs=get;list;watch;create;update;patch;delete
@@ -88,7 +90,7 @@ func (r *K8sPodReplicasReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	if instance.Spec.Enabled != nil && !*instance.Spec.Enabled {
 		disableResource(r.Cron, &instance.Status.Conditions, resourceName)
 	} else {
-		err := reconcileResource(ctx, req, r.Client, r.Cron, instance.Spec.Actions, instance.Spec.Schedule, resourceName, r.setReplicas, &instance.Status.Conditions)
+		err := reconcileResource(ctx, req, r.Client, r.Cron, r.NotificationService, instance.Spec.Actions, instance.Spec.Schedule, resourceName, r.setReplicas, &instance.Status.Conditions)
 		if err != nil {
 			return ctrl.Result{}, err
 		}

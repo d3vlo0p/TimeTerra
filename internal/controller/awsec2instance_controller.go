@@ -36,14 +36,16 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	corev1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 	"github.com/d3vlo0p/TimeTerra/internal/cron"
+	"github.com/d3vlo0p/TimeTerra/notification"
 )
 
 // AwsEc2InstanceReconciler reconciles a AwsEc2Instance object
 type AwsEc2InstanceReconciler struct {
 	client.Client
-	Scheme   *runtime.Scheme
-	Cron     *cron.ScheduleCron
-	Recorder record.EventRecorder
+	Scheme              *runtime.Scheme
+	Cron                *cron.ScheduleCron
+	NotificationService *notification.NotificationService
+	Recorder            record.EventRecorder
 }
 
 //+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=awsec2instances,verbs=get;list;watch;create;update;patch;delete
@@ -85,7 +87,7 @@ func (r *AwsEc2InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	if instance.Spec.Enabled != nil && !*instance.Spec.Enabled {
 		disableResource(r.Cron, &instance.Status.Conditions, resourceName)
 	} else {
-		err := reconcileResource(ctx, req, r.Client, r.Cron, instance.Spec.Actions, instance.Spec.Schedule, resourceName, r.startStopInstances, &instance.Status.Conditions)
+		err := reconcileResource(ctx, req, r.Client, r.Cron, r.NotificationService, instance.Spec.Actions, instance.Spec.Schedule, resourceName, r.startStopInstances, &instance.Status.Conditions)
 		if err != nil {
 			return ctrl.Result{}, err
 		}

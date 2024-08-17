@@ -1,0 +1,23 @@
+# permissions for end users to view notificationpolicies.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: timeterra
+    app.kubernetes.io/managed-by: kustomize
+  name: notificationpolicy-viewer-role
+rules:
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - notificationpolicies
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - notificationpolicies/status
+  verbs:
+  - get

@@ -10,6 +10,7 @@ resources:
 - bases/core.timeterra.d3vlo0p.dev_awstransferfamilies.yaml
 - bases/core.timeterra.d3vlo0p.dev_awsec2instances.yaml
 - bases/core.timeterra.d3vlo0p.dev_k8srunjobs.yaml
+- bases/core.timeterra.d3vlo0p.dev_notificationpolicies.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patches:
@@ -35,6 +36,7 @@ patches:
 #- path: patches/cainjection_in_awstransferfamilies.yaml
 #- path: patches/cainjection_in_awsec2instances.yaml
 #- path: patches/cainjection_in_k8srunjobs.yaml
+#- path: patches/cainjection_in_notificationpolicies.yaml
 #+kubebuilder:scaffold:crdkustomizecainjectionpatch
 
 # [WEBHOOK] To enable webhook, uncomment the following section
