@@ -28,6 +28,10 @@ func NewApiNotification(ctx context.Context, config ApiNotificationConfig) *ApiN
 	}
 }
 
+func (n *ApiNotification) Type() NotificationType {
+	return NotificationTypeApi
+}
+
 func (n *ApiNotification) Notify(id string, body NotificationBody) error {
 	jsonBody, err := json.Marshal(body)
 	if err != nil {

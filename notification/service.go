@@ -3,7 +3,9 @@ package notification
 import (
 	"context"
 	"sync"
+	"time"
 
+	"github.com/d3vlo0p/TimeTerra/monitoring"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -18,6 +20,7 @@ type NotificationBody struct {
 
 type Recipient interface {
 	Notify(id string, body NotificationBody) error
+	Type() NotificationType
 }
 
 type NotificationService struct {
@@ -41,6 +44,10 @@ func (s *NotificationService) RemoveRecipient(id string) {
 	// remove recipient from all schedules
 	for scheduleName := range s.recipients {
 		s.logger.Info("Removing recipient", "id", id, "schedule", scheduleName)
+		if _, ok := s.recipients[scheduleName][id]; !ok {
+			continue
+		}
+		monitoring.TimeTerraNotificationPolicies.WithLabelValues(s.recipients[scheduleName][id].Type().String(), scheduleName).Dec()
 		delete(s.recipients[scheduleName], id)
 	}
 }
@@ -55,6 +62,7 @@ func (s *NotificationService) AddRecipientToSchedule(schedule string, id string,
 	// add recipient to schedule
 	s.logger.Info("Adding recipient", "id", id, "schedule", schedule)
 	s.recipients[schedule][id] = recipient
+	monitoring.TimeTerraNotificationPolicies.WithLabelValues(recipient.Type().String(), schedule).Inc()
 }
 
 func (s *NotificationService) Send(body NotificationBody) {
@@ -74,10 +82,14 @@ func (s *NotificationService) run(i uint, wg *sync.WaitGroup) {
 			continue
 		}
 		for id, recipient := range s.recipients[body.Schedule] {
+			start := time.Now()
+			status := "success"
 			err := recipient.Notify(id, body)
 			if err != nil {
 				s.logger.Error(err, "Failed to notify recipient")
+				status = "failed"
 			}
+			monitoring.TimeTerraNotificationLatency.WithLabelValues(recipient.Type().String(), body.Schedule, body.Action, body.Resource, status).Observe(time.Since(start).Seconds())
 		}
 	}
 	s.logger.Info("Notification service stopped", "thread", i)

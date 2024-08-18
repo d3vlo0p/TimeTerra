@@ -102,7 +102,7 @@ func (r *NotificationPolicyReconciler) reconcile(ctx context.Context, instance *
 
 	var recipient notification.Recipient
 	switch instance.Spec.Type {
-	case corev1alpha1.NotificationTypeApi:
+	case notification.NotificationTypeApi:
 		logger.Info("Handling API notification")
 		if instance.Spec.Api == nil {
 			logger.Info("api notification type requires api configuration")
@@ -120,7 +120,7 @@ func (r *NotificationPolicyReconciler) reconcile(ctx context.Context, instance *
 			Url:    instance.Spec.Api.Url,
 			Method: instance.Spec.Api.Method,
 		})
-	case corev1alpha1.NotificationTypeMSTeams:
+	case notification.NotificationTypeMSTeams:
 		logger.Info("Handling MS Teams notification")
 		if instance.Spec.MSTeams == nil {
 			logger.Info("ms teams notification type requires ms teams configuration")

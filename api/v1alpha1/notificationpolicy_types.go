@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/d3vlo0p/TimeTerra/notification"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -35,23 +36,12 @@ func (r NotificationPolicySpec) IsActive() bool {
 	return r.Enabled == nil || *r.Enabled
 }
 
-type NotificationType string
-
-const (
-	NotificationTypeApi     NotificationType = "api"
-	NotificationTypeMSTeams NotificationType = "msteams"
-)
-
-func (r NotificationType) String() string {
-	return string(r)
-}
-
 // NotificationPolicySpec defines the desired state of NotificationPolicy
 type NotificationPolicySpec struct {
 	Enabled   *bool    `json:"enabled,omitempty"`
 	Schedules []string `json:"schedules"`
 	// +kubebuilder:validation:Enum:=api;msteams
-	Type    NotificationType               `json:"type"`
+	Type    notification.NotificationType  `json:"type"`
 	Api     *NotificationPolicyApiSpec     `json:"api,omitempty"`
 	MSTeams *NotificationPolicyMSTeamsSpec `json:"msteams,omitempty"`
 }

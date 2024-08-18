@@ -28,6 +28,10 @@ func NewMSTeamsNotification(ctx context.Context, config MSTeamsNotificationConfi
 	}
 }
 
+func (n *MSTeamsNotification) Type() NotificationType {
+	return NotificationTypeMSTeams
+}
+
 type CardContentMSTeams struct {
 	Schema  string           `json:"$schema"`
 	Type    string           `json:"type"`
