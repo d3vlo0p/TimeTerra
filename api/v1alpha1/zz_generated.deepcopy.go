@@ -1126,6 +1126,11 @@ func (in *NotificationPolicySpec) DeepCopyInto(out *NotificationPolicySpec) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.Schedules != nil {
+		in, out := &in.Schedules, &out.Schedules
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.Api != nil {
 		in, out := &in.Api, &out.Api
 		*out = new(NotificationPolicyApiSpec)

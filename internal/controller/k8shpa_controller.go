@@ -103,23 +103,22 @@ func (r *K8sHpaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	return ctrl.Result{}, nil
 }
 
-func (r *K8sHpaReconciler) setAutoscaling(ctx context.Context, key types.NamespacedName, actionName string) JobResult {
+func (r *K8sHpaReconciler) setAutoscaling(ctx context.Context, key types.NamespacedName, actionName string) (JobResult, JobMetadata) {
+	metadata := JobMetadata{}
 	logger := log.FromContext(ctx)
 	start := time.Now()
 	obj := &corev1alpha1.K8sHpa{}
 	err := r.Get(ctx, key, obj)
 	if err != nil {
-		if errors.IsNotFound(err) {
-			logger.Info("K8sHpa resource not found. object must has been deleted.")
-			return JobResultError
-		}
 		logger.Info("Failed to get K8sHpa resource.")
-		return JobResultError
+		metadata["error"] = err.Error()
+		return JobResultError, metadata
 	}
 	action, ok := obj.Spec.Actions[actionName]
 	if !ok {
-		logger.Info("Action not found")
-		return JobResultError
+		logger.Info(fmt.Sprintf("Action %q not found in HPA resource.", actionName))
+		metadata["error"] = fmt.Sprintf("Action %q not found in HPA resource.", actionName)
+		return JobResultError, metadata
 	}
 
 	selector := labels.SelectorFromSet(obj.Spec.LabelSelector.MatchLabels)
@@ -166,7 +165,8 @@ func (r *K8sHpaReconciler) setAutoscaling(ctx context.Context, key types.Namespa
 			Message:            strings.Join(errorsList, ";"),
 		})
 		r.Status().Update(ctx, obj)
-		return JobResultFailure
+		metadata["error_list"] = errorsList
+		return JobResultFailure, metadata
 	}
 
 	addToConditions(&obj.Status.Conditions, metav1.Condition{
@@ -177,7 +177,7 @@ func (r *K8sHpaReconciler) setAutoscaling(ctx context.Context, key types.Namespa
 		Message:            fmt.Sprintf("Action %q, last execution start:%q end:%q", actionName, start.Format(time.RFC3339), time.Now().Format(time.RFC3339)),
 	})
 	r.Status().Update(ctx, obj)
-	return JobResultSuccess
+	return JobResultSuccess, metadata
 }
 
 // SetupWithManager sets up the controller with the Manager.

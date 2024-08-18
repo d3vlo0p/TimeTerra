@@ -6,4 +6,9 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: notificationpolicy-sample
 spec:
-  # TODO(user): Add fields here
+  schedules:
+    - schedule-sample
+  type: api
+  api:
+    url: https://devloop.free.beeceptor.com/notify
+    method: post

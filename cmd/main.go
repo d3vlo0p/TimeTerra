@@ -136,7 +136,7 @@ func main() {
 	}
 
 	// Starting Notification Service
-	ns := notification.New()
+	ns := notification.NewNotificationService()
 	if err = mgr.Add(ns); err != nil {
 		setupLog.Error(err, "unable to add notification service")
 		os.Exit(1)

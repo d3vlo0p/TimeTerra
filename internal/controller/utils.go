@@ -74,6 +74,8 @@ func (jr JobResult) String() string {
 	return string(jr)
 }
 
+type JobMetadata map[string]any
+
 func reconcileResource[ActionType Activable](
 	ctx context.Context,
 	req ctrl.Request,
@@ -83,7 +85,7 @@ func reconcileResource[ActionType Activable](
 	instanceActions map[string]ActionType,
 	scheduleName string,
 	resourceName string,
-	job func(ctx context.Context, key types.NamespacedName, actionName string) JobResult,
+	job func(ctx context.Context, key types.NamespacedName, actionName string) (JobResult, JobMetadata),
 	conditions *[]metav1.Condition,
 ) error {
 	logger := log.FromContext(ctx)
@@ -217,15 +219,14 @@ func reconcileResource[ActionType Activable](
 				}
 
 				logger.Info(fmt.Sprintf("Scheduled action %q is starting for resource %q", actionName, resourceName))
-				status := job(ctx, req.NamespacedName, actionName)
+				status, metadata := job(ctx, req.NamespacedName, actionName)
 				monitoring.TimeterraActionExecutionSeconds.WithLabelValues(scheduleName, actionName, resourceName, status.String()).Observe(time.Since(start).Seconds())
-				// TODO: add message to notification
 				notificationService.Send(notification.NotificationBody{
 					Schedule: scheduleName,
 					Action:   actionName,
 					Resource: resourceName,
-					Message:  "",
 					Status:   status.String(),
+					Metadata: metadata,
 				})
 			})
 			if err != nil {

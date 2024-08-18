@@ -56,14 +56,16 @@ spec:
                 type: object
               enabled:
                 type: boolean
-              schedule:
-                type: string
+              schedules:
+                items:
+                  type: string
+                type: array
               type:
                 enum:
                 - api
                 type: string
             required:
-            - schedule
+            - schedules
             - type
             type: object
           status:

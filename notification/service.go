@@ -9,11 +9,11 @@ import (
 )
 
 type NotificationBody struct {
-	Schedule string
-	Action   string
-	Resource string
-	Message  string
-	Status   string
+	Schedule string         `json:"schedule"`
+	Action   string         `json:"action"`
+	Resource string         `json:"resource"`
+	Status   string         `json:"status"`
+	Metadata map[string]any `json:"metadata"`
 }
 
 type Recipient interface {
@@ -24,11 +24,13 @@ type NotificationService struct {
 	ch         chan NotificationBody
 	recipients map[string]map[string]Recipient
 	logger     logr.Logger
+	threads    uint
 }
 
-func New() *NotificationService {
+func NewNotificationService() *NotificationService {
 	return &NotificationService{
-		ch: make(chan NotificationBody),
+		ch:      make(chan NotificationBody),
+		threads: 3,
 	}
 }
 
@@ -37,8 +39,9 @@ func (s *NotificationService) RemoveRecipient(id string) {
 		return
 	}
 	// remove recipient from all schedules
-	for _, recipients := range s.recipients {
-		delete(recipients, id)
+	for scheduleName := range s.recipients {
+		s.logger.Info("Removing recipient", "id", id, "schedule", scheduleName)
+		delete(s.recipients[scheduleName], id)
 	}
 }
 
@@ -49,6 +52,8 @@ func (s *NotificationService) AddRecipientToSchedule(schedule string, id string,
 	if s.recipients[schedule] == nil {
 		s.recipients[schedule] = make(map[string]Recipient)
 	}
+	// add recipient to schedule
+	s.logger.Info("Adding recipient", "id", id, "schedule", schedule)
 	s.recipients[schedule][id] = recipient
 }
 
@@ -56,30 +61,39 @@ func (s *NotificationService) Send(body NotificationBody) {
 	s.ch <- body
 }
 
+func (s *NotificationService) run(i uint, wg *sync.WaitGroup) {
+	s.logger.Info("Notification service started", "thread", i)
+	defer wg.Done()
+	// loop until channel is closed
+	for {
+		body, ok := <-s.ch
+		if !ok {
+			break
+		}
+		if _, ok := s.recipients[body.Schedule]; !ok {
+			continue
+		}
+		for _, recipient := range s.recipients[body.Schedule] {
+			err := recipient.Notify(body)
+			if err != nil {
+				s.logger.Error(err, "Failed to notify recipient")
+			}
+		}
+	}
+	s.logger.Info("Notification service stopped", "thread", i)
+}
+
 func (s *NotificationService) Start(ctx context.Context) error {
 	s.logger = log.FromContext(ctx)
 	var wg sync.WaitGroup
+
 	// start notification service
 	s.logger.Info("Starting notification service")
-	wg.Add(1)
-	go func() {
-		s.logger.Info("Notification service started")
-		defer wg.Done()
-		// loop until channel is closed
-		for {
-			body, ok := <-s.ch
-			if !ok {
-				break
-			}
-			if _, ok := s.recipients[body.Schedule]; !ok {
-				continue
-			}
-			for _, recipient := range s.recipients[body.Schedule] {
-				recipient.Notify(body)
-			}
-		}
-		s.logger.Info("Notification service stopped")
-	}()
+	for i := uint(0); i < s.threads; i++ {
+		wg.Add(1)
+		go s.run(i, &wg)
+	}
+
 	stopSignal := make(chan struct{})
 	go func() {
 		<-ctx.Done()

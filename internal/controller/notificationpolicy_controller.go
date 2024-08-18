@@ -63,7 +63,7 @@ func (r *NotificationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 	if err != nil {
 		if errors.IsNotFound(err) {
 			logger.Info("NotificationPolicy resource not found. object must has been deleted.")
-			r.NotificationService.RemoveRecipient(instance.Name)
+			r.NotificationService.RemoveRecipient(req.Name)
 			return ctrl.Result{}, nil
 		}
 		logger.Info("Failed to get NotificationPolicy resource. Re-running reconcile.")
@@ -96,7 +96,10 @@ func (r *NotificationPolicyReconciler) reconcile(ctx context.Context, instance *
 		if instance.Spec.Api == nil {
 			return fmt.Errorf("api notification type requires api configuration")
 		}
-		api := notification.NewApiNotification(ctx, instance.Name, instance.Spec.Api.Url)
+		api := notification.NewApiNotification(ctx, instance.Name, notification.ApiNotificationConfig{
+			Url:    instance.Spec.Api.Url,
+			Method: instance.Spec.Api.Method,
+		})
 		for _, schedule := range instance.Spec.Schedules {
 			r.NotificationService.AddRecipientToSchedule(schedule, instance.Name, api)
 		}
