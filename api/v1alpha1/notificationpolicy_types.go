@@ -64,6 +64,7 @@ type NotificationPolicyStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:scope=Cluster
+//+kubebuilder:printcolumn:name="Type",type="string",JSONPath=`.spec.type`
 //+kubebuilder:printcolumn:name="Ready",type="boolean",JSONPath=`.status.conditions[?(@.type=="Ready")].status`
 
 // NotificationPolicy is the Schema for the notificationpolicies API

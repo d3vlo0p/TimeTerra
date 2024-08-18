@@ -14,7 +14,14 @@ spec:
     singular: notificationpolicy
   scope: Cluster
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .spec.type
+      name: Type
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Ready")].status
+      name: Ready
+      type: boolean
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: NotificationPolicy is the Schema for the notificationpolicies
@@ -56,14 +63,27 @@ spec:
                 type: object
               enabled:
                 type: boolean
-              schedule:
-                type: string
+              msteams:
+                properties:
+                  cardtitle:
+                    type: string
+                  webhookurl:
+                    type: string
+                required:
+                - cardtitle
+                - webhookurl
+                type: object
+              schedules:
+                items:
+                  type: string
+                type: array
               type:
                 enum:
                 - api
+                - msteams
                 type: string
             required:
-            - schedule
+            - schedules
             - type
             type: object
           status:
