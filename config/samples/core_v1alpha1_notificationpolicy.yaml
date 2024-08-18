@@ -1,0 +1,14 @@
+apiVersion: core.timeterra.d3vlo0p.dev/v1alpha1
+kind: NotificationPolicy
+metadata:
+  labels:
+    app.kubernetes.io/name: timeterra
+    app.kubernetes.io/managed-by: kustomize
+  name: notificationpolicy-sample
+spec:
+  schedules:
+    - schedule-sample
+  type: api
+  api:
+    url: https://devloop.free.beeceptor.com/notify
+    method: post

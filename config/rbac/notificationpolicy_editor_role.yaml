@@ -1,0 +1,27 @@
+# permissions for end users to edit notificationpolicies.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: timeterra
+    app.kubernetes.io/managed-by: kustomize
+  name: notificationpolicy-editor-role
+rules:
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - notificationpolicies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - core.timeterra.d3vlo0p.dev
+  resources:
+  - notificationpolicies/status
+  verbs:
+  - get

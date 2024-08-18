@@ -36,14 +36,16 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	corev1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 	"github.com/d3vlo0p/TimeTerra/internal/cron"
+	"github.com/d3vlo0p/TimeTerra/notification"
 )
 
 // AwsEc2InstanceReconciler reconciles a AwsEc2Instance object
 type AwsEc2InstanceReconciler struct {
 	client.Client
-	Scheme   *runtime.Scheme
-	Cron     *cron.ScheduleCron
-	Recorder record.EventRecorder
+	Scheme              *runtime.Scheme
+	Cron                *cron.ScheduleCron
+	NotificationService *notification.NotificationService
+	Recorder            record.EventRecorder
 }
 
 //+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=awsec2instances,verbs=get;list;watch;create;update;patch;delete
@@ -85,7 +87,7 @@ func (r *AwsEc2InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	if instance.Spec.Enabled != nil && !*instance.Spec.Enabled {
 		disableResource(r.Cron, &instance.Status.Conditions, resourceName)
 	} else {
-		err := reconcileResource(ctx, req, r.Client, r.Cron, instance.Spec.Actions, instance.Spec.Schedule, resourceName, r.startStopInstances, &instance.Status.Conditions)
+		err := reconcileResource(ctx, req, r.Client, r.Cron, r.NotificationService, instance.Spec.Actions, instance.Spec.Schedule, resourceName, r.startStopInstances, &instance.Status.Conditions)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -99,29 +101,29 @@ func (r *AwsEc2InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	return ctrl.Result{}, nil
 }
 
-func (r *AwsEc2InstanceReconciler) startStopInstances(ctx context.Context, key types.NamespacedName, actionName string) JobResult {
+func (r *AwsEc2InstanceReconciler) startStopInstances(ctx context.Context, key types.NamespacedName, actionName string) (JobResult, JobMetadata) {
+	metadata := JobMetadata{}
 	logger := log.FromContext(ctx)
 	start := time.Now()
 	obj := &corev1alpha1.AwsEc2Instance{}
 	err := r.Get(ctx, key, obj)
 	if err != nil {
-		if errors.IsNotFound(err) {
-			logger.Error(err, "AwsEc2Instance resource not found. object must has been deleted.")
-			return JobResultError
-		}
 		logger.Error(err, "Failed to get AwsEc2Instance resource.")
-		return JobResultError
+		metadata["error"] = err.Error()
+		return JobResultError, metadata
 	}
 	action, ok := obj.Spec.Actions[actionName]
 	if !ok {
-		logger.Info("Action not found")
-		return JobResultError
+		logger.Info(fmt.Sprintf("Action %q not found in AWSEc2Instance resource.", actionName))
+		metadata["error"] = fmt.Sprintf("Action %q not found in AWSEc2Instance resource.", actionName)
+		return JobResultError, metadata
 	}
 
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		logger.Error(err, "unable to load SDK config")
-		return JobResultError
+		metadata["error"] = err.Error()
+		return JobResultError, metadata
 	}
 
 	actionType := ConditionTypeForAction(actionName)
@@ -180,7 +182,8 @@ func (r *AwsEc2InstanceReconciler) startStopInstances(ctx context.Context, key t
 			Message:            strings.Join(errorsList, ";"),
 		})
 		r.Status().Update(ctx, obj)
-		return JobResultFailure
+		metadata["error_list"] = errorsList
+		return JobResultFailure, metadata
 	}
 
 	addToConditions(&obj.Status.Conditions, metav1.Condition{
@@ -191,7 +194,7 @@ func (r *AwsEc2InstanceReconciler) startStopInstances(ctx context.Context, key t
 		Message:            fmt.Sprintf("Action %q, last execution start:%q end:%q", actionName, start.Format(time.RFC3339), time.Now().Format(time.RFC3339)),
 	})
 	r.Status().Update(ctx, obj)
-	return JobResultSuccess
+	return JobResultSuccess, metadata
 }
 
 // SetupWithManager sets up the controller with the Manager.

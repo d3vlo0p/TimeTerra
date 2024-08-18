@@ -9,6 +9,7 @@ import (
 	corev1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 	sc "github.com/d3vlo0p/TimeTerra/internal/cron"
 	"github.com/d3vlo0p/TimeTerra/monitoring"
+	"github.com/d3vlo0p/TimeTerra/notification"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -73,15 +74,18 @@ func (jr JobResult) String() string {
 	return string(jr)
 }
 
+type JobMetadata map[string]any
+
 func reconcileResource[ActionType Activable](
 	ctx context.Context,
 	req ctrl.Request,
 	cli client.Client,
 	cron *sc.ScheduleCron,
+	notificationService *notification.NotificationService,
 	instanceActions map[string]ActionType,
 	scheduleName string,
 	resourceName string,
-	job func(ctx context.Context, key types.NamespacedName, actionName string) JobResult,
+	job func(ctx context.Context, key types.NamespacedName, actionName string) (JobResult, JobMetadata),
 	conditions *[]metav1.Condition,
 ) error {
 	logger := log.FromContext(ctx)
@@ -215,8 +219,15 @@ func reconcileResource[ActionType Activable](
 				}
 
 				logger.Info(fmt.Sprintf("Scheduled action %q is starting for resource %q", actionName, resourceName))
-				status := job(ctx, req.NamespacedName, actionName)
+				status, metadata := job(ctx, req.NamespacedName, actionName)
 				monitoring.TimeterraActionExecutionSeconds.WithLabelValues(scheduleName, actionName, resourceName, status.String()).Observe(time.Since(start).Seconds())
+				notificationService.Send(notification.NotificationBody{
+					Schedule: scheduleName,
+					Action:   actionName,
+					Resource: resourceName,
+					Status:   status.String(),
+					Metadata: metadata,
+				})
 			})
 			if err != nil {
 				logger.Error(err, "failed to add cron job")

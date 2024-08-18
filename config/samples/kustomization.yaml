@@ -10,4 +10,5 @@ resources:
 - core_v1alpha1_awstransferfamily.yaml
 - core_v1alpha1_awsec2instance.yaml
 - core_v1alpha1_k8srunjob.yaml
+- core_v1alpha1_notificationpolicy.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

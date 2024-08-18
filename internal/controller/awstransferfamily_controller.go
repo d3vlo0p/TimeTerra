@@ -36,14 +36,16 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/transfer"
 	corev1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 	"github.com/d3vlo0p/TimeTerra/internal/cron"
+	"github.com/d3vlo0p/TimeTerra/notification"
 )
 
 // AwsTransferFamilyReconciler reconciles a AwsTransferFamily object
 type AwsTransferFamilyReconciler struct {
 	client.Client
-	Scheme   *runtime.Scheme
-	Cron     *cron.ScheduleCron
-	Recorder record.EventRecorder
+	Scheme              *runtime.Scheme
+	Cron                *cron.ScheduleCron
+	NotificationService *notification.NotificationService
+	Recorder            record.EventRecorder
 }
 
 //+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=awstransferfamilies,verbs=get;list;watch;create;update;patch;delete
@@ -85,7 +87,7 @@ func (r *AwsTransferFamilyReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	if instance.Spec.Enabled != nil && !*instance.Spec.Enabled {
 		disableResource(r.Cron, &instance.Status.Conditions, resourceName)
 	} else {
-		err := reconcileResource(ctx, req, r.Client, r.Cron, instance.Spec.Actions, instance.Spec.Schedule, resourceName, r.startStopServer, &instance.Status.Conditions)
+		err := reconcileResource(ctx, req, r.Client, r.Cron, r.NotificationService, instance.Spec.Actions, instance.Spec.Schedule, resourceName, r.startStopServer, &instance.Status.Conditions)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -99,29 +101,29 @@ func (r *AwsTransferFamilyReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	return ctrl.Result{}, nil
 }
 
-func (r *AwsTransferFamilyReconciler) startStopServer(ctx context.Context, key types.NamespacedName, actionName string) JobResult {
+func (r *AwsTransferFamilyReconciler) startStopServer(ctx context.Context, key types.NamespacedName, actionName string) (JobResult, JobMetadata) {
+	metadata := JobMetadata{}
 	logger := log.FromContext(ctx)
 	start := time.Now()
 	obj := &corev1alpha1.AwsTransferFamily{}
 	err := r.Get(ctx, key, obj)
 	if err != nil {
-		if errors.IsNotFound(err) {
-			logger.Error(err, "AwsTransferFamily resource not found. object must has been deleted.")
-			return JobResultError
-		}
 		logger.Error(err, "Failed to get AwsTransferFamily resource. Re-running reconcile.")
-		return JobResultError
+		metadata["error"] = err.Error()
+		return JobResultError, metadata
 	}
 	action, ok := obj.Spec.Actions[actionName]
 	if !ok {
-		logger.Info("Action not found")
-		return JobResultError
+		logger.Info(fmt.Sprintf("Action %q not found in AWSTransferFamily resource.", actionName))
+		metadata["error"] = fmt.Sprintf("Action %q not found in AWSTransferFamily resource.", actionName)
+		return JobResultError, metadata
 	}
 
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		logger.Error(err, "unable to load SDK config")
-		return JobResultError
+		metadata["error"] = err.Error()
+		return JobResultError, metadata
 	}
 
 	actionType := ConditionTypeForAction(actionName)
@@ -177,7 +179,8 @@ func (r *AwsTransferFamilyReconciler) startStopServer(ctx context.Context, key t
 			Message:            strings.Join(errorsList, ";"),
 		})
 		r.Status().Update(ctx, obj)
-		return JobResultFailure
+		metadata["error_list"] = errorsList
+		return JobResultFailure, metadata
 	}
 
 	addToConditions(&obj.Status.Conditions, metav1.Condition{
@@ -188,7 +191,7 @@ func (r *AwsTransferFamilyReconciler) startStopServer(ctx context.Context, key t
 		Message:            fmt.Sprintf("Action %q, last execution started:%q ended:%q", actionName, start.Format(time.RFC3339), time.Now().Format(time.RFC3339)),
 	})
 	r.Status().Update(ctx, obj)
-	return JobResultSuccess
+	return JobResultSuccess, metadata
 }
 
 // SetupWithManager sets up the controller with the Manager.
