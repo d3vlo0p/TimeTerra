@@ -45,5 +45,6 @@ var (
 func RegisterMetrics() {
 	metrics.Registry.MustRegister(TimeterraActionLatency)
 	metrics.Registry.MustRegister(TimeterraScheduledCronJobs)
+	metrics.Registry.MustRegister(TimeTerraNotificationLatency)
 	metrics.Registry.MustRegister(TimeTerraNotificationPolicies)
 }
