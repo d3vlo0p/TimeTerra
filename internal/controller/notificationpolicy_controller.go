@@ -90,11 +90,30 @@ func (r *NotificationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 func (r *NotificationPolicyReconciler) reconcile(ctx context.Context, instance *corev1alpha1.NotificationPolicy) error {
 	logger := log.FromContext(ctx)
 	r.NotificationService.RemoveRecipient(instance.Name)
+	if !instance.Spec.IsActive() {
+		addToConditions(&instance.Status.Conditions, metav1.Condition{
+			LastTransitionTime: metav1.Now(),
+			Status:             metav1.ConditionFalse,
+			Type:               "Ready",
+			Reason:             "Disabled",
+		})
+		return nil
+	}
+
 	switch instance.Spec.Type {
 	case corev1alpha1.NotificationTypeApi:
 		logger.Info("Handling API notification")
 		if instance.Spec.Api == nil {
-			return fmt.Errorf("api notification type requires api configuration")
+			logger.Info("api notification type requires api configuration")
+			addToConditions(&instance.Status.Conditions, metav1.Condition{
+				LastTransitionTime: metav1.Now(),
+				Status:             metav1.ConditionFalse,
+				Type:               "Ready",
+				Reason:             "InvalidNotificationConfig",
+				Message:            "api notification type requires api configuration",
+			})
+			r.Recorder.Eventf(instance, "Warning", "InvalidNotificationConfig", "api notification type requires api configuration")
+			return nil
 		}
 		api := notification.NewApiNotification(ctx, instance.Name, notification.ApiNotificationConfig{
 			Url:    instance.Spec.Api.Url,
@@ -105,8 +124,23 @@ func (r *NotificationPolicyReconciler) reconcile(ctx context.Context, instance *
 		}
 	default:
 		logger.Info("Unknown notification type")
-		return fmt.Errorf("unknown notification type: %s", instance.Spec.Type)
+		addToConditions(&instance.Status.Conditions, metav1.Condition{
+			LastTransitionTime: metav1.Now(),
+			Status:             metav1.ConditionFalse,
+			Type:               "Ready",
+			Reason:             "UnknownNotificationType",
+			Message:            "Unknown notification type",
+		})
+		r.Recorder.Eventf(instance, "Warning", "UnknownNotificationType", "Unknown notification type: %s", instance.Spec.Type)
+		return nil
 	}
+
+	addToConditions(&instance.Status.Conditions, metav1.Condition{
+		LastTransitionTime: metav1.Now(),
+		Status:             metav1.ConditionTrue,
+		Type:               "Ready",
+		Reason:             "Ready",
+	})
 	return nil
 }
 
