@@ -17,7 +17,7 @@ type NotificationBody struct {
 }
 
 type Recipient interface {
-	Notify(body NotificationBody) error
+	Notify(id string, body NotificationBody) error
 }
 
 type NotificationService struct {
@@ -73,8 +73,8 @@ func (s *NotificationService) run(i uint, wg *sync.WaitGroup) {
 		if _, ok := s.recipients[body.Schedule]; !ok {
 			continue
 		}
-		for _, recipient := range s.recipients[body.Schedule] {
-			err := recipient.Notify(body)
+		for id, recipient := range s.recipients[body.Schedule] {
+			err := recipient.Notify(id, body)
 			if err != nil {
 				s.logger.Error(err, "Failed to notify recipient")
 			}

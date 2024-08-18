@@ -100,6 +100,7 @@ func (r *NotificationPolicyReconciler) reconcile(ctx context.Context, instance *
 		return nil
 	}
 
+	var recipient notification.Recipient
 	switch instance.Spec.Type {
 	case corev1alpha1.NotificationTypeApi:
 		logger.Info("Handling API notification")
@@ -115,13 +116,28 @@ func (r *NotificationPolicyReconciler) reconcile(ctx context.Context, instance *
 			r.Recorder.Eventf(instance, "Warning", "InvalidNotificationConfig", "api notification type requires api configuration")
 			return nil
 		}
-		api := notification.NewApiNotification(ctx, instance.Name, notification.ApiNotificationConfig{
+		recipient = notification.NewApiNotification(ctx, notification.ApiNotificationConfig{
 			Url:    instance.Spec.Api.Url,
 			Method: instance.Spec.Api.Method,
 		})
-		for _, schedule := range instance.Spec.Schedules {
-			r.NotificationService.AddRecipientToSchedule(schedule, instance.Name, api)
+	case corev1alpha1.NotificationTypeMSTeams:
+		logger.Info("Handling MS Teams notification")
+		if instance.Spec.MSTeams == nil {
+			logger.Info("ms teams notification type requires ms teams configuration")
+			addToConditions(&instance.Status.Conditions, metav1.Condition{
+				LastTransitionTime: metav1.Now(),
+				Status:             metav1.ConditionFalse,
+				Type:               "Ready",
+				Reason:             "InvalidNotificationConfig",
+				Message:            "ms teams notification type requires ms teams configuration",
+			})
+			r.Recorder.Eventf(instance, "Warning", "InvalidNotificationConfig", "ms teams notification type requires ms teams configuration")
+			return nil
 		}
+		recipient = notification.NewMSTeamsNotification(ctx, notification.MSTeamsNotificationConfig{
+			WebHookUrl: instance.Spec.MSTeams.WebHookUrl,
+			CardTitle:  instance.Spec.MSTeams.CardTitle,
+		})
 	default:
 		logger.Info("Unknown notification type")
 		addToConditions(&instance.Status.Conditions, metav1.Condition{
@@ -133,6 +149,10 @@ func (r *NotificationPolicyReconciler) reconcile(ctx context.Context, instance *
 		})
 		r.Recorder.Eventf(instance, "Warning", "UnknownNotificationType", "Unknown notification type: %s", instance.Spec.Type)
 		return nil
+	}
+
+	for _, schedule := range instance.Spec.Schedules {
+		r.NotificationService.AddRecipientToSchedule(schedule, instance.Name, recipient)
 	}
 
 	addToConditions(&instance.Status.Conditions, metav1.Condition{

@@ -26,6 +26,11 @@ type NotificationPolicyApiSpec struct {
 	Method string `json:"method"`
 }
 
+type NotificationPolicyMSTeamsSpec struct {
+	WebHookUrl string `json:"webhookurl"`
+	CardTitle  string `json:"cardtitle"`
+}
+
 func (r NotificationPolicySpec) IsActive() bool {
 	return r.Enabled == nil || *r.Enabled
 }
@@ -33,7 +38,8 @@ func (r NotificationPolicySpec) IsActive() bool {
 type NotificationType string
 
 const (
-	NotificationTypeApi NotificationType = "api"
+	NotificationTypeApi     NotificationType = "api"
+	NotificationTypeMSTeams NotificationType = "msteams"
 )
 
 func (r NotificationType) String() string {
@@ -44,9 +50,10 @@ func (r NotificationType) String() string {
 type NotificationPolicySpec struct {
 	Enabled   *bool    `json:"enabled,omitempty"`
 	Schedules []string `json:"schedules"`
-	// +kubebuilder:validation:Enum:=api
-	Type NotificationType           `json:"type"`
-	Api  *NotificationPolicyApiSpec `json:"api,omitempty"`
+	// +kubebuilder:validation:Enum:=api;msteams
+	Type    NotificationType               `json:"type"`
+	Api     *NotificationPolicyApiSpec     `json:"api,omitempty"`
+	MSTeams *NotificationPolicyMSTeamsSpec `json:"msteams,omitempty"`
 }
 
 // NotificationPolicyStatus defines the observed state of NotificationPolicy

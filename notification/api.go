@@ -18,25 +18,23 @@ type ApiNotificationConfig struct {
 
 type ApiNotification struct {
 	logger logr.Logger
-	id     string
 	ApiNotificationConfig
 }
 
-func NewApiNotification(ctx context.Context, id string, config ApiNotificationConfig) *ApiNotification {
+func NewApiNotification(ctx context.Context, config ApiNotificationConfig) *ApiNotification {
 	return &ApiNotification{
 		logger:                log.FromContext(ctx),
-		id:                    id,
 		ApiNotificationConfig: config,
 	}
 }
 
-func (api *ApiNotification) Notify(body NotificationBody) error {
+func (n *ApiNotification) Notify(id string, body NotificationBody) error {
 	jsonBody, err := json.Marshal(body)
 	if err != nil {
 		return err
 	}
 	bodyReader := bytes.NewReader(jsonBody)
-	req, err := http.NewRequest(strings.ToUpper(api.Method), api.Url, bodyReader)
+	req, err := http.NewRequest(strings.ToUpper(n.Method), n.Url, bodyReader)
 	if err != nil {
 		return err
 	}
@@ -47,6 +45,6 @@ func (api *ApiNotification) Notify(body NotificationBody) error {
 		return err
 	}
 	defer resp.Body.Close()
-	api.logger.Info("Notification sent", "id", api.id, "status", resp.Status, "body", string(jsonBody))
+	n.logger.Info("Notification sent", "id", id, "status", resp.Status, "body", string(jsonBody))
 	return nil
 }

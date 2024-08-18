@@ -60,6 +60,16 @@ spec:
                 type: object
               enabled:
                 type: boolean
+              msteams:
+                properties:
+                  cardtitle:
+                    type: string
+                  webhookurl:
+                    type: string
+                required:
+                - cardtitle
+                - webhookurl
+                type: object
               schedules:
                 items:
                   type: string
@@ -67,6 +77,7 @@ spec:
               type:
                 enum:
                 - api
+                - msteams
                 type: string
             required:
             - schedules
