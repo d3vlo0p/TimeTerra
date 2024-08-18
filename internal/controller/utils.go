@@ -167,19 +167,19 @@ func reconcileResource[ActionType Activable](
 				err := cli.Get(ctx, client.ObjectKey{Name: scheduleName}, s)
 				if err != nil {
 					logger.Error(err, "Cron run, failed to get schedule", "name", scheduleName)
-					monitoring.TimeterraActionExecutionSeconds.WithLabelValues(scheduleName, actionName, resourceName, JobResultError.String()).Observe(time.Since(start).Seconds())
+					monitoring.TimeterraActionLatency.WithLabelValues(scheduleName, actionName, resourceName, JobResultError.String()).Observe(time.Since(start).Seconds())
 					return
 				}
 
 				if !s.Spec.IsActive() {
 					logger.Info(fmt.Sprintf("Achedule %q is not active, skipping execution", scheduleName))
-					monitoring.TimeterraActionExecutionSeconds.WithLabelValues(scheduleName, actionName, resourceName, JobResultSkipped.String()).Observe(time.Since(start).Seconds())
+					monitoring.TimeterraActionLatency.WithLabelValues(scheduleName, actionName, resourceName, JobResultSkipped.String()).Observe(time.Since(start).Seconds())
 					return
 				}
 
 				if a, ok := s.Spec.Actions[actionName]; !ok || !a.IsActive() {
 					logger.Info(fmt.Sprintf("Action %q is not active, skipping execution", actionName))
-					monitoring.TimeterraActionExecutionSeconds.WithLabelValues(scheduleName, actionName, resourceName, JobResultSkipped.String()).Observe(time.Since(start).Seconds())
+					monitoring.TimeterraActionLatency.WithLabelValues(scheduleName, actionName, resourceName, JobResultSkipped.String()).Observe(time.Since(start).Seconds())
 					return
 				}
 
@@ -198,7 +198,7 @@ func reconcileResource[ActionType Activable](
 					}
 					if !active {
 						logger.Info(fmt.Sprintf("Scheduled action %q is outside an active period, skipping execution", actionName))
-						monitoring.TimeterraActionExecutionSeconds.WithLabelValues(scheduleName, actionName, resourceName, JobResultSkipped.String()).Observe(time.Since(start).Seconds())
+						monitoring.TimeterraActionLatency.WithLabelValues(scheduleName, actionName, resourceName, JobResultSkipped.String()).Observe(time.Since(start).Seconds())
 						return
 					}
 				}
@@ -213,14 +213,14 @@ func reconcileResource[ActionType Activable](
 					}
 					if !active {
 						logger.Info(fmt.Sprintf("Scheduled action %q is inside an inactive period, skipping execution", actionName))
-						monitoring.TimeterraActionExecutionSeconds.WithLabelValues(scheduleName, actionName, resourceName, JobResultSkipped.String()).Observe(time.Since(start).Seconds())
+						monitoring.TimeterraActionLatency.WithLabelValues(scheduleName, actionName, resourceName, JobResultSkipped.String()).Observe(time.Since(start).Seconds())
 						return
 					}
 				}
 
 				logger.Info(fmt.Sprintf("Scheduled action %q is starting for resource %q", actionName, resourceName))
 				status, metadata := job(ctx, req.NamespacedName, actionName)
-				monitoring.TimeterraActionExecutionSeconds.WithLabelValues(scheduleName, actionName, resourceName, status.String()).Observe(time.Since(start).Seconds())
+				monitoring.TimeterraActionLatency.WithLabelValues(scheduleName, actionName, resourceName, status.String()).Observe(time.Since(start).Seconds())
 				notificationService.Send(notification.NotificationBody{
 					Schedule: scheduleName,
 					Action:   actionName,

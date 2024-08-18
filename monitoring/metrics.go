@@ -6,9 +6,9 @@ import (
 )
 
 var (
-	TimeterraActionExecutionSeconds = prometheus.NewHistogramVec(
+	TimeterraActionLatency = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "timeterra_action_execution_seconds",
+			Name:    "timeterra_action_latency_seconds",
 			Help:    "Time taken to execute a Timeterra action.",
 			Buckets: []float64{0.01, 0.025, 0.05, 0.1, 0.2, 0.3, 0.5, 1, 2, 3, 5, 10, 20, 30, 60},
 		},
@@ -43,7 +43,7 @@ var (
 
 // RegisterMetrics will register metrics with the global prometheus registry
 func RegisterMetrics() {
-	metrics.Registry.MustRegister(TimeterraActionExecutionSeconds)
+	metrics.Registry.MustRegister(TimeterraActionLatency)
 	metrics.Registry.MustRegister(TimeterraScheduledCronJobs)
 	metrics.Registry.MustRegister(TimeTerraNotificationPolicies)
 }
