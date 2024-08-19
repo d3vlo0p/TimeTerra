@@ -1,0 +1,20 @@
+apiVersion: timeterra.d3vlo0p.dev/v1alpha1
+kind: AwsEc2Instance
+metadata:
+  labels:
+    app.kubernetes.io/name: awsec2instance
+    app.kubernetes.io/instance: awsec2instance-sample
+    app.kubernetes.io/part-of: timeterra
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: timeterra
+  name: awsec2instance-sample
+spec:
+  schedule: schedule-sample
+  instances:
+    - id: i-xxxxxxxxxxxxx
+      region: eu-central-1
+  actions:
+    start:
+      command: start
+    stop:
+      command: stop

@@ -4,19 +4,19 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.14.0
-  name: notificationpolicies.core.timeterra.d3vlo0p.dev
+  name: k8shpas.timeterra.d3vlo0p.dev
 spec:
-  group: core.timeterra.d3vlo0p.dev
+  group: timeterra.d3vlo0p.dev
   names:
-    kind: NotificationPolicy
-    listKind: NotificationPolicyList
-    plural: notificationpolicies
-    singular: notificationpolicy
+    kind: K8sHpa
+    listKind: K8sHpaList
+    plural: k8shpas
+    singular: k8shpa
   scope: Cluster
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .spec.type
-      name: Type
+    - jsonPath: .spec.schedule
+      name: Schedule
       type: string
     - jsonPath: .status.conditions[?(@.type=="Ready")].status
       name: Ready
@@ -24,8 +24,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: NotificationPolicy is the Schema for the notificationpolicies
-          API
+        description: K8sHpa is the Schema for the k8shpas API
         properties:
           apiVersion:
             description: |-
@@ -45,49 +44,83 @@ spec:
           metadata:
             type: object
           spec:
-            description: NotificationPolicySpec defines the desired state of NotificationPolicy
+            description: K8sHpaSpec defines the desired state of K8sHpa
             properties:
-              api:
-                properties:
-                  method:
-                    enum:
-                    - post
-                    - put
-                    - patch
-                    type: string
-                  url:
-                    type: string
-                required:
-                - method
-                - url
+              actions:
+                additionalProperties:
+                  properties:
+                    enabled:
+                      type: boolean
+                    maxReplicas:
+                      type: integer
+                    minReplicas:
+                      type: integer
+                  required:
+                  - maxReplicas
+                  - minReplicas
+                  type: object
                 type: object
               enabled:
                 type: boolean
-              msteams:
+              labelSelector:
+                description: |-
+                  A label selector is a label query over a set of resources. The result of matchLabels and
+                  matchExpressions are ANDed. An empty label selector matches all objects. A null
+                  label selector matches no objects.
                 properties:
-                  cardtitle:
-                    type: string
-                  webhookurl:
-                    type: string
-                required:
-                - cardtitle
-                - webhookurl
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                      The requirements are ANDed.
+                    items:
+                      description: |-
+                        A label selector requirement is a selector that contains values, a key, and an operator that
+                        relates the key and values.
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: |-
+                            operator represents a key's relationship to a set of values.
+                            Valid operators are In, NotIn, Exists and DoesNotExist.
+                          type: string
+                        values:
+                          description: |-
+                            values is an array of string values. If the operator is In or NotIn,
+                            the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                            the values array must be empty. This array is replaced during a strategic
+                            merge patch.
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                      map is equivalent to an element of matchExpressions, whose key field is "key", the
+                      operator is "In", and the values array contains only "value". The requirements are ANDed.
+                    type: object
                 type: object
-              schedules:
+                x-kubernetes-map-type: atomic
+              namespaces:
                 items:
                   type: string
                 type: array
-              type:
-                enum:
-                - api
-                - msteams
+              schedule:
                 type: string
             required:
-            - schedules
-            - type
+            - actions
+            - schedule
             type: object
           status:
-            description: NotificationPolicyStatus defines the observed state of NotificationPolicy
+            description: K8sHpaStatus defines the observed state of K8sHpa
             properties:
               conditions:
                 items:

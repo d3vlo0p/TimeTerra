@@ -65,7 +65,7 @@ rules:
   verbs:
   - create
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - awsdocumentdbclusters
   verbs:
@@ -77,13 +77,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - awsdocumentdbclusters/finalizers
   verbs:
   - update
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - awsdocumentdbclusters/status
   verbs:
@@ -91,7 +91,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - awsec2instances
   verbs:
@@ -103,13 +103,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - awsec2instances/finalizers
   verbs:
   - update
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - awsec2instances/status
   verbs:
@@ -117,7 +117,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - awsrdsauroraclusters
   verbs:
@@ -129,13 +129,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - awsrdsauroraclusters/finalizers
   verbs:
   - update
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - awsrdsauroraclusters/status
   verbs:
@@ -143,7 +143,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - awstransferfamilies
   verbs:
@@ -155,13 +155,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - awstransferfamilies/finalizers
   verbs:
   - update
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - awstransferfamilies/status
   verbs:
@@ -169,7 +169,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - k8shpas
   verbs:
@@ -181,13 +181,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - k8shpas/finalizers
   verbs:
   - update
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - k8shpas/status
   verbs:
@@ -195,7 +195,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - k8spodreplicas
   verbs:
@@ -207,13 +207,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - k8spodreplicas/finalizers
   verbs:
   - update
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - k8spodreplicas/status
   verbs:
@@ -221,7 +221,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - k8srunjobs
   verbs:
@@ -233,13 +233,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - k8srunjobs/finalizers
   verbs:
   - update
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - k8srunjobs/status
   verbs:
@@ -247,7 +247,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - notificationpolicies
   verbs:
@@ -259,13 +259,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - notificationpolicies/finalizers
   verbs:
   - update
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - notificationpolicies/status
   verbs:
@@ -273,7 +273,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - schedules
   verbs:
@@ -285,13 +285,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - schedules/finalizers
   verbs:
   - update
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - schedules/status
   verbs:

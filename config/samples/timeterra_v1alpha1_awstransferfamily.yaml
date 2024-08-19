@@ -1,17 +1,17 @@
-apiVersion: core.timeterra.d3vlo0p.dev/v1alpha1
-kind: AwsEc2Instance
+apiVersion: timeterra.d3vlo0p.dev/v1alpha1
+kind: AwsTransferFamily
 metadata:
   labels:
-    app.kubernetes.io/name: awsec2instance
-    app.kubernetes.io/instance: awsec2instance-sample
+    app.kubernetes.io/name: awstransferfamily
+    app.kubernetes.io/instance: awstransferfamily-sample
     app.kubernetes.io/part-of: timeterra
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/created-by: timeterra
-  name: awsec2instance-sample
+  name: awstransferfamily-sample
 spec:
   schedule: schedule-sample
-  instances:
-    - id: i-xxxxxxxxxxxxx
+  serverIds:
+    - id: s-xxxxxxxxxxxxx
       region: eu-central-1
   actions:
     start:

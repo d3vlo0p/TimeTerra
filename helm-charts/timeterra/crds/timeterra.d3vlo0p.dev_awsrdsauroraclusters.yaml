@@ -4,22 +4,19 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.14.0
-  name: k8spodreplicas.core.timeterra.d3vlo0p.dev
+  name: awsrdsauroraclusters.timeterra.d3vlo0p.dev
 spec:
-  group: core.timeterra.d3vlo0p.dev
+  group: timeterra.d3vlo0p.dev
   names:
-    kind: K8sPodReplicas
-    listKind: K8sPodReplicasList
-    plural: k8spodreplicas
-    singular: k8spodreplicas
+    kind: AwsRdsAuroraCluster
+    listKind: AwsRdsAuroraClusterList
+    plural: awsrdsauroraclusters
+    singular: awsrdsauroracluster
   scope: Cluster
   versions:
   - additionalPrinterColumns:
     - jsonPath: .spec.schedule
       name: Schedule
-      type: string
-    - jsonPath: .spec.resourceType
-      name: ResourceType
       type: string
     - jsonPath: .status.conditions[?(@.type=="Ready")].status
       name: Ready
@@ -27,7 +24,8 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: K8sPodReplicas is the Schema for the k8spodreplicas API
+        description: AwsRdsAuroraCluster is the Schema for the awsrdsauroraclusters
+          API
         properties:
           apiVersion:
             description: |-
@@ -47,86 +45,47 @@ spec:
           metadata:
             type: object
           spec:
-            description: K8sPodReplicasSpec defines the desired state of K8sPodReplicas
+            description: AwsRdsAuroraClusterSpec defines the desired state of AwsRdsAuroraCluster
             properties:
               actions:
                 additionalProperties:
                   properties:
+                    command:
+                      enum:
+                      - stop
+                      - start
+                      type: string
                     enabled:
                       type: boolean
-                    replicas:
-                      type: integer
                   required:
-                  - replicas
+                  - command
                   type: object
                 type: object
+              dbClusterIdentifiers:
+                items:
+                  properties:
+                    identifier:
+                      type: string
+                    region:
+                      type: string
+                  required:
+                  - identifier
+                  - region
+                  type: object
+                type: array
               enabled:
                 type: boolean
-              labelSelector:
-                description: |-
-                  A label selector is a label query over a set of resources. The result of matchLabels and
-                  matchExpressions are ANDed. An empty label selector matches all objects. A null
-                  label selector matches no objects.
-                properties:
-                  matchExpressions:
-                    description: matchExpressions is a list of label selector requirements.
-                      The requirements are ANDed.
-                    items:
-                      description: |-
-                        A label selector requirement is a selector that contains values, a key, and an operator that
-                        relates the key and values.
-                      properties:
-                        key:
-                          description: key is the label key that the selector applies
-                            to.
-                          type: string
-                        operator:
-                          description: |-
-                            operator represents a key's relationship to a set of values.
-                            Valid operators are In, NotIn, Exists and DoesNotExist.
-                          type: string
-                        values:
-                          description: |-
-                            values is an array of string values. If the operator is In or NotIn,
-                            the values array must be non-empty. If the operator is Exists or DoesNotExist,
-                            the values array must be empty. This array is replaced during a strategic
-                            merge patch.
-                          items:
-                            type: string
-                          type: array
-                      required:
-                      - key
-                      - operator
-                      type: object
-                    type: array
-                  matchLabels:
-                    additionalProperties:
-                      type: string
-                    description: |-
-                      matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
-                      map is equivalent to an element of matchExpressions, whose key field is "key", the
-                      operator is "In", and the values array contains only "value". The requirements are ANDed.
-                    type: object
-                type: object
-                x-kubernetes-map-type: atomic
-              namespaces:
-                items:
-                  type: string
-                type: array
-              resourceType:
-                enum:
-                - Deployment
-                - StatefulSet
-                type: string
               schedule:
+                type: string
+              serviceEndpoint:
                 type: string
             required:
             - actions
-            - resourceType
+            - dbClusterIdentifiers
             - schedule
             type: object
           status:
-            description: K8sPodReplicasStatus defines the observed state of K8sPodReplicas
+            description: AwsRdsAuroraClusterStatus defines the observed state of AwsRdsAuroraCluster
             properties:
               conditions:
                 items:

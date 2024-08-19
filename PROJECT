@@ -2,7 +2,7 @@
 # This file is used to track the info used to scaffold your project
 # and allow the plugins properly work.
 # More info: https://book.kubebuilder.io/reference/project-config.html
-domain: timeterra.d3vlo0p.dev
+domain: d3vlo0p.dev
 layout:
 - go.kubebuilder.io/v4
 plugins:
@@ -14,72 +14,72 @@ resources:
 - api:
     crdVersion: v1
   controller: true
-  domain: timeterra.d3vlo0p.dev
-  group: core
+  domain: d3vlo0p.dev
+  group: timeterra
   kind: Schedule
   path: github.com/d3vlo0p/TimeTerra/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
   controller: true
-  domain: timeterra.d3vlo0p.dev
-  group: core
+  domain: d3vlo0p.dev
+  group: timeterra
   kind: K8sHpa
   path: github.com/d3vlo0p/TimeTerra/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
   controller: true
-  domain: timeterra.d3vlo0p.dev
-  group: core
+  domain: d3vlo0p.dev
+  group: timeterra
   kind: K8sPodReplicas
   path: github.com/d3vlo0p/TimeTerra/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
   controller: true
-  domain: timeterra.d3vlo0p.dev
-  group: core
+  domain: d3vlo0p.dev
+  group: timeterra
   kind: AwsRdsAuroraCluster
   path: github.com/d3vlo0p/TimeTerra/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
   controller: true
-  domain: timeterra.d3vlo0p.dev
-  group: core
+  domain: d3vlo0p.dev
+  group: timeterra
   kind: AwsDocumentDBCluster
   path: github.com/d3vlo0p/TimeTerra/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
   controller: true
-  domain: timeterra.d3vlo0p.dev
-  group: core
+  domain: d3vlo0p.dev
+  group: timeterra
   kind: AwsTransferFamily
   path: github.com/d3vlo0p/TimeTerra/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
   controller: true
-  domain: timeterra.d3vlo0p.dev
-  group: core
+  domain: d3vlo0p.dev
+  group: timeterra
   kind: AwsEc2Instance
   path: github.com/d3vlo0p/TimeTerra/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
   controller: true
-  domain: timeterra.d3vlo0p.dev
-  group: core
+  domain: d3vlo0p.dev
+  group: timeterra
   kind: K8sRunJob
   path: github.com/d3vlo0p/TimeTerra/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
   controller: true
-  domain: timeterra.d3vlo0p.dev
-  group: core
+  domain: d3vlo0p.dev
+  group: timeterra
   kind: NotificationPolicy
   path: github.com/d3vlo0p/TimeTerra/api/v1alpha1
   version: v1alpha1

@@ -47,9 +47,9 @@ type K8sRunJobReconciler struct {
 	Recorder            record.EventRecorder
 }
 
-//+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=k8srunjobs,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=k8srunjobs/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=k8srunjobs/finalizers,verbs=update
+//+kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=k8srunjobs,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=k8srunjobs/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=k8srunjobs/finalizers,verbs=update
 //+kubebuilder:rbac:groups=batch,resources=jobs,verbs=create
 //+kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 

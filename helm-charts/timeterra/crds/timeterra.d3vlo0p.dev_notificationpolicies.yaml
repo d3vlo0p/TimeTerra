@@ -4,19 +4,19 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.14.0
-  name: awsec2instances.core.timeterra.d3vlo0p.dev
+  name: notificationpolicies.timeterra.d3vlo0p.dev
 spec:
-  group: core.timeterra.d3vlo0p.dev
+  group: timeterra.d3vlo0p.dev
   names:
-    kind: AwsEc2Instance
-    listKind: AwsEc2InstanceList
-    plural: awsec2instances
-    singular: awsec2instance
+    kind: NotificationPolicy
+    listKind: NotificationPolicyList
+    plural: notificationpolicies
+    singular: notificationpolicy
   scope: Cluster
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .spec.schedule
-      name: Schedule
+    - jsonPath: .spec.type
+      name: Type
       type: string
     - jsonPath: .status.conditions[?(@.type=="Ready")].status
       name: Ready
@@ -24,7 +24,8 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: AwsEc2Instance is the Schema for the awsec2instances API
+        description: NotificationPolicy is the Schema for the notificationpolicies
+          API
         properties:
           apiVersion:
             description: |-
@@ -44,50 +45,49 @@ spec:
           metadata:
             type: object
           spec:
-            description: AwsEc2InstanceSpec defines the desired state of AwsEc2Instance
+            description: NotificationPolicySpec defines the desired state of NotificationPolicy
             properties:
-              actions:
-                additionalProperties:
-                  properties:
-                    command:
-                      enum:
-                      - stop
-                      - start
-                      - hibernate
-                      type: string
-                    enabled:
-                      type: boolean
-                    force:
-                      type: boolean
-                  required:
-                  - command
-                  type: object
+              api:
+                properties:
+                  method:
+                    enum:
+                    - post
+                    - put
+                    - patch
+                    type: string
+                  url:
+                    type: string
+                required:
+                - method
+                - url
                 type: object
               enabled:
                 type: boolean
-              instances:
+              msteams:
+                properties:
+                  cardtitle:
+                    type: string
+                  webhookurl:
+                    type: string
+                required:
+                - cardtitle
+                - webhookurl
+                type: object
+              schedules:
                 items:
-                  properties:
-                    id:
-                      type: string
-                    region:
-                      type: string
-                  required:
-                  - id
-                  - region
-                  type: object
+                  type: string
                 type: array
-              schedule:
-                type: string
-              serviceEndpoint:
+              type:
+                enum:
+                - api
+                - msteams
                 type: string
             required:
-            - actions
-            - instances
-            - schedule
+            - schedules
+            - type
             type: object
           status:
-            description: AwsEc2InstanceStatus defines the observed state of AwsEc2Instance
+            description: NotificationPolicyStatus defines the observed state of NotificationPolicy
             properties:
               conditions:
                 items:

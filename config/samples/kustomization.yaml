@@ -1,14 +1,14 @@
 ## Append samples of your project ##
 resources:
-- core_v1alpha1_schedule.yaml
-- core_v1alpha1_podreplicas.yaml
-- core_v1alpha1_autoscaling.yaml
-- core_v1alpha1_k8shpa.yaml
-- core_v1alpha1_k8spodreplicas.yaml
-- core_v1alpha1_awsrdsauroracluster.yaml
-- core_v1alpha1_awsdocumentdbcluster.yaml
-- core_v1alpha1_awstransferfamily.yaml
-- core_v1alpha1_awsec2instance.yaml
-- core_v1alpha1_k8srunjob.yaml
-- core_v1alpha1_notificationpolicy.yaml
+- timeterra_v1alpha1_schedule.yaml
+- timeterra_v1alpha1_podreplicas.yaml
+- timeterra_v1alpha1_autoscaling.yaml
+- timeterra_v1alpha1_k8shpa.yaml
+- timeterra_v1alpha1_k8spodreplicas.yaml
+- timeterra_v1alpha1_awsrdsauroracluster.yaml
+- timeterra_v1alpha1_awsdocumentdbcluster.yaml
+- timeterra_v1alpha1_awstransferfamily.yaml
+- timeterra_v1alpha1_awsec2instance.yaml
+- timeterra_v1alpha1_k8srunjob.yaml
+- timeterra_v1alpha1_notificationpolicy.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

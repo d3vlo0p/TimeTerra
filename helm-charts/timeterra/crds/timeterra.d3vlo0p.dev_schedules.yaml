@@ -4,27 +4,24 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.14.0
-  name: k8shpas.core.timeterra.d3vlo0p.dev
+  name: schedules.timeterra.d3vlo0p.dev
 spec:
-  group: core.timeterra.d3vlo0p.dev
+  group: timeterra.d3vlo0p.dev
   names:
-    kind: K8sHpa
-    listKind: K8sHpaList
-    plural: k8shpas
-    singular: k8shpa
+    kind: Schedule
+    listKind: ScheduleList
+    plural: schedules
+    singular: schedule
   scope: Cluster
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .spec.schedule
-      name: Schedule
-      type: string
     - jsonPath: .status.conditions[?(@.type=="Ready")].status
       name: Ready
       type: boolean
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: K8sHpa is the Schema for the k8shpas API
+        description: Schedule is the Schema for the schedules API
         properties:
           apiVersion:
             description: |-
@@ -44,83 +41,53 @@ spec:
           metadata:
             type: object
           spec:
-            description: K8sHpaSpec defines the desired state of K8sHpa
+            description: ScheduleSpec defines the desired state of Schedule
             properties:
               actions:
                 additionalProperties:
+                  description: ScheduleAction defines the time to performe an action
                   properties:
+                    cron:
+                      type: string
                     enabled:
                       type: boolean
-                    maxReplicas:
-                      type: integer
-                    minReplicas:
-                      type: integer
                   required:
-                  - maxReplicas
-                  - minReplicas
+                  - cron
                   type: object
                 type: object
+              activePeriods:
+                items:
+                  properties:
+                    end:
+                      format: date-time
+                      type: string
+                    start:
+                      format: date-time
+                      type: string
+                  required:
+                  - end
+                  - start
+                  type: object
+                type: array
               enabled:
                 type: boolean
-              labelSelector:
-                description: |-
-                  A label selector is a label query over a set of resources. The result of matchLabels and
-                  matchExpressions are ANDed. An empty label selector matches all objects. A null
-                  label selector matches no objects.
-                properties:
-                  matchExpressions:
-                    description: matchExpressions is a list of label selector requirements.
-                      The requirements are ANDed.
-                    items:
-                      description: |-
-                        A label selector requirement is a selector that contains values, a key, and an operator that
-                        relates the key and values.
-                      properties:
-                        key:
-                          description: key is the label key that the selector applies
-                            to.
-                          type: string
-                        operator:
-                          description: |-
-                            operator represents a key's relationship to a set of values.
-                            Valid operators are In, NotIn, Exists and DoesNotExist.
-                          type: string
-                        values:
-                          description: |-
-                            values is an array of string values. If the operator is In or NotIn,
-                            the values array must be non-empty. If the operator is Exists or DoesNotExist,
-                            the values array must be empty. This array is replaced during a strategic
-                            merge patch.
-                          items:
-                            type: string
-                          type: array
-                      required:
-                      - key
-                      - operator
-                      type: object
-                    type: array
-                  matchLabels:
-                    additionalProperties:
-                      type: string
-                    description: |-
-                      matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
-                      map is equivalent to an element of matchExpressions, whose key field is "key", the
-                      operator is "In", and the values array contains only "value". The requirements are ANDed.
-                    type: object
-                type: object
-                x-kubernetes-map-type: atomic
-              namespaces:
+              inactivePeriods:
                 items:
-                  type: string
+                  properties:
+                    end:
+                      format: date-time
+                      type: string
+                    start:
+                      format: date-time
+                      type: string
+                  required:
+                  - end
+                  - start
+                  type: object
                 type: array
-              schedule:
-                type: string
-            required:
-            - actions
-            - schedule
             type: object
           status:
-            description: K8sHpaStatus defines the observed state of K8sHpa
+            description: ScheduleStatus defines the observed state of Schedule
             properties:
               conditions:
                 items:

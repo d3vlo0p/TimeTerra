@@ -12,7 +12,7 @@ metadata:
   name: awsdocumentdbcluster-viewer-role
 rules:
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - awsdocumentdbclusters
   verbs:
@@ -20,7 +20,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - awsdocumentdbclusters/status
   verbs:

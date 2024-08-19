@@ -2,15 +2,15 @@
 # since it depends on service name and namespace that are out of this kustomize package.
 # It should be run by config/default
 resources:
-- bases/core.timeterra.d3vlo0p.dev_schedules.yaml
-- bases/core.timeterra.d3vlo0p.dev_k8shpas.yaml
-- bases/core.timeterra.d3vlo0p.dev_k8spodreplicas.yaml
-- bases/core.timeterra.d3vlo0p.dev_awsrdsauroraclusters.yaml
-- bases/core.timeterra.d3vlo0p.dev_awsdocumentdbclusters.yaml
-- bases/core.timeterra.d3vlo0p.dev_awstransferfamilies.yaml
-- bases/core.timeterra.d3vlo0p.dev_awsec2instances.yaml
-- bases/core.timeterra.d3vlo0p.dev_k8srunjobs.yaml
-- bases/core.timeterra.d3vlo0p.dev_notificationpolicies.yaml
+- bases/timeterra.d3vlo0p.dev_schedules.yaml
+- bases/timeterra.d3vlo0p.dev_k8shpas.yaml
+- bases/timeterra.d3vlo0p.dev_k8spodreplicas.yaml
+- bases/timeterra.d3vlo0p.dev_awsrdsauroraclusters.yaml
+- bases/timeterra.d3vlo0p.dev_awsdocumentdbclusters.yaml
+- bases/timeterra.d3vlo0p.dev_awstransferfamilies.yaml
+- bases/timeterra.d3vlo0p.dev_awsec2instances.yaml
+- bases/timeterra.d3vlo0p.dev_k8srunjobs.yaml
+- bases/timeterra.d3vlo0p.dev_notificationpolicies.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patches:
