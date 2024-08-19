@@ -48,9 +48,9 @@ type AwsDocumentDBClusterReconciler struct {
 	Recorder            record.EventRecorder
 }
 
-//+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=awsdocumentdbclusters,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=awsdocumentdbclusters/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=awsdocumentdbclusters/finalizers,verbs=update
+//+kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=awsdocumentdbclusters,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=awsdocumentdbclusters/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=awsdocumentdbclusters/finalizers,verbs=update
 //+kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to

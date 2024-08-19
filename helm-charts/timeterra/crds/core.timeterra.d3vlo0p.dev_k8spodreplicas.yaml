@@ -4,9 +4,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.14.0
-  name: k8spodreplicas.core.timeterra.d3vlo0p.dev
+  name: k8spodreplicas.timeterra.d3vlo0p.dev
 spec:
-  group: core.timeterra.d3vlo0p.dev
+  group: timeterra.d3vlo0p.dev
   names:
     kind: K8sPodReplicas
     listKind: K8sPodReplicasList

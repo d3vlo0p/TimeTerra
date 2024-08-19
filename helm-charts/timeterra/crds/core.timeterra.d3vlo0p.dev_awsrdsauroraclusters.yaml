@@ -4,9 +4,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.14.0
-  name: awsrdsauroraclusters.core.timeterra.d3vlo0p.dev
+  name: awsrdsauroraclusters.timeterra.d3vlo0p.dev
 spec:
-  group: core.timeterra.d3vlo0p.dev
+  group: timeterra.d3vlo0p.dev
   names:
     kind: AwsRdsAuroraCluster
     listKind: AwsRdsAuroraClusterList

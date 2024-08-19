@@ -4,14 +4,14 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.14.0
-  name: awsrdsauroraclusters.core.timeterra.d3vlo0p.dev
+  name: awstransferfamilies.timeterra.d3vlo0p.dev
 spec:
-  group: core.timeterra.d3vlo0p.dev
+  group: timeterra.d3vlo0p.dev
   names:
-    kind: AwsRdsAuroraCluster
-    listKind: AwsRdsAuroraClusterList
-    plural: awsrdsauroraclusters
-    singular: awsrdsauroracluster
+    kind: AwsTransferFamily
+    listKind: AwsTransferFamilyList
+    plural: awstransferfamilies
+    singular: awstransferfamily
   scope: Cluster
   versions:
   - additionalPrinterColumns:
@@ -24,8 +24,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: AwsRdsAuroraCluster is the Schema for the awsrdsauroraclusters
-          API
+        description: AwsTransferFamily is the Schema for the awstransferfamilies API
         properties:
           apiVersion:
             description: |-
@@ -45,7 +44,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: AwsRdsAuroraClusterSpec defines the desired state of AwsRdsAuroraCluster
+            description: AwsTransferFamilySpec defines the desired state of AwsTransferFamily
             properties:
               actions:
                 additionalProperties:
@@ -61,31 +60,31 @@ spec:
                   - command
                   type: object
                 type: object
-              dbClusterIdentifiers:
-                items:
-                  properties:
-                    identifier:
-                      type: string
-                    region:
-                      type: string
-                  required:
-                  - identifier
-                  - region
-                  type: object
-                type: array
               enabled:
                 type: boolean
               schedule:
                 type: string
+              serverIds:
+                items:
+                  properties:
+                    id:
+                      type: string
+                    region:
+                      type: string
+                  required:
+                  - id
+                  - region
+                  type: object
+                type: array
               serviceEndpoint:
                 type: string
             required:
             - actions
-            - dbClusterIdentifiers
             - schedule
+            - serverIds
             type: object
           status:
-            description: AwsRdsAuroraClusterStatus defines the observed state of AwsRdsAuroraCluster
+            description: AwsTransferFamilyStatus defines the observed state of AwsTransferFamily
             properties:
               conditions:
                 items:

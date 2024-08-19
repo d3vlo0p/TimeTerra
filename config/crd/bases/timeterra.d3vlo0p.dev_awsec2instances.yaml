@@ -4,24 +4,27 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.14.0
-  name: schedules.core.timeterra.d3vlo0p.dev
+  name: awsec2instances.timeterra.d3vlo0p.dev
 spec:
-  group: core.timeterra.d3vlo0p.dev
+  group: timeterra.d3vlo0p.dev
   names:
-    kind: Schedule
-    listKind: ScheduleList
-    plural: schedules
-    singular: schedule
+    kind: AwsEc2Instance
+    listKind: AwsEc2InstanceList
+    plural: awsec2instances
+    singular: awsec2instance
   scope: Cluster
   versions:
   - additionalPrinterColumns:
+    - jsonPath: .spec.schedule
+      name: Schedule
+      type: string
     - jsonPath: .status.conditions[?(@.type=="Ready")].status
       name: Ready
       type: boolean
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Schedule is the Schema for the schedules API
+        description: AwsEc2Instance is the Schema for the awsec2instances API
         properties:
           apiVersion:
             description: |-
@@ -41,53 +44,50 @@ spec:
           metadata:
             type: object
           spec:
-            description: ScheduleSpec defines the desired state of Schedule
+            description: AwsEc2InstanceSpec defines the desired state of AwsEc2Instance
             properties:
               actions:
                 additionalProperties:
-                  description: ScheduleAction defines the time to performe an action
                   properties:
-                    cron:
+                    command:
+                      enum:
+                      - stop
+                      - start
+                      - hibernate
                       type: string
                     enabled:
                       type: boolean
+                    force:
+                      type: boolean
                   required:
-                  - cron
+                  - command
                   type: object
                 type: object
-              activePeriods:
-                items:
-                  properties:
-                    end:
-                      format: date-time
-                      type: string
-                    start:
-                      format: date-time
-                      type: string
-                  required:
-                  - end
-                  - start
-                  type: object
-                type: array
               enabled:
                 type: boolean
-              inactivePeriods:
+              instances:
                 items:
                   properties:
-                    end:
-                      format: date-time
+                    id:
                       type: string
-                    start:
-                      format: date-time
+                    region:
                       type: string
                   required:
-                  - end
-                  - start
+                  - id
+                  - region
                   type: object
                 type: array
+              schedule:
+                type: string
+              serviceEndpoint:
+                type: string
+            required:
+            - actions
+            - instances
+            - schedule
             type: object
           status:
-            description: ScheduleStatus defines the observed state of Schedule
+            description: AwsEc2InstanceStatus defines the observed state of AwsEc2Instance
             properties:
               conditions:
                 items:

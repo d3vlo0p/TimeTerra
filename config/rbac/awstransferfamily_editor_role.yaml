@@ -12,7 +12,7 @@ metadata:
   name: awstransferfamily-editor-role
 rules:
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - awstransferfamilies
   verbs:
@@ -24,7 +24,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - awstransferfamilies/status
   verbs:

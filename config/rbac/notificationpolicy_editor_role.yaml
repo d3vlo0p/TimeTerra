@@ -8,7 +8,7 @@ metadata:
   name: notificationpolicy-editor-role
 rules:
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - notificationpolicies
   verbs:
@@ -20,7 +20,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - notificationpolicies/status
   verbs:

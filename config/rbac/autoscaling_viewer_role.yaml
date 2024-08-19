@@ -12,7 +12,7 @@ metadata:
   name: autoscaling-viewer-role
 rules:
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - autoscalings
   verbs:
@@ -20,7 +20,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - core.timeterra.d3vlo0p.dev
+  - timeterra.d3vlo0p.dev
   resources:
   - autoscalings/status
   verbs:

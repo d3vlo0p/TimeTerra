@@ -48,9 +48,9 @@ type K8sHpaReconciler struct {
 	Recorder            record.EventRecorder
 }
 
-//+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=k8shpas,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=k8shpas/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=core.timeterra.d3vlo0p.dev,resources=k8shpas/finalizers,verbs=update
+//+kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=k8shpas,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=k8shpas/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=k8shpas/finalizers,verbs=update
 //+kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 //+kubebuilder:rbac:groups=autoscaling,resources=horizontalpodautoscalers,verbs=get;list;watch;update;patch
 

@@ -1,4 +1,4 @@
-apiVersion: core.timeterra.d3vlo0p.dev/v1alpha1
+apiVersion: timeterra.d3vlo0p.dev/v1alpha1
 kind: NotificationPolicy
 metadata:
   labels:
