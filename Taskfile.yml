@@ -7,6 +7,7 @@ vars:
   VERSION: "0.3.1"
   CHART_VERSION: "0.3.1"
   TAG: 1h
+  CR_USR: USERNAME
 
 tasks:
   update:
@@ -80,3 +81,35 @@ tasks:
     cmds:
       - kubectl apply --server-side -f ./helm-charts/timeterra/crds/
       - helm upgrade -n timeterra --create-namespace --install operator oci://ghcr.io/d3vlo0p/timeterra
+
+  dagger-dev:
+    cmds:
+      - dagger -m ./dagger/operator develop
+      - dagger -m ./dagger/helm develop 
+
+  dagger-operator:
+    cmds:
+      - dagger -m ./dagger/operator call build --src=. --platforms={{.PLATFORMS}} publish --registry={{.REPO}} --img={{.IMG}}:{{.TAG}}
+
+  dagger-helm:
+    cmds:
+      - dagger -m ./dagger/helm call package --chart=./helm-charts/timeterra --version={{.CHART_VERSION}} --app-version={{.VERSION}} push --scheme=oci --registry={{.REPO}} --repository=d3vlo0p
+
+  github-dagger-operator:
+    vars:
+      REPO: ghcr.io
+      TAG: "{{.VERSION}}"
+      PLATFROMS: linux/arm64,linux/amd64
+    cmds:
+      - dagger -m ./dagger/operator call build --src=. --platforms={{.PLATFORMS}} publish --registry={{.REPO}} --img={{.IMG}}:{{.TAG}} --user={{.CR_USR}} --password=env:CR_PAT
+
+  github-dagger-helm:
+    vars:
+      REPO: ghcr.io
+    cmds:
+      - dagger -m ./dagger/helm call package --chart=./helm-charts/timeterra --version={{.CHART_VERSION}} --app-version={{.VERSION}} push --scheme=oci --registry={{.REPO}} --repository=d3vlo0p --user={{.CR_USR}} --password=env:CR_PAT
+
+  github-dagger-release:
+    cmds:
+      - task: github-dagger-operator
+      - task: github-dagger-helm
