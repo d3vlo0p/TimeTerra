@@ -48,12 +48,24 @@ func (m *Operator) Build(platforms []dagger.Platform, src *dagger.Directory) *Op
 	return m
 }
 
-func (m *Operator) Publish(ctx context.Context, img string) (string, error) {
+func (m *Operator) Publish(ctx context.Context,
+	registry string,
+	img string,
+	// +optional
+	user *string,
+	// +optional
+	password *dagger.Secret,
+) (string, error) {
 	if len(m.PlatformVariants) == 0 {
 		return "", fmt.Errorf("missing conatiners to publish")
 	}
 
-	imageDigest, err := dag.Container().Publish(ctx, img, dagger.ContainerPublishOpts{
+	ctn := dag.Container()
+	if user != nil && password != nil {
+		ctn = ctn.WithRegistryAuth(registry, *user, password)
+	}
+
+	imageDigest, err := ctn.Publish(ctx, fmt.Sprintf("%s/%s", registry, img), dagger.ContainerPublishOpts{
 		PlatformVariants: m.PlatformVariants,
 	})
 	if err != nil {
