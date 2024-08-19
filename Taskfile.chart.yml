@@ -1,0 +1,29 @@
+version: '3'
+
+tasks:
+  crds:
+    cmds:
+      - cp -rf ./config/crd/bases/. ./helm-charts/timeterra/crds/
+
+  build:
+    cmds:
+      - task: crds
+      - helm package ./helm-charts/timeterra --app-version {{.VERSION}} --version {{.CHART_VERSION}}
+
+  deploy:
+    cmds:
+      - task: crds
+      - kubectl apply --server-side -f ./helm-charts/timeterra/crds/
+      - helm upgrade -n timeterra --create-namespace --install operator ./helm-charts/timeterra --set image.repository={{.REPO}}/{{.IMG}} --set image.tag={{.TAG}}
+
+  undeploy:
+    cmds:
+      - helm uninstall -n timeterra operator
+      - kubectl delete -f ./config/crd/bases
+      - kubectl delete namespace timeterra
+  
+  publish:
+    cmds:
+      - task: build
+      - helm push timeterra-{{.CHART_VERSION}}.tgz {{.CHART_REPO}}
+      - rm timeterra-{{.CHART_VERSION}}.tgz

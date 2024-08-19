@@ -1,0 +1,39 @@
+version: '3'
+
+vars:
+  CR_USR: USERNAME
+
+tasks:
+  dev:
+    cmds:
+      - dagger -m ./dagger/operator develop
+      - dagger -m ./dagger/helm develop 
+
+  operator-ci:
+    cmds:
+      - dagger -m ./dagger/operator call build --src=. --platforms={{.PLATFORMS}} publish --registry={{.REPO}} --img={{.IMG}}:{{.TAG}} {{.EXTRA_ARGS}}
+
+  chart-ci:
+    cmds:
+      - dagger -m ./dagger/helm call package --chart=./helm-charts/timeterra --version={{.CHART_VERSION}} --app-version={{.VERSION}} push --scheme=oci --registry={{.REPO}} --repository=d3vlo0p {{.EXTRA_ARGS}}
+
+  operator-ghci:
+    vars:
+      REPO: ghcr.io
+      TAG: "{{.VERSION}}"
+      PLATFROMS: linux/arm64,linux/amd64
+      EXTRA_ARGS: --user={{.CR_USR}} --password=env:CR_PAT
+    cmds:
+      - task: operator-ci
+
+  chart-ghci:
+    vars:
+      REPO: ghcr.io
+      EXTRA_ARGS: --user={{.CR_USR}} --password=env:CR_PAT
+    cmds:
+      - task: chart-ci
+
+  release-ghci:
+    cmds:
+      - task: operator-ghci
+      - task: chart-ghci

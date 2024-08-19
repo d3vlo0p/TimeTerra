@@ -1,5 +1,10 @@
 version: '3'
 
+includes:
+  op: ./Taskfile.operator.yml
+  chart: ./Taskfile.chart.yml
+  dagger: ./Taskfile.dagger.yml
+
 vars:
   PLATFROMS: linux/amd64
   REPO: ttl.sh
@@ -7,109 +12,37 @@ vars:
   VERSION: "0.3.1"
   CHART_VERSION: "0.3.1"
   TAG: 1h
-  CR_USR: USERNAME
 
 tasks:
-  update:
-    cmds:
-      - make generate manifests
-      
-  run:
-    env:
-      AWS_PROFILE: timeterra
-    cmds:
-      - make install run
-  
-  dockerx-build-push:
-    cmds:
-      - make docker-buildx PLATFORMS="{{.PLATFROMS}}" IMG="{{.REPO}}/{{.IMG}}:{{.TAG}}"
-
-  k8s-deploy:
-    cmds:
-      - make deploy IMG="{{.REPO}}/{{.IMG}}"
-
-  k8s-undeploy:
-    cmds:
-      - make undeploy
-
-  helm-crds:
-    cmds:
-      - cp -rf ./config/crd/bases/. ./helm-charts/timeterra/crds/
-
-  helm-build:
-    cmds:
-      - task: helm-crds
-      - helm package ./helm-charts/timeterra --app-version {{.VERSION}}
-
-  helm-deploy:
-    cmds:
-      - task: helm-crds
-      - kubectl apply --server-side -f ./helm-charts/timeterra/crds/
-      - helm upgrade -n timeterra --create-namespace --install operator ./helm-charts/timeterra --set image.repository={{.REPO}}/{{.IMG}} --set image.tag={{.TAG}}
-  
-  helm-deploy-build:
+  build-deploy:
     cmds: 
-      - task: dockerx-build-push
-      - task: helm-deploy
+      - task: op:build-push
+      - task: chart:deploy
 
-  helm-undeploy:
-    cmds:
-      - helm uninstall -n timeterra operator
-      - kubectl delete -f ./config/crd/bases
-      - kubectl delete namespace timeterra
-
-  github-release-image:
+  publish-operator:
     cmds: 
-      - task: dockerx-build-push
+      - task: op:build-push
         vars:
           REPO: ghcr.io
           TAG: "{{.VERSION}}"
           PLATFROMS: linux/arm64,linux/amd64
   
-  github-release-helm:
+  publish-chart:
     cmds:
-      - task: helm-build
-      - helm push timeterra-{{.CHART_VERSION}}.tgz oci://ghcr.io/d3vlo0p
-      - rm timeterra-{{.CHART_VERSION}}.tgz
+      - task: chart:publish
+        vars:
+          CHART_REPO: oci://ghcr.io/d3vlo0p
 
-  github-release:
+  publish:
     cmds:
-      - task: github-release-image
-      - task: github-release-helm
+      - task: publish-operator
+      - task: publish-chart
 
-  github-helm-deploy:
+  deploy-rel:
     cmds:
       - kubectl apply --server-side -f ./helm-charts/timeterra/crds/
       - helm upgrade -n timeterra --create-namespace --install operator oci://ghcr.io/d3vlo0p/timeterra
 
-  dagger-dev:
+  undeploy-rel:
     cmds:
-      - dagger -m ./dagger/operator develop
-      - dagger -m ./dagger/helm develop 
-
-  dagger-operator:
-    cmds:
-      - dagger -m ./dagger/operator call build --src=. --platforms={{.PLATFORMS}} publish --registry={{.REPO}} --img={{.IMG}}:{{.TAG}}
-
-  dagger-helm:
-    cmds:
-      - dagger -m ./dagger/helm call package --chart=./helm-charts/timeterra --version={{.CHART_VERSION}} --app-version={{.VERSION}} push --scheme=oci --registry={{.REPO}} --repository=d3vlo0p
-
-  github-dagger-operator:
-    vars:
-      REPO: ghcr.io
-      TAG: "{{.VERSION}}"
-      PLATFROMS: linux/arm64,linux/amd64
-    cmds:
-      - dagger -m ./dagger/operator call build --src=. --platforms={{.PLATFORMS}} publish --registry={{.REPO}} --img={{.IMG}}:{{.TAG}} --user={{.CR_USR}} --password=env:CR_PAT
-
-  github-dagger-helm:
-    vars:
-      REPO: ghcr.io
-    cmds:
-      - dagger -m ./dagger/helm call package --chart=./helm-charts/timeterra --version={{.CHART_VERSION}} --app-version={{.VERSION}} push --scheme=oci --registry={{.REPO}} --repository=d3vlo0p --user={{.CR_USR}} --password=env:CR_PAT
-
-  github-dagger-release:
-    cmds:
-      - task: github-dagger-operator
-      - task: github-dagger-helm
+      - task: chart:undeploy
