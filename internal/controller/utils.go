@@ -94,7 +94,8 @@ func reconcileResource[ActionType Activable](
 	err := cli.Get(ctx, client.ObjectKey{Name: scheduleName}, schedule)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			logger.Info("Schedule resource not found.")
+			// return an error to force reconciliation, this is to fix the fact that if you add the missing schedule later, it fixes itself
+			logger.Info("Schedule resource not found. Re-running reconcile.")
 			addToConditions(conditions, metav1.Condition{
 				LastTransitionTime: metav1.Now(),
 				Type:               "Ready",
@@ -102,9 +103,9 @@ func reconcileResource[ActionType Activable](
 				Reason:             "Error",
 				Message:            fmt.Sprintf("Schedule %s not found", scheduleName),
 			})
-			return nil
+		} else {
+			logger.Info("Failed to get Schedule resource. Re-running reconcile.")
 		}
-		logger.Info("Failed to get Schedule resource. Re-running reconcile.")
 		return err
 	}
 
