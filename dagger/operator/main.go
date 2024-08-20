@@ -33,6 +33,7 @@ func (m *Operator) Build(platforms []dagger.Platform, src *dagger.Directory) *Op
 
 		ctn := dag.Container(dagger.ContainerOpts{Platform: platform}).
 			Build(src, dagger.ContainerBuildOpts{
+				Dockerfile: "Dockerfile.dagger",
 				BuildArgs: []dagger.BuildArg{{
 					Name:  "TARGETOS",
 					Value: string(p[0]),
