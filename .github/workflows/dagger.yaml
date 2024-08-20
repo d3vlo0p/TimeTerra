@@ -1,0 +1,48 @@
+name: dagger
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build'
+        required: true
+
+jobs:
+  build-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build operator container and publish to ghcr.io
+        uses: dagger/dagger-for-github@v6
+        with:
+          version: "latest"
+          verb: call
+          module: ./dagger/operator
+          args: build --src=. --platforms=$DOCKER_IMAGE_PLATFORMS publish --registry=$DOCKER_REGISTRY --img=d3vlo0p/timeterra-operator:$DOCKER_IMAGE_TAG --user=$DOCKER_USERNAME --password=env:DOCKER_PASSWORD
+          # cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
+        env:
+          DOCKER_IMAGE_PLATFORMS: linux/amd64,linux/arm64
+          DOCKER_IMAGE_TAG: ${{ github.event.inputs.version || github.ref_name }}
+          DOCKER_REGISTRY: ghcr.io
+          DOCKER_USERNAME: ${{ github.actor }}
+          DOCKER_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Build helm chart and publish to ghcr.io
+        uses: dagger/dagger-for-github@v6
+        with:
+          version: "latest"
+          verb: call
+          module: ./dagger/helm
+          args: package --chart=./helm-charts/timeterra --version=$CHART_VERSION --app-version=$CHART_VERSION push --scheme=oci --registry=$DOCKER_REGISTRY --repository=d3vlo0p --user=$DOCKER_USERNAME --password=env:DOCKER_PASSWORD
+          # cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
+        env:
+          CHART_VERSION: ${{ github.event.inputs.version || github.ref_name }}
+          DOCKER_REGISTRY: ghcr.io
+          DOCKER_USERNAME: ${{ github.actor }}
+          DOCKER_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}

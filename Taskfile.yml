@@ -1,82 +1,52 @@
 version: '3'
 
+includes:
+  op: ./Taskfile.operator.yml
+  chart: ./Taskfile.chart.yml
+  dagger: ./Taskfile.dagger.yml
+
 vars:
   PLATFROMS: linux/amd64
-  REPO: ttl.sh
   IMG: d3vlo0p/timeterra-operator
+  REPO: ttl.sh
+  GH_REPO: ghcr.io
   VERSION: "0.3.1"
+  CHART_REPO: oci://ttl.sh/d3vlo0p
+  GH_CHART_REPO: oci://ghcr.io/d3vlo0p
   CHART_VERSION: "0.3.1"
-  TAG: 1h
 
 tasks:
-  update:
-    cmds:
-      - make generate manifests
-      
-  run:
-    env:
-      AWS_PROFILE: timeterra
-    cmds:
-      - make install run
-  
-  dockerx-build-push:
-    cmds:
-      - make docker-buildx PLATFORMS="{{.PLATFROMS}}" IMG="{{.REPO}}/{{.IMG}}:{{.TAG}}"
-
-  k8s-deploy:
-    cmds:
-      - make deploy IMG="{{.REPO}}/{{.IMG}}"
-
-  k8s-undeploy:
-    cmds:
-      - make undeploy
-
-  helm-crds:
-    cmds:
-      - cp -rf ./config/crd/bases/. ./helm-charts/timeterra/crds/
-
-  helm-build:
-    cmds:
-      - task: helm-crds
-      - helm package ./helm-charts/timeterra --app-version {{.VERSION}}
-
-  helm-deploy:
-    cmds:
-      - task: helm-crds
-      - kubectl apply --server-side -f ./helm-charts/timeterra/crds/
-      - helm upgrade -n timeterra --create-namespace --install operator ./helm-charts/timeterra --set image.repository={{.REPO}}/{{.IMG}} --set image.tag={{.TAG}}
-  
-  helm-deploy-build:
+  build-deploy:
     cmds: 
-      - task: dockerx-build-push
-      - task: helm-deploy
-
-  helm-undeploy:
-    cmds:
-      - helm uninstall -n timeterra operator
-      - kubectl delete -f ./config/crd/bases
-      - kubectl delete namespace timeterra
-
-  github-release-image:
-    cmds: 
-      - task: dockerx-build-push
+      - task: op:build-push
+      - task: chart:deploy
         vars:
-          REPO: ghcr.io
-          TAG: "{{.VERSION}}"
-          PLATFROMS: linux/arm64,linux/amd64
-  
-  github-release-helm:
-    cmds:
-      - task: helm-build
-      - helm push timeterra-{{.CHART_VERSION}}.tgz oci://ghcr.io/d3vlo0p
-      - rm timeterra-{{.CHART_VERSION}}.tgz
+          CHART_REPO: "./helm-charts"
 
-  github-release:
+  publish:
     cmds:
-      - task: github-release-image
-      - task: github-release-helm
+      - task: op:build-push
+      - task: chart:publish
 
-  github-helm-deploy:
+  deploy:
     cmds:
-      - kubectl apply --server-side -f ./helm-charts/timeterra/crds/
-      - helm upgrade -n timeterra --create-namespace --install operator oci://ghcr.io/d3vlo0p/timeterra
+      - task: chart:deploy
+
+  publish-release:
+    vars:
+      REPO: "{{.GH_REPO}}"
+      CHART_REPO: "{{.GH_CHART_REPO}}"
+      PLATFROMS: linux/arm64,linux/amd64
+    cmds:
+      - task: op:build-push
+      - task: chart:publish
+
+  deploy-release:
+    cmds:
+      - task: chart:deploy
+        vars:
+          CHART_REPO: "{{.GH_CHART_REPO}}"
+
+  undeploy:
+    cmds:
+      - task: chart:undeploy

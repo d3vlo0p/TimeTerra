@@ -1,0 +1,25 @@
+version: '3'
+
+tasks:
+  generate-manifests:
+    aliases: [gen]
+    cmds:
+      - make generate manifests
+      
+  run:
+    env:
+      AWS_PROFILE: timeterra
+    cmds:
+      - make install run
+
+  deploy:
+    cmds:
+      - make deploy IMG="{{.REPO}}/{{.IMG}}"
+
+  undeploy:
+    cmds:
+      - make undeploy
+  
+  build-push:
+    cmds:
+      - make docker-buildx PLATFORMS="{{.PLATFROMS}}" IMG="{{.REPO}}/{{.IMG}}:{{.VERSION}}"
