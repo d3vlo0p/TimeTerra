@@ -64,7 +64,7 @@ func (m *Operator) Publish(ctx context.Context,
 	img string,
 ) (string, error) {
 	if len(m.PlatformVariants) == 0 {
-		return "", errors.New("missing conatiners to publish")
+		return "", errors.New("missing containers to publish")
 	}
 
 	ctn := dag.Container()
