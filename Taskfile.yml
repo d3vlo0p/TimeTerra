@@ -45,6 +45,7 @@ tasks:
     cmds:
       - task: chart:deploy
         vars:
+          REPO: "{{.GH_REPO}}"
           CHART_REPO: "{{.GH_CHART_REPO}}"
 
   undeploy:
