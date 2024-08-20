@@ -11,26 +11,31 @@ tasks:
 
   operator-ci:
     cmds:
-      - dagger -m ./dagger/operator call build --src=. --platforms={{.PLATFORMS}} publish --registry={{.REPO}} --img={{.IMG}}:{{.VERSION}} {{.EXTRA_ARGS}}
+      - dagger -m ./dagger/operator call build --src=. --platforms={{.PLATFORMS}} {{.CREDENTIALS}} publish --registry={{.REPO}} --img={{.IMG}}:{{.VERSION}}
 
   chart-ci:
     cmds:
-      - dagger -m ./dagger/helm call package --chart=./helm-charts/timeterra --version={{.CHART_VERSION}} --app-version={{.VERSION}} push --scheme=oci --registry={{.REPO}} --repository=d3vlo0p {{.EXTRA_ARGS}}
+      - dagger -m ./dagger/helm call package --chart=./helm-charts/timeterra --version={{.CHART_VERSION}} --app-version={{.VERSION}} {{.CREDENTIALS}} push --scheme=oci --registry={{.REPO}} --repository=d3vlo0p
+  
+  release-ci:
+    cmds:
+      - task: operator-ci
+      - task: chart-ci
 
   operator-ghci:
     cmds:
       - task: operator-ci
         vars:
           REPO: ghcr.io
-          PLATFROMS: linux/arm64,linux/amd64
-          EXTRA_ARGS: --user={{.CR_USR}} --password=env:CR_PAT
+          PLATFORMS: linux/arm64,linux/amd64
+          CREDENTIALS: credentials --user={{.CR_USR}} --password=env:CR_PAT
 
   chart-ghci:
     cmds:
       - task: chart-ci
         vars:
           REPO: ghcr.io
-          EXTRA_ARGS: --user={{.CR_USR}} --password=env:CR_PAT
+          CREDENTIALS: credentials --user={{.CR_USR}} --password=env:CR_PAT
 
   release-ghci:
     cmds:

@@ -17,12 +17,15 @@ package main
 import (
 	"context"
 	"dagger/operator/internal/dagger"
+	"errors"
 	"fmt"
 	"strings"
 )
 
 type Operator struct {
 	PlatformVariants []*dagger.Container
+	User             *string
+	Password         *dagger.Secret
 }
 
 func (m *Operator) Build(platforms []dagger.Platform, src *dagger.Directory) *Operator {
@@ -49,21 +52,24 @@ func (m *Operator) Build(platforms []dagger.Platform, src *dagger.Directory) *Op
 	return m
 }
 
+// set registry credentials
+func (m *Operator) Credentials(user *string, password *dagger.Secret) *Operator {
+	m.User = user
+	m.Password = password
+	return m
+}
+
 func (m *Operator) Publish(ctx context.Context,
 	registry string,
 	img string,
-	// +optional
-	user *string,
-	// +optional
-	password *dagger.Secret,
 ) (string, error) {
 	if len(m.PlatformVariants) == 0 {
-		return "", fmt.Errorf("missing conatiners to publish")
+		return "", errors.New("missing conatiners to publish")
 	}
 
 	ctn := dag.Container()
-	if user != nil && password != nil {
-		ctn = ctn.WithRegistryAuth(registry, *user, password)
+	if m.User != nil && m.Password != nil {
+		ctn = ctn.WithRegistryAuth(registry, *m.User, m.Password)
 	}
 
 	imageDigest, err := ctn.Publish(ctx, fmt.Sprintf("%s/%s", registry, img), dagger.ContainerPublishOpts{

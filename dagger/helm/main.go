@@ -17,11 +17,14 @@ package main
 import (
 	"context"
 	"dagger/helm/internal/dagger"
+	"errors"
 )
 
 type Helm struct {
-	Ctn  *dagger.Container
-	file *dagger.File
+	Ctn      *dagger.Container
+	Tgz      *dagger.File
+	User     *string
+	Password *dagger.Secret
 }
 
 func (m *Helm) Package(
@@ -44,36 +47,44 @@ func (m *Helm) Package(
 		WithExec(args).
 		WithExec([]string{"sh", "-c", "mv timeterra-*.tgz timeterra.tgz"})
 
-	m.file = m.Ctn.File("./timeterra.tgz")
+	m.Tgz = m.Ctn.File("./timeterra.tgz")
 	return m
 }
 
+// get container after package
 func (m *Helm) Container() *dagger.Container {
 	return m.Ctn
+}
+
+// set helm package to push
+func (m *Helm) File(path *dagger.File) *Helm {
+	m.Tgz = path
+	return m
+}
+
+// set registry credentials
+func (m *Helm) Credentials(user *string, password *dagger.Secret) *Helm {
+	m.User = user
+	m.Password = password
+	return m
 }
 
 func (m *Helm) Push(ctx context.Context,
 	scheme string,
 	registry string,
 	repository string,
-	// +optional
-	file *dagger.File,
-	// +optional
-	user *string,
-	// +optional
-	password *dagger.Secret,
 ) (string, error) {
-	if file == nil {
-		file = m.file
+	if m.Tgz == nil {
+		return "", errors.New("Missing file to push")
 	}
 
 	ctn := dag.Container()
-	if user != nil && password != nil {
-		ctn = ctn.WithRegistryAuth(registry, *user, password)
+	if m.User != nil && m.Password != nil {
+		ctn = ctn.WithRegistryAuth(registry, *m.User, m.Password)
 	}
 
 	return ctn.From("alpine/helm").
 		WithWorkdir("/tmp").
-		WithFile("./chart.tgz", file).
+		WithFile("./chart.tgz", m.Tgz).
 		WithExec([]string{"sh", "-c", "helm push chart.tgz " + scheme + "://" + registry + "/" + repository}).Stdout(ctx)
 }
