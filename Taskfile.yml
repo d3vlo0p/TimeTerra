@@ -6,7 +6,7 @@ includes:
   dagger: ./Taskfile.dagger.yml
 
 vars:
-  PLATFROMS: linux/amd64
+  PLATFORMS: linux/amd64
   IMG: d3vlo0p/timeterra-operator
   REPO: ttl.sh
   GH_REPO: ghcr.io
@@ -36,7 +36,7 @@ tasks:
     vars:
       REPO: "{{.GH_REPO}}"
       CHART_REPO: "{{.GH_CHART_REPO}}"
-      PLATFROMS: linux/arm64,linux/amd64
+      PLATFORMS: linux/arm64,linux/amd64
     cmds:
       - task: op:build-push
       - task: chart:publish
