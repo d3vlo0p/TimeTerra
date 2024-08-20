@@ -18,6 +18,7 @@ import (
 	"context"
 	"dagger/helm/internal/dagger"
 	"errors"
+	"fmt"
 )
 
 type Helm struct {
@@ -75,16 +76,16 @@ func (m *Helm) Push(ctx context.Context,
 	repository string,
 ) (string, error) {
 	if m.Tgz == nil {
-		return "", errors.New("Missing file to push")
+		return "", errors.New("missing file to push")
 	}
 
-	ctn := dag.Container()
+	ctn := dag.Container().From("alpine/helm")
 	if m.User != nil && m.Password != nil {
-		ctn = ctn.WithRegistryAuth(registry, *m.User, m.Password)
+		ctn = ctn.WithSecretVariable("REGISTRY_PASSWORD", m.Password).
+			WithExec([]string{"sh", "-c", fmt.Sprintf("echo $REGISTRY_PASSWORD | helm registry login %s -u %s --password-stdin", registry, *m.User)})
 	}
 
-	return ctn.From("alpine/helm").
-		WithWorkdir("/tmp").
+	return ctn.WithWorkdir("/tmp").
 		WithFile("./chart.tgz", m.Tgz).
 		WithExec([]string{"sh", "-c", "helm push chart.tgz " + scheme + "://" + registry + "/" + repository}).Stdout(ctx)
 }
