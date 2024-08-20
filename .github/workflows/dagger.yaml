@@ -30,7 +30,8 @@ jobs:
           DOCKER_IMAGE_PLATFORMS: linux/amd64,linux/arm64
           DOCKER_IMAGE_TAG: ${{ github.event.inputs.version || github.ref_name }}
           DOCKER_REGISTRY: ghcr.io
-          DOCKER_USERNAME: ${{ github.actor }}
+          DOCKER_USERNAME: USERNAME
+          # DOCKER_USERNAME: ${{ github.actor }}
           DOCKER_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
 
       - name: Build helm chart and publish to ghcr.io
@@ -44,5 +45,6 @@ jobs:
         env:
           CHART_VERSION: ${{ github.event.inputs.version || github.ref_name }}
           DOCKER_REGISTRY: ghcr.io
-          DOCKER_USERNAME: ${{ github.actor }}
+          DOCKER_USERNAME: USERNAME
+          # DOCKER_USERNAME: ${{ github.actor }}
           DOCKER_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
