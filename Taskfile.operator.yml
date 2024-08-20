@@ -22,4 +22,4 @@ tasks:
   
   build-push:
     cmds:
-      - make docker-buildx PLATFORMS="{{.PLATFROMS}}" IMG="{{.REPO}}/{{.IMG}}:{{.TAG}}"
+      - make docker-buildx PLATFORMS="{{.PLATFROMS}}" IMG="{{.REPO}}/{{.IMG}}:{{.VERSION}}"

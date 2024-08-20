@@ -7,42 +7,46 @@ includes:
 
 vars:
   PLATFROMS: linux/amd64
-  REPO: ttl.sh
   IMG: d3vlo0p/timeterra-operator
+  REPO: ttl.sh
+  GH_REPO: ghcr.io
   VERSION: "0.3.1"
+  CHART_REPO: oci://ttl.sh/d3vlo0p
+  GH_CHART_REPO: oci://ghcr.io/d3vlo0p
   CHART_VERSION: "0.3.1"
-  TAG: 1h
 
 tasks:
   build-deploy:
     cmds: 
       - task: op:build-push
       - task: chart:deploy
-
-  publish-operator:
-    cmds: 
-      - task: op:build-push
         vars:
-          REPO: ghcr.io
-          TAG: "{{.VERSION}}"
-          PLATFROMS: linux/arm64,linux/amd64
-  
-  publish-chart:
-    cmds:
-      - task: chart:publish
-        vars:
-          CHART_REPO: oci://ghcr.io/d3vlo0p
+          CHART_REPO: "./helm-charts"
 
   publish:
     cmds:
-      - task: publish-operator
-      - task: publish-chart
+      - task: op:build-push
+      - task: chart:publish
 
-  deploy-rel:
+  deploy:
     cmds:
-      - kubectl apply --server-side -f ./helm-charts/timeterra/crds/
-      - helm upgrade -n timeterra --create-namespace --install operator oci://ghcr.io/d3vlo0p/timeterra
+      - task: chart:deploy
 
-  undeploy-rel:
+  publish-release:
+    vars:
+      REPO: "{{.GH_REPO}}"
+      CHART_REPO: "{{.GH_CHART_REPO}}"
+      PLATFROMS: linux/arm64,linux/amd64
+    cmds:
+      - task: op:build-push
+      - task: chart:publish
+
+  deploy-release:
+    cmds:
+      - task: chart:deploy
+        vars:
+          CHART_REPO: "{{.GH_CHART_REPO}}"
+
+  undeploy:
     cmds:
       - task: chart:undeploy
