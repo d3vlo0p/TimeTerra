@@ -25,7 +25,7 @@ jobs:
           verb: call
           module: ./dagger/operator
           args: build --src=. --platforms=$DOCKER_IMAGE_PLATFORMS publish --registry=$DOCKER_REGISTRY --img=d3vlo0p/timeterra-operator:$DOCKER_IMAGE_TAG --user=$DOCKER_USERNAME --password=env:DOCKER_PASSWORD
-          # cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
+          cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
         env:
           DOCKER_IMAGE_PLATFORMS: linux/amd64,linux/arm64
           DOCKER_IMAGE_TAG: ${{ github.event.inputs.version || github.ref_name }}
@@ -41,7 +41,7 @@ jobs:
           verb: call
           module: ./dagger/helm
           args: package --chart=./helm-charts/timeterra --version=$CHART_VERSION --app-version=$CHART_VERSION push --scheme=oci --registry=$DOCKER_REGISTRY --repository=d3vlo0p --user=$DOCKER_USERNAME --password=env:DOCKER_PASSWORD
-          # cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
+          cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
         env:
           CHART_VERSION: ${{ github.event.inputs.version || github.ref_name }}
           DOCKER_REGISTRY: ghcr.io
