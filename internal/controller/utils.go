@@ -36,7 +36,7 @@ func contains(actions []string, action string) bool {
 	return false
 }
 
-func disableResource(cron *sc.ScheduleCron, conditions *[]metav1.Condition, resourceName string) {
+func disableResource(cron *sc.ScheduleService, conditions *[]metav1.Condition, resourceName string) {
 	cron.RemoveResource(resourceName)
 	// remove condition if Type starts with "Action"
 	if len(*conditions) > 0 {
@@ -80,7 +80,7 @@ func reconcileResource[ActionType Activable](
 	ctx context.Context,
 	req ctrl.Request,
 	cli client.Client,
-	cron *sc.ScheduleCron,
+	cron *sc.ScheduleService,
 	notificationService *notification.NotificationService,
 	instanceActions map[string]ActionType,
 	scheduleName string,

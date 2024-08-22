@@ -38,7 +38,7 @@ import (
 type ScheduleReconciler struct {
 	client.Client
 	Scheme   *runtime.Scheme
-	Cron     *sc.ScheduleCron
+	Cron     *sc.ScheduleService
 	Recorder record.EventRecorder
 }
 

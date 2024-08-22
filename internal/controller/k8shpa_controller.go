@@ -43,7 +43,7 @@ import (
 type K8sHpaReconciler struct {
 	client.Client
 	Scheme              *runtime.Scheme
-	Cron                *cron.ScheduleCron
+	Cron                *cron.ScheduleService
 	NotificationService *notification.NotificationService
 	Recorder            record.EventRecorder
 }
