@@ -6,10 +6,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/credentials"
 	v1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 	sc "github.com/d3vlo0p/TimeTerra/internal/cron"
 	"github.com/d3vlo0p/TimeTerra/monitoring"
 	"github.com/d3vlo0p/TimeTerra/notification"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -280,4 +282,69 @@ func removeMissingActionFromConditions(conditions *[]metav1.Condition, actions [
 	for _, c := range orphanedConditions {
 		removeFromConditions(conditions, c.Type)
 	}
+}
+
+// func printBytes(b []byte) string {
+// 	r := ""
+// 	for i := 0; i < len(b); i++ {
+// 		r = strings.Join([]string{r, fmt.Sprintf("%d", b[i])}, ", ")
+// 	}
+// 	return r
+// }
+
+func decodeSecret(secret *corev1.Secret) (map[string]string, error) {
+	values := make(map[string]string, len(secret.Data))
+	for k, v := range secret.Data {
+		// log.Log.Info("decoding secret", "key", k, "value", v, "bytes", printBytes(v), "dec", string(v))
+		// dst := make([]byte, base64.StdEncoding.DecodedLen(len(v)))
+		// n, err := base64.StdEncoding.Decode(dst, v)
+		// if err != nil {
+		// 	return nil, err
+		// }
+		// log.Log.Info("decoded secret", "key", k, "dst", dst[:n], "bytes_dst", printBytes(dst[:n]), "v", v, "bytes_v", printBytes(v))
+		// values[k] = string(dst[:n])
+
+		// seems that string() does already base64 decoding
+		// because if i print "v" in the logs i see the base64 string, but if i try to convert to string, the result is alredy base64 decoded.
+		values[k] = string(v)
+	}
+	// log.Log.Info("decoded secret", "values", values)
+	return values, nil
+}
+
+func getAwsCredentialProviderFromSecret(secret *corev1.Secret, keysRef *v1alpha1.AwsCredentialsKeysRef) (*credentials.StaticCredentialsProvider, error) {
+	values, err := decodeSecret(secret)
+	if err != nil {
+		return nil, err
+	}
+
+	var kAcceccKey, kSecretKey, kSessionKey = "accessKey", "secretKey", "sessionKey"
+	// override default keys if specified
+	if keysRef != nil {
+		kAcceccKey, kSecretKey, kSessionKey = keysRef.AccessKey, keysRef.SecretKey, keysRef.SessionKey
+	}
+
+	accessKey, ok := values[kAcceccKey]
+	if !ok {
+		return nil, fmt.Errorf("failed to get AccessKey from Secret resource, no %q key found", kAcceccKey)
+	}
+	secretKey, ok := values[kSecretKey]
+	if !ok {
+		return nil, fmt.Errorf("failed to get SecretKey from Secret resource, no %q key found", kSecretKey)
+	}
+	sessionKey := ""
+	if kSessionKey != "" {
+		sessionKey, ok = values[kSessionKey]
+		if !ok && keysRef != nil {
+			return nil, fmt.Errorf("failed to get SessionKey from Secret resource, no %q key found", kSessionKey)
+		}
+	}
+
+	r := credentials.NewStaticCredentialsProvider(
+		accessKey,
+		secretKey,
+		sessionKey,
+	)
+
+	return &r, nil
 }

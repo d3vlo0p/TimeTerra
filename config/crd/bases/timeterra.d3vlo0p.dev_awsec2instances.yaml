@@ -63,6 +63,27 @@ spec:
                   - command
                   type: object
                 type: object
+              credentials:
+                properties:
+                  keysRef:
+                    properties:
+                      accessKey:
+                        type: string
+                      secretKey:
+                        type: string
+                      sessionKey:
+                        type: string
+                    required:
+                    - accessKey
+                    - secretKey
+                    type: object
+                  namespace:
+                    type: string
+                  secretName:
+                    type: string
+                required:
+                - secretName
+                type: object
               enabled:
                 type: boolean
               instances:

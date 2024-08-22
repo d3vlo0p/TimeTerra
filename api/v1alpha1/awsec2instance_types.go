@@ -59,6 +59,7 @@ type AwsEc2InstanceSpec struct {
 	ServiceEndpoint *string                         `json:"serviceEndpoint,omitempty"`
 	Instances       []AwsEc2InstanceIdentifier      `json:"instances"`
 	Actions         map[string]AwsEc2InstanceAction `json:"actions"`
+	Credentials     *AwsCredentialsSpec             `json:"credentials,omitempty"`
 }
 
 // AwsEc2InstanceStatus defines the observed state of AwsEc2Instance

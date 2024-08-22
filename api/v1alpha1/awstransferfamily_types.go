@@ -57,6 +57,7 @@ type AwsTransferFamilySpec struct {
 	ServiceEndpoint *string                            `json:"serviceEndpoint,omitempty"`
 	ServerIds       []AwsTransferFamilyIdentifier      `json:"serverIds"`
 	Actions         map[string]AwsTransferFamilyAction `json:"actions"`
+	Credentials     *AwsCredentialsSpec                `json:"credentials,omitempty"`
 }
 
 // AwsTransferFamilyStatus defines the observed state of AwsTransferFamily

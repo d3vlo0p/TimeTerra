@@ -59,6 +59,7 @@ func init() {
 
 //RBAC operator
 //+kubebuilder:rbac:groups="",resources=events,verbs=create;patch
+//+kubebuilder:rbac:groups="",namespace="timeterra",resources=secrets,verbs=get
 
 func main() {
 	var metricsAddr string

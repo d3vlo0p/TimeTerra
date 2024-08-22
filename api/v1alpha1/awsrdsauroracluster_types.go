@@ -60,6 +60,7 @@ type AwsRdsAuroraClusterSpec struct {
 	ServiceEndpoint      *string                              `json:"serviceEndpoint,omitempty"`
 	DBClusterIdentifiers []AwsRdsAuroraClusterIdentifier      `json:"dbClusterIdentifiers"`
 	Actions              map[string]AwsRdsAuroraClusterAction `json:"actions"`
+	Credentials          *AwsCredentialsSpec                  `json:"credentials,omitempty"`
 }
 
 // AwsRdsAuroraClusterStatus defines the observed state of AwsRdsAuroraCluster

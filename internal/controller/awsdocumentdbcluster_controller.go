@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -123,6 +124,23 @@ func (r *AwsDocumentDBClusterReconciler) startStopCluster(ctx context.Context, k
 		logger.Error(err, "unable to load SDK config")
 		metadata["error"] = err.Error()
 		return JobResultError, metadata
+	}
+
+	if obj.Spec.Credentials != nil {
+		secret := &corev1.Secret{}
+		err = r.Get(ctx, types.NamespacedName{Name: obj.Spec.Credentials.SecretName, Namespace: obj.Spec.Credentials.Namespace}, secret)
+		if err != nil {
+			logger.Error(err, "Failed to get Secret resource.")
+			metadata["error"] = err.Error()
+			return JobResultError, metadata
+		}
+
+		cfg.Credentials, err = getAwsCredentialProviderFromSecret(secret, obj.Spec.Credentials.KeysRef)
+		if err != nil {
+			logger.Error(err, "Failed to configure credentials")
+			metadata["error"] = err.Error()
+			return JobResultError, metadata
+		}
 	}
 
 	actionType := ConditionTypeForAction(actionName)

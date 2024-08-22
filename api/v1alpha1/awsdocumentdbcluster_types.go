@@ -60,6 +60,7 @@ type AwsDocumentDBClusterSpec struct {
 	ServiceEndpoint      *string                               `json:"serviceEndpoint,omitempty"`
 	DBClusterIdentifiers []AwsDocumentDBClusterIdentifier      `json:"dbClusterIdentifiers"`
 	Actions              map[string]AwsDocumentDBClusterAction `json:"actions"`
+	Credentials          *AwsCredentialsSpec                   `json:"credentials,omitempty"`
 }
 
 // AwsDocumentDBClusterStatus defines the observed state of AwsDocumentDBCluster

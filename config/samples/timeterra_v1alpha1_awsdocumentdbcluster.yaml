@@ -9,4 +9,13 @@ metadata:
     app.kubernetes.io/created-by: timeterra
   name: awsdocumentdbcluster-sample
 spec:
-  # TODO(user): Add fields here
+  actions:
+    start:
+      command: start
+    stop:
+      command: stop
+  dbClusterIdentifiers:
+    - identifier: xxxxxxxxxxxxx
+      region: eu-central-1
+  enabled: true
+  schedule: schedule-sample
