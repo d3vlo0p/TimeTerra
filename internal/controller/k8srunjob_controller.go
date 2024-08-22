@@ -51,7 +51,6 @@ type K8sRunJobReconciler struct {
 //+kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=k8srunjobs/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=k8srunjobs/finalizers,verbs=update
 //+kubebuilder:rbac:groups=batch,resources=jobs,verbs=create
-//+kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

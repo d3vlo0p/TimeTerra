@@ -57,6 +57,9 @@ func init() {
 	//+kubebuilder:scaffold:scheme
 }
 
+//RBAC operator
+//+kubebuilder:rbac:groups="",resources=events,verbs=create;patch
+
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool

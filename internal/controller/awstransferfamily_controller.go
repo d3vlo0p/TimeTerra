@@ -51,7 +51,6 @@ type AwsTransferFamilyReconciler struct {
 //+kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=awstransferfamilies,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=awstransferfamilies/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=awstransferfamilies/finalizers,verbs=update
-//+kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the server closer to the desired state.

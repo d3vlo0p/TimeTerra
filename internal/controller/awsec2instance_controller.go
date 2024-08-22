@@ -51,7 +51,6 @@ type AwsEc2InstanceReconciler struct {
 //+kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=awsec2instances,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=awsec2instances/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=awsec2instances/finalizers,verbs=update
-//+kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the ec2 closer to the desired state.

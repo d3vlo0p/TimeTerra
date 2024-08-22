@@ -45,7 +45,6 @@ type ScheduleReconciler struct {
 //+kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=schedules,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=schedules/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=schedules/finalizers,verbs=update
-//+kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.16.3/pkg/reconcile
