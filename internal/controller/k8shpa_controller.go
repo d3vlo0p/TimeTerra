@@ -34,7 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	corev1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
+	v1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 	"github.com/d3vlo0p/TimeTerra/internal/cron"
 	"github.com/d3vlo0p/TimeTerra/notification"
 )
@@ -69,7 +69,7 @@ func (r *K8sHpaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	logger.Info(fmt.Sprintf("reconciling object %#q", req.NamespacedName))
 
 	resourceName := ResourceName("K8sHpa", req.Name)
-	instance := &corev1alpha1.K8sHpa{}
+	instance := &v1alpha1.K8sHpa{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -106,7 +106,7 @@ func (r *K8sHpaReconciler) setAutoscaling(ctx context.Context, key types.Namespa
 	metadata := JobMetadata{}
 	logger := log.FromContext(ctx)
 	start := time.Now()
-	obj := &corev1alpha1.K8sHpa{}
+	obj := &v1alpha1.K8sHpa{}
 	err := r.Get(ctx, key, obj)
 	if err != nil {
 		logger.Info("Failed to get K8sHpa resource.")
@@ -182,7 +182,7 @@ func (r *K8sHpaReconciler) setAutoscaling(ctx context.Context, key types.Namespa
 // SetupWithManager sets up the controller with the Manager.
 func (r *K8sHpaReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&corev1alpha1.K8sHpa{}).
+		For(&v1alpha1.K8sHpa{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Complete(r)
 }

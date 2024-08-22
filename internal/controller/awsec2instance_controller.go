@@ -34,7 +34,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
-	corev1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
+	v1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 	"github.com/d3vlo0p/TimeTerra/internal/cron"
 	"github.com/d3vlo0p/TimeTerra/notification"
 )
@@ -67,7 +67,7 @@ func (r *AwsEc2InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	logger.Info(fmt.Sprintf("reconciling object %#q", req.NamespacedName))
 
 	resourceName := ResourceName("AwsEc2Instance", req.Name)
-	instance := &corev1alpha1.AwsEc2Instance{}
+	instance := &v1alpha1.AwsEc2Instance{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -104,7 +104,7 @@ func (r *AwsEc2InstanceReconciler) startStopInstances(ctx context.Context, key t
 	metadata := JobMetadata{}
 	logger := log.FromContext(ctx)
 	start := time.Now()
-	obj := &corev1alpha1.AwsEc2Instance{}
+	obj := &v1alpha1.AwsEc2Instance{}
 	err := r.Get(ctx, key, obj)
 	if err != nil {
 		logger.Error(err, "Failed to get AwsEc2Instance resource.")
@@ -138,7 +138,7 @@ func (r *AwsEc2InstanceReconciler) startStopInstances(ctx context.Context, key t
 
 		switch action.Command {
 
-		case corev1alpha1.AwsEc2InstanceCommandStart:
+		case v1alpha1.AwsEc2InstanceCommandStart:
 			_, err := ec2Client.StartInstances(ctx, &ec2.StartInstancesInput{
 				InstanceIds: []string{ec2Instance.Id},
 			}, opts)
@@ -153,8 +153,8 @@ func (r *AwsEc2InstanceReconciler) startStopInstances(ctx context.Context, key t
 			r.Recorder.Eventf(obj, "Normal", "StartEc2Succeeded", "Ec2 %s is starting", ec2Instance.Id)
 			logger.Info("Ec2 is starting", "identifier", ec2Instance.Id)
 
-		case corev1alpha1.AwsEc2InstanceCommandStop, corev1alpha1.AwsEc2InstanceCommandHibernate:
-			hibernate := action.Command == corev1alpha1.AwsEc2InstanceCommandHibernate
+		case v1alpha1.AwsEc2InstanceCommandStop, v1alpha1.AwsEc2InstanceCommandHibernate:
+			hibernate := action.Command == v1alpha1.AwsEc2InstanceCommandHibernate
 			_, err := ec2Client.StopInstances(ctx, &ec2.StopInstancesInput{
 				InstanceIds: []string{ec2Instance.Id},
 				Hibernate:   &hibernate,
@@ -199,7 +199,7 @@ func (r *AwsEc2InstanceReconciler) startStopInstances(ctx context.Context, key t
 // SetupWithManager sets up the controller with the Manager.
 func (r *AwsEc2InstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&corev1alpha1.AwsEc2Instance{}).
+		For(&v1alpha1.AwsEc2Instance{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Complete(r)
 }

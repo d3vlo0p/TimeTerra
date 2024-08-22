@@ -27,7 +27,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	corev1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
+	v1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 )
 
 var _ = Describe("NotificationPolicy Controller", func() {
@@ -40,13 +40,13 @@ var _ = Describe("NotificationPolicy Controller", func() {
 			Name:      resourceName,
 			Namespace: "default", // TODO(user):Modify as needed
 		}
-		notificationpolicy := &corev1alpha1.NotificationPolicy{}
+		notificationpolicy := &v1alpha1.NotificationPolicy{}
 
 		BeforeEach(func() {
 			By("creating the custom resource for the Kind NotificationPolicy")
 			err := k8sClient.Get(ctx, typeNamespacedName, notificationpolicy)
 			if err != nil && errors.IsNotFound(err) {
-				resource := &corev1alpha1.NotificationPolicy{
+				resource := &v1alpha1.NotificationPolicy{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
 						Namespace: "default",
@@ -59,7 +59,7 @@ var _ = Describe("NotificationPolicy Controller", func() {
 
 		AfterEach(func() {
 			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &corev1alpha1.NotificationPolicy{}
+			resource := &v1alpha1.NotificationPolicy{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 

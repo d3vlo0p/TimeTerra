@@ -34,7 +34,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/rds"
-	corev1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
+	v1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 	"github.com/d3vlo0p/TimeTerra/internal/cron"
 	"github.com/d3vlo0p/TimeTerra/notification"
 )
@@ -67,7 +67,7 @@ func (r *AwsRdsAuroraClusterReconciler) Reconcile(ctx context.Context, req ctrl.
 	logger.Info(fmt.Sprintf("reconciling object %#q", req.NamespacedName))
 
 	resourceName := ResourceName("AwsRdsAuroraCluster", req.Name)
-	instance := &corev1alpha1.AwsRdsAuroraCluster{}
+	instance := &v1alpha1.AwsRdsAuroraCluster{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -104,7 +104,7 @@ func (r *AwsRdsAuroraClusterReconciler) startStopCluster(ctx context.Context, ke
 	metadata := JobMetadata{}
 	logger := log.FromContext(ctx)
 	start := time.Now()
-	obj := &corev1alpha1.AwsRdsAuroraCluster{}
+	obj := &v1alpha1.AwsRdsAuroraCluster{}
 	err := r.Get(ctx, key, obj)
 	if err != nil {
 		logger.Error(err, "Failed to get AwsRdsAuroraCluster resource. Re-running reconcile.")
@@ -138,7 +138,7 @@ func (r *AwsRdsAuroraClusterReconciler) startStopCluster(ctx context.Context, ke
 
 		switch action.Command {
 
-		case corev1alpha1.AwsRdsAuroraClusterCommandStart:
+		case v1alpha1.AwsRdsAuroraClusterCommandStart:
 			_, err := rdsClient.StartDBCluster(ctx, &rds.StartDBClusterInput{
 				DBClusterIdentifier: &cluster.Identifier,
 			}, opts)
@@ -153,7 +153,7 @@ func (r *AwsRdsAuroraClusterReconciler) startStopCluster(ctx context.Context, ke
 			r.Recorder.Eventf(obj, "Normal", "StartClusterSucceeded", "Cluster %s is starting", cluster.Identifier)
 			logger.Info("Cluster is starting", "identifier", cluster.Identifier)
 
-		case corev1alpha1.AwsRdsAuroraClusterCommandStop:
+		case v1alpha1.AwsRdsAuroraClusterCommandStop:
 			_, err := rdsClient.StopDBCluster(ctx, &rds.StopDBClusterInput{
 				DBClusterIdentifier: &cluster.Identifier,
 			}, opts)
@@ -196,7 +196,7 @@ func (r *AwsRdsAuroraClusterReconciler) startStopCluster(ctx context.Context, ke
 // SetupWithManager sets up the controller with the Manager.
 func (r *AwsRdsAuroraClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&corev1alpha1.AwsRdsAuroraCluster{}).
+		For(&v1alpha1.AwsRdsAuroraCluster{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Complete(r)
 }

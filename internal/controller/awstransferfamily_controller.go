@@ -34,7 +34,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/transfer"
-	corev1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
+	v1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 	"github.com/d3vlo0p/TimeTerra/internal/cron"
 	"github.com/d3vlo0p/TimeTerra/notification"
 )
@@ -67,7 +67,7 @@ func (r *AwsTransferFamilyReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	logger.Info(fmt.Sprintf("reconciling object %#q", req.NamespacedName))
 
 	resourceName := ResourceName("AwsTransferFamily", req.Name)
-	instance := &corev1alpha1.AwsTransferFamily{}
+	instance := &v1alpha1.AwsTransferFamily{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -104,7 +104,7 @@ func (r *AwsTransferFamilyReconciler) startStopServer(ctx context.Context, key t
 	metadata := JobMetadata{}
 	logger := log.FromContext(ctx)
 	start := time.Now()
-	obj := &corev1alpha1.AwsTransferFamily{}
+	obj := &v1alpha1.AwsTransferFamily{}
 	err := r.Get(ctx, key, obj)
 	if err != nil {
 		logger.Error(err, "Failed to get AwsTransferFamily resource. Re-running reconcile.")
@@ -138,7 +138,7 @@ func (r *AwsTransferFamilyReconciler) startStopServer(ctx context.Context, key t
 
 		switch action.Command {
 
-		case corev1alpha1.AwsTransferFamilyCommandStart:
+		case v1alpha1.AwsTransferFamilyCommandStart:
 			_, err := transferClient.StartServer(ctx, &transfer.StartServerInput{
 				ServerId: &server.Id,
 			}, opts)
@@ -153,7 +153,7 @@ func (r *AwsTransferFamilyReconciler) startStopServer(ctx context.Context, key t
 			r.Recorder.Eventf(obj, "Normal", "StartServerSucceeded", "Server %s is starting", server.Id)
 			logger.Info("Server is starting", "id", server.Id)
 
-		case corev1alpha1.AwsTransferFamilyCommandStop:
+		case v1alpha1.AwsTransferFamilyCommandStop:
 			_, err := transferClient.StopServer(ctx, &transfer.StopServerInput{
 				ServerId: &server.Id,
 			}, opts)
@@ -196,7 +196,7 @@ func (r *AwsTransferFamilyReconciler) startStopServer(ctx context.Context, key t
 // SetupWithManager sets up the controller with the Manager.
 func (r *AwsTransferFamilyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&corev1alpha1.AwsTransferFamily{}).
+		For(&v1alpha1.AwsTransferFamily{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Complete(r)
 }

@@ -32,7 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	corev1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
+	v1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 	"github.com/d3vlo0p/TimeTerra/internal/cron"
 	"github.com/d3vlo0p/TimeTerra/notification"
 	batchv1 "k8s.io/api/batch/v1"
@@ -67,7 +67,7 @@ func (r *K8sRunJobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	logger.Info(fmt.Sprintf("reconciling object %#q", req.NamespacedName))
 
 	resourceName := ResourceName("K8sRunJob", req.Name)
-	instance := &corev1alpha1.K8sRunJob{}
+	instance := &v1alpha1.K8sRunJob{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -104,7 +104,7 @@ func (r *K8sRunJobReconciler) runJob(ctx context.Context, key types.NamespacedNa
 	metadata := JobMetadata{}
 	logger := log.FromContext(ctx)
 	start := time.Now()
-	obj := &corev1alpha1.K8sRunJob{}
+	obj := &v1alpha1.K8sRunJob{}
 	err := r.Get(ctx, key, obj)
 	if err != nil {
 		logger.Error(err, "Failed to get RunJob resource.")
@@ -200,7 +200,7 @@ func (r *K8sRunJobReconciler) runJob(ctx context.Context, key types.NamespacedNa
 // SetupWithManager sets up the controller with the Manager.
 func (r *K8sRunJobReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&corev1alpha1.K8sRunJob{}).
+		For(&v1alpha1.K8sRunJob{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Complete(r)
 }

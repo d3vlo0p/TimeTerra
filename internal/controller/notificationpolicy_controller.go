@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	corev1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
+	v1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 	"github.com/d3vlo0p/TimeTerra/notification"
 )
 
@@ -58,7 +58,7 @@ func (r *NotificationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 	logger := log.FromContext(ctx)
 
 	logger.Info(fmt.Sprintf("reconciling object %#q", req.NamespacedName))
-	instance := &corev1alpha1.NotificationPolicy{}
+	instance := &v1alpha1.NotificationPolicy{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -87,7 +87,7 @@ func (r *NotificationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 	return ctrl.Result{}, nil
 }
 
-func (r *NotificationPolicyReconciler) reconcile(ctx context.Context, instance *corev1alpha1.NotificationPolicy) error {
+func (r *NotificationPolicyReconciler) reconcile(ctx context.Context, instance *v1alpha1.NotificationPolicy) error {
 	logger := log.FromContext(ctx)
 	r.NotificationService.RemoveRecipient(instance.Name)
 	if !instance.Spec.IsActive() {
@@ -167,7 +167,7 @@ func (r *NotificationPolicyReconciler) reconcile(ctx context.Context, instance *
 // SetupWithManager sets up the controller with the Manager.
 func (r *NotificationPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&corev1alpha1.NotificationPolicy{}).
+		For(&v1alpha1.NotificationPolicy{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Complete(r)
 }

@@ -27,7 +27,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	corev1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
+	v1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 )
 
 var _ = Describe("AwsTransferFamily Controller", func() {
@@ -40,13 +40,13 @@ var _ = Describe("AwsTransferFamily Controller", func() {
 			Name:      resourceName,
 			Namespace: "default", // TODO(user):Modify as needed
 		}
-		awstransferfamily := &corev1alpha1.AwsTransferFamily{}
+		awstransferfamily := &v1alpha1.AwsTransferFamily{}
 
 		BeforeEach(func() {
 			By("creating the custom resource for the Kind AwsTransferFamily")
 			err := k8sClient.Get(ctx, typeNamespacedName, awstransferfamily)
 			if err != nil && errors.IsNotFound(err) {
-				resource := &corev1alpha1.AwsTransferFamily{
+				resource := &v1alpha1.AwsTransferFamily{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
 						Namespace: "default",
@@ -59,7 +59,7 @@ var _ = Describe("AwsTransferFamily Controller", func() {
 
 		AfterEach(func() {
 			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &corev1alpha1.AwsTransferFamily{}
+			resource := &v1alpha1.AwsTransferFamily{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 

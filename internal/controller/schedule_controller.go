@@ -30,7 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	corev1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
+	v1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -52,7 +52,7 @@ func (r *ScheduleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	logger := log.FromContext(ctx)
 
 	logger.Info(fmt.Sprintf("reconciling object %#q", req.NamespacedName))
-	instance := &corev1alpha1.Schedule{}
+	instance := &v1alpha1.Schedule{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -115,7 +115,7 @@ func (r *ScheduleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	return ctrl.Result{}, nil
 }
 
-func (r *ScheduleReconciler) reconcile(ctx context.Context, instance *corev1alpha1.Schedule) error {
+func (r *ScheduleReconciler) reconcile(ctx context.Context, instance *v1alpha1.Schedule) error {
 	logger := log.FromContext(ctx)
 	scheduleName := instance.Name
 	// checking if the cron expression of the actions is correct
@@ -210,7 +210,7 @@ func (r *ScheduleReconciler) reconcile(ctx context.Context, instance *corev1alph
 // SetupWithManager sets up the controller with the Manager.
 func (r *ScheduleReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&corev1alpha1.Schedule{}).
+		For(&v1alpha1.Schedule{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Complete(r)
 }

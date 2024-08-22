@@ -34,7 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	corev1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
+	v1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 	"github.com/d3vlo0p/TimeTerra/internal/cron"
 	"github.com/d3vlo0p/TimeTerra/notification"
 )
@@ -71,7 +71,7 @@ func (r *K8sPodReplicasReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	logger.Info(fmt.Sprintf("reconciling object %#q", req.NamespacedName))
 
 	resourceName := ResourceName("K8sPodReplicas", req.Name)
-	instance := &corev1alpha1.K8sPodReplicas{}
+	instance := &v1alpha1.K8sPodReplicas{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -108,7 +108,7 @@ func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, key types.Na
 	metadata := JobMetadata{}
 	logger := log.FromContext(ctx)
 	start := time.Now()
-	obj := &corev1alpha1.K8sPodReplicas{}
+	obj := &v1alpha1.K8sPodReplicas{}
 	err := r.Get(ctx, key, obj)
 	if err != nil {
 		logger.Error(err, "Failed to get PodReplicas resource.")
@@ -129,7 +129,7 @@ func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, key types.Na
 	errorsList := make([]string, 0)
 	for _, namespace := range obj.Spec.Namespaces {
 		switch kind := obj.Spec.ResourceType; kind {
-		case corev1alpha1.K8sDeployment:
+		case v1alpha1.K8sDeployment:
 			// retrive Deployments with specified labels
 			deploymentList := &appsv1.DeploymentList{}
 			err := r.List(ctx, deploymentList, &client.ListOptions{
@@ -160,7 +160,7 @@ func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, key types.Na
 				logger.Info(fmt.Sprintf("updated deployment %q/%q to %d replicas", deployment.Namespace, deployment.Name, action.Replicas))
 			}
 
-		case corev1alpha1.K8sStatefulSet:
+		case v1alpha1.K8sStatefulSet:
 			// retrive StatefulSets with specified labels
 			statefulSetList := &appsv1.StatefulSetList{}
 			err := r.List(ctx, statefulSetList, &client.ListOptions{
@@ -219,7 +219,7 @@ func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, key types.Na
 // SetupWithManager sets up the controller with the Manager.
 func (r *K8sPodReplicasReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&corev1alpha1.K8sPodReplicas{}).
+		For(&v1alpha1.K8sPodReplicas{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Complete(r)
 }

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	corev1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
+	v1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 	sc "github.com/d3vlo0p/TimeTerra/internal/cron"
 	"github.com/d3vlo0p/TimeTerra/monitoring"
 	"github.com/d3vlo0p/TimeTerra/notification"
@@ -90,7 +90,7 @@ func reconcileResource[ActionType Activable](
 ) error {
 	logger := log.FromContext(ctx)
 
-	schedule := &corev1alpha1.Schedule{}
+	schedule := &v1alpha1.Schedule{}
 	err := cli.Get(ctx, client.ObjectKey{Name: scheduleName}, schedule)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -164,7 +164,7 @@ func reconcileResource[ActionType Activable](
 				// retrive schedule for cheking if it is active
 				// we do the check here because the check is simpler, and it avoids us having to delete and create objects in cron schedule
 				start := time.Now()
-				s := &corev1alpha1.Schedule{}
+				s := &v1alpha1.Schedule{}
 				err := cli.Get(ctx, client.ObjectKey{Name: scheduleName}, s)
 				if err != nil {
 					logger.Error(err, "Cron run, failed to get schedule", "name", scheduleName)
