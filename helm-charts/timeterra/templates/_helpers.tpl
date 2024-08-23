@@ -73,6 +73,6 @@ define namespaces to watch
     {{- end }}
 {{- else -}}
 - name: WATCH_NAMESPACE
-  value: {{- .Release.Namespace }}
+  value: {{ .Release.Namespace }}
 {{- end }}
 {{- end }}
