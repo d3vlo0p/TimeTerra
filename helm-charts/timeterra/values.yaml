@@ -65,6 +65,15 @@ readinessProbe:
   initialDelaySeconds: 5
   periodSeconds: 10
 
+settings: 
+  ##enable Cluster Scope for the operator
+  ##if set to true watchNamespaces is ignored
+  watchAllNamespaces: false
+  ##set wich namespaces the operator should watch
+  ##if not set, it will watch the operator namespace
+  ##if set with a list of namespaces, it will watch those namespaces
+  watchNamespaces: ""
+
 # Additional env vars
 env: []
   # - name: LOG_LEVEL

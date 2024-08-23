@@ -41,8 +41,7 @@ spec:
           env:
             - name: NAMESPACE
               value: {{ .Release.Namespace }}
-            - name: WATCH_NAMESPACE
-              value: {{ .Release.Namespace }}
+            {{- include "timeterra.settings.watchNamespaces" . | nindent 12 }}
           {{- with .Values.env }}
             {{- toYaml .Values.env | nindent 12 }}
           {{- end }}

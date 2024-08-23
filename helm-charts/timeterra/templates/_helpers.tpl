@@ -60,3 +60,19 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+
+{{/*
+define namespaces to watch
+*/}}
+{{- define "timeterra.settings.watchNamespaces" -}}
+{{- if .Values.settings -}}
+    {{- if not .Values.settings.watchAllNamespaces -}}
+- name: WATCH_NAMESPACE
+  value: {{ default .Release.Namespace .Values.settings.watchNamespaces  }}
+    {{- end }}
+{{- else -}}
+- name: WATCH_NAMESPACE
+  value: {{- .Release.Namespace }}
+{{- end }}
+{{- end }}
