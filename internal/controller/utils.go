@@ -284,29 +284,27 @@ func removeMissingActionFromConditions(conditions *[]metav1.Condition, actions [
 	}
 }
 
-// func printBytes(b []byte) string {
-// 	r := ""
-// 	for i := 0; i < len(b); i++ {
-// 		r = strings.Join([]string{r, fmt.Sprintf("%d", b[i])}, ", ")
-// 	}
-// 	return r
-// }
-
 func decodeSecret(secret *corev1.Secret) (map[string]string, error) {
 	values := make(map[string]string, len(secret.Data))
 	for k, v := range secret.Data {
-		// log.Log.Info("decoding secret", "key", k, "value", v, "bytes", printBytes(v), "dec", string(v))
+		// log.Log.Info("decoding secret", "key", k, "value", v, "dec", string(v))
+
+		// seems that something does already base64 decoding
+		// because if i print "v" in the logs, i see the base64 string
+		// but if i log string(v), i see the decoded string
+		values[k] = string(v)
+
 		// dst := make([]byte, base64.StdEncoding.DecodedLen(len(v)))
 		// n, err := base64.StdEncoding.Decode(dst, v)
 		// if err != nil {
 		// 	return nil, err
 		// }
-		// log.Log.Info("decoded secret", "key", k, "dst", dst[:n], "bytes_dst", printBytes(dst[:n]), "v", v, "bytes_v", printBytes(v))
+		// Base64 decoding the bytes into a slice works correctly,
+		// but attempting to cast the slice to a string fails.
+		// This is likely because the string conversion is trying
+		// to decode the byte slice again, which is not necessary
+		// since it has already been decoded into the slice.
 		// values[k] = string(dst[:n])
-
-		// seems that string() does already base64 decoding
-		// because if i print "v" in the logs i see the base64 string, but if i try to convert to string, the result is alredy base64 decoded.
-		values[k] = string(v)
 	}
 	// log.Log.Info("decoded secret", "values", values)
 	return values, nil
