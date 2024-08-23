@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -76,11 +77,13 @@ func (r *NotificationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	err = r.reconcile(ctx, instance)
 	if err != nil {
+		r.Recorder.Eventf(instance, corev1.EventTypeWarning, "ReconcileError", "Reconcile error: %s", err.Error())
 		return ctrl.Result{}, err
 	}
 
 	err = r.Status().Update(ctx, instance)
 	if err != nil {
+		r.Recorder.Eventf(instance, corev1.EventTypeWarning, "ReconcileError", "Reconcile error: %s", err.Error())
 		logger.Info("Failed to update NotificationPolicy resource status. Re-running reconcile.")
 		return ctrl.Result{}, err
 	}

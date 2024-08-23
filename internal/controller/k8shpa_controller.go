@@ -23,6 +23,7 @@ import (
 	"time"
 
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -90,12 +91,14 @@ func (r *K8sHpaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	} else {
 		err := reconcileResource(ctx, req, r.Client, r.Cron, r.NotificationService, instance.Spec.Actions, instance.Spec.Schedule, resourceName, r.setAutoscaling, &instance.Status.Conditions)
 		if err != nil {
+			r.Recorder.Eventf(instance, corev1.EventTypeWarning, "ReconcileError", "Reconcile error: %s", err.Error())
 			return ctrl.Result{}, err
 		}
 	}
 
 	err = r.Status().Update(ctx, instance)
 	if err != nil {
+		r.Recorder.Eventf(instance, corev1.EventTypeWarning, "ReconcileError", "Reconcile error: %s", err.Error())
 		logger.Info("Failed to update K8sHpa resource. Re-running reconcile.")
 		return ctrl.Result{}, err
 	}

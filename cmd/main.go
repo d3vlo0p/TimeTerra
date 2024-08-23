@@ -19,7 +19,9 @@ package main
 import (
 	"crypto/tls"
 	"flag"
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/d3vlo0p/TimeTerra/internal/cron"
 	"github.com/d3vlo0p/TimeTerra/monitoring"
@@ -33,6 +35,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -59,7 +62,32 @@ func init() {
 
 //RBAC operator
 //+kubebuilder:rbac:groups="",resources=events,verbs=create;patch
-//+kubebuilder:rbac:groups="",namespace="timeterra",resources=secrets,verbs=get
+//+kubebuilder:rbac:groups="",namespace="timeterra",resources=secrets,verbs=get;list;watch
+
+// getOperatorNamespace returns the Namespace of the operator
+func getOperatorNamespace() (string, error) {
+	var operatorNamespaceEnvVar = "NAMESPACE"
+
+	ns, found := os.LookupEnv(operatorNamespaceEnvVar)
+	if !found {
+		return "", fmt.Errorf("%s not found", operatorNamespaceEnvVar)
+	}
+	return ns, nil
+}
+
+// getWatchNamespace returns the Namespace the operator should be watching for changes
+func getWatchNamespace() (string, error) {
+	// WatchNamespaceEnvVar is the constant for env variable WATCH_NAMESPACE
+	// which specifies the Namespace to watch.
+	// An empty value means the operator is running with cluster scope.
+	var watchNamespaceEnvVar = "WATCH_NAMESPACE"
+
+	ns, found := os.LookupEnv(watchNamespaceEnvVar)
+	if !found {
+		return "", fmt.Errorf("%s not found", watchNamespaceEnvVar)
+	}
+	return ns, nil
+}
 
 func main() {
 	var metricsAddr string
@@ -104,6 +132,28 @@ func main() {
 		TLSOpts: tlsOpts,
 	})
 
+	operatorNamespace, err := getOperatorNamespace()
+	if err != nil {
+		setupLog.Error(err, "missing OperatorNamespace, default namespace not set")
+	}
+
+	cacheOptions := cache.Options{}
+	watchNamespace, err := getWatchNamespace()
+	if err != nil {
+		setupLog.Error(err, "unable to get WatchNamespace, the manager will watch and manage resources in all Namespaces")
+	} else {
+		if strings.Contains(watchNamespace, ",") {
+			namespaces := strings.Split(watchNamespace, ",")
+			cacheOptions.DefaultNamespaces = make(map[string]cache.Config, len(namespaces))
+			for _, namespace := range namespaces {
+				cacheOptions.DefaultNamespaces[namespace] = cache.Config{}
+			}
+		} else {
+			cacheOptions.DefaultNamespaces = make(map[string]cache.Config, 1)
+			cacheOptions.DefaultNamespaces[watchNamespace] = cache.Config{}
+		}
+	}
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
@@ -115,6 +165,7 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "70e6cc78.timeterra.d3vlo0p.dev",
+		Cache:                  cacheOptions,
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
@@ -181,6 +232,7 @@ func main() {
 		Cron:                c,
 		NotificationService: ns,
 		Recorder:            mgr.GetEventRecorderFor("awsrdsauroracluster-controller"),
+		OperatorNamespace:   operatorNamespace,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AwsRdsAuroraCluster")
 		os.Exit(1)
@@ -191,6 +243,7 @@ func main() {
 		Cron:                c,
 		NotificationService: ns,
 		Recorder:            mgr.GetEventRecorderFor("awsdocumentdbcluster-controller"),
+		OperatorNamespace:   operatorNamespace,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AwsDocumentDBCluster")
 		os.Exit(1)
@@ -201,6 +254,7 @@ func main() {
 		Cron:                c,
 		NotificationService: ns,
 		Recorder:            mgr.GetEventRecorderFor("awstransferfamily-controller"),
+		OperatorNamespace:   operatorNamespace,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AwsTransferFamily")
 		os.Exit(1)
@@ -211,6 +265,7 @@ func main() {
 		Cron:                c,
 		NotificationService: ns,
 		Recorder:            mgr.GetEventRecorderFor("awsec2instance-controller"),
+		OperatorNamespace:   operatorNamespace,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AwsEc2Instance")
 		os.Exit(1)

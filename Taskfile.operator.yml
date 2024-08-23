@@ -9,6 +9,8 @@ tasks:
   run:
     env:
       AWS_PROFILE: timeterra
+      NAMESPACE: timeterra
+      WATCH_NAMESPACE: timeterra
     cmds:
       - make install run
 

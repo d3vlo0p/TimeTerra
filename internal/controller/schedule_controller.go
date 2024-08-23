@@ -22,6 +22,7 @@ import (
 
 	sc "github.com/d3vlo0p/TimeTerra/internal/cron"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
@@ -94,6 +95,7 @@ func (r *ScheduleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if update {
 		err = r.Update(ctx, instance)
 		if err != nil {
+			r.Recorder.Eventf(instance, corev1.EventTypeWarning, "ReconcileError", "Reconcile error: %s", err.Error())
 			logger.Info("Failed to update Schedule resource. Re-running reconcile.")
 			return ctrl.Result{}, err
 		}
@@ -103,11 +105,13 @@ func (r *ScheduleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	err = r.reconcile(ctx, instance)
 	if err != nil {
+		r.Recorder.Eventf(instance, corev1.EventTypeWarning, "ReconcileError", "Reconcile error: %s", err.Error())
 		return ctrl.Result{}, err
 	}
 
 	err = r.Status().Update(ctx, instance)
 	if err != nil {
+		r.Recorder.Eventf(instance, corev1.EventTypeWarning, "ReconcileError", "Reconcile error: %s", err.Error())
 		logger.Info("Failed to update Schedule resource status. Re-running reconcile.")
 		return ctrl.Result{}, err
 	}

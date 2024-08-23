@@ -47,6 +47,7 @@ type AwsTransferFamilyReconciler struct {
 	Cron                *cron.ScheduleService
 	NotificationService *notification.NotificationService
 	Recorder            record.EventRecorder
+	OperatorNamespace   string
 }
 
 //+kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=awstransferfamilies,verbs=get;list;watch;create;update;patch;delete
@@ -84,17 +85,31 @@ func (r *AwsTransferFamilyReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		instance.Status.Conditions = make([]metav1.Condition, 0)
 	}
 
+	if instance.Spec.Credentials != nil {
+		secret := &corev1.Secret{}
+		key := types.NamespacedName{Name: instance.Spec.Credentials.SecretName, Namespace: defaultNamespace(r.OperatorNamespace, instance.Spec.Credentials.Namespace)}
+		log.Log.Info("check secret", "key", key)
+		err = r.Get(ctx, key, secret)
+		if err != nil {
+			logger.Error(err, "Failed to get Secret.", "key", key)
+			r.Recorder.Eventf(instance, corev1.EventTypeWarning, "SecretError", "Secret %s error: %s", key.String(), err.Error())
+			return ctrl.Result{}, err
+		}
+	}
+
 	if instance.Spec.Enabled != nil && !*instance.Spec.Enabled {
 		disableResource(r.Cron, &instance.Status.Conditions, resourceName)
 	} else {
 		err := reconcileResource(ctx, req, r.Client, r.Cron, r.NotificationService, instance.Spec.Actions, instance.Spec.Schedule, resourceName, r.startStopServer, &instance.Status.Conditions)
 		if err != nil {
+			r.Recorder.Eventf(instance, corev1.EventTypeWarning, "ReconcileError", "Reconcile error: %s", err.Error())
 			return ctrl.Result{}, err
 		}
 	}
 
 	err = r.Status().Update(ctx, instance)
 	if err != nil {
+		r.Recorder.Eventf(instance, corev1.EventTypeWarning, "ReconcileError", "Reconcile error: %s", err.Error())
 		logger.Info("Failed to update AwsTransferFamily resource. Re-running reconcile.")
 		return ctrl.Result{}, err
 	}
@@ -128,7 +143,7 @@ func (r *AwsTransferFamilyReconciler) startStopServer(ctx context.Context, key t
 
 	if obj.Spec.Credentials != nil {
 		secret := &corev1.Secret{}
-		err = r.Get(ctx, types.NamespacedName{Name: obj.Spec.Credentials.SecretName, Namespace: obj.Spec.Credentials.Namespace}, secret)
+		err = r.Get(ctx, types.NamespacedName{Name: obj.Spec.Credentials.SecretName, Namespace: defaultNamespace(r.OperatorNamespace, obj.Spec.Credentials.Namespace)}, secret)
 		if err != nil {
 			logger.Error(err, "Failed to get Secret resource.")
 			metadata["error"] = err.Error()

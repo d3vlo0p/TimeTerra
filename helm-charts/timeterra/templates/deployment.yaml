@@ -38,8 +38,12 @@ spec:
             - /manager
           args:
             - --leader-elect
-          {{- with .Values.env }}
           env:
+            - name: NAMESPACE
+              value: {{ .Release.Namespace }}
+            - name: WATCH_NAMESPACE
+              value: {{ .Release.Namespace }}
+          {{- with .Values.env }}
             {{- toYaml .Values.env | nindent 12 }}
           {{- end }}
           {{- with .Values.envFrom }}

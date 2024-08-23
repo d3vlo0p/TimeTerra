@@ -36,6 +36,7 @@ import (
 	"github.com/d3vlo0p/TimeTerra/internal/cron"
 	"github.com/d3vlo0p/TimeTerra/notification"
 	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // K8sRunJobReconciler reconciles a K8sRunJob object
@@ -87,12 +88,14 @@ func (r *K8sRunJobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	} else {
 		err := reconcileResource(ctx, req, r.Client, r.Cron, r.NotificationService, instance.Spec.Actions, instance.Spec.Schedule, resourceName, r.runJob, &instance.Status.Conditions)
 		if err != nil {
+			r.Recorder.Eventf(instance, corev1.EventTypeWarning, "ReconcileError", "Reconcile error: %s", err.Error())
 			return ctrl.Result{}, err
 		}
 	}
 
 	err = r.Status().Update(ctx, instance)
 	if err != nil {
+		r.Recorder.Eventf(instance, corev1.EventTypeWarning, "ReconcileError", "Reconcile error: %s", err.Error())
 		logger.Info(fmt.Sprintf("failed to update status: %q", err))
 		return ctrl.Result{}, err
 	}

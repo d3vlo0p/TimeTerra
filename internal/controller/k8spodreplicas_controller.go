@@ -23,6 +23,7 @@ import (
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -91,12 +92,14 @@ func (r *K8sPodReplicasReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	} else {
 		err := reconcileResource(ctx, req, r.Client, r.Cron, r.NotificationService, instance.Spec.Actions, instance.Spec.Schedule, resourceName, r.setReplicas, &instance.Status.Conditions)
 		if err != nil {
+			r.Recorder.Eventf(instance, corev1.EventTypeWarning, "ReconcileError", "Reconcile error: %s", err.Error())
 			return ctrl.Result{}, err
 		}
 	}
 
 	err = r.Status().Update(ctx, instance)
 	if err != nil {
+		r.Recorder.Eventf(instance, corev1.EventTypeWarning, "ReconcileError", "Reconcile error: %s", err.Error())
 		logger.Info(fmt.Sprintf("failed to update status: %q", err))
 		return ctrl.Result{}, err
 	}
