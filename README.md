@@ -116,8 +116,8 @@ more samples [here](./config/samples/)
 To allow timeterra to be able to call the AWS API there are several methods, including:
 
 On EKS:
-- EKS Pod Identity [docs](https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html)
-- IAM roles for service accounts [docs](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html)
+- [EKS Pod Identity](https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html)
+- [IAM roles for service accounts](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html)
 
 Others:
 - Setting env vars, you can find the list [here](https://docs.aws.amazon.com/sdkref/latest/guide/settings-reference.html#EVarSettings)
