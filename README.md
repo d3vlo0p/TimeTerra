@@ -111,6 +111,77 @@ spec:
 ```
 more samples [here](./config/samples/)
 
+## AWS
+
+To allow timeterra to be able to call the AWS API there are several methods, including:
+
+On EKS:
+- EKS Pod Identity [docs](https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html)
+- IAM roles for service accounts [docs](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html)
+
+Others:
+- Setting env vars, you can find the list [here](https://docs.aws.amazon.com/sdkref/latest/guide/settings-reference.html#EVarSettings)
+- Mounting as volume the [credentials and config files](https://docs.aws.amazon.com/sdkref/latest/guide/file-format.html) in the operator folder [~/.aws/config](https://docs.aws.amazon.com/sdkref/latest/guide/file-location.html)
+- Specify the credentials property in the AWS CRs with [this format](api/v1alpha1/aws_types.go), this allows you to read the credentials from a kubernetes secret, you can do your mapping or relaing on the default keys. You can have different credentials for different resources.
+
+  ```yaml
+  apiVersion: v1
+  kind: Secret
+  metadata:
+    name: aws-credentials-example
+    namespace: timeterra
+  stringData:
+    aws_access_key_id: ASIAIOSFODNN7EXAMPLE
+    aws_secret_access_key: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+    aws_session_token: IQoJb3JpZ2luX2IQoJb3JpZ2luX2IQoJb3JpZ2luX2IQoJb3JpZ2luX2IQoJb3JpZVERYLONGSTRINGEXAMPLE
+  type: Opaque
+  ```
+
+Example of AWS IAM Policy to attach to the IAM user / role.
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "rds",
+      "Action": [
+        "rds:StartDBCluster",
+        "rds:StopDBCluster"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    },
+    {
+      "Sid": "docdb",
+      "Action": [
+        "docdb-elastic:StartCluster",
+        "docdb-elastic:StopCluster"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    },
+    {
+      "Sid": "sftp",
+      "Action": [
+        "transfer:StartServer",
+        "transfer:StopServer"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    },
+    {
+      "Sid": "ec2",
+      "Action": [
+        "ec2:StartInstances",
+        "ec2:StopInstances"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    }
+  ]
+}
+```
+
 ## License
 
 Copyright 2024.
