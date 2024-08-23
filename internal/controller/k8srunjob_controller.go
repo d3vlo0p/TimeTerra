@@ -159,7 +159,7 @@ func (r *K8sRunJobReconciler) runJob(ctx context.Context, key types.NamespacedNa
 			msg := fmt.Sprintf("Failed to set controller reference: %s", err)
 			errorsList = append(errorsList, msg)
 			logger.Error(err, msg)
-			r.Recorder.Eventf(obj, "Warning", "Failed", msg)
+			r.Recorder.Eventf(obj, corev1.EventTypeWarning, "Failed", msg)
 			continue
 		}
 
@@ -168,11 +168,11 @@ func (r *K8sRunJobReconciler) runJob(ctx context.Context, key types.NamespacedNa
 			msg := fmt.Sprintf("Failed to create job: %s", err)
 			errorsList = append(errorsList, msg)
 			logger.Error(err, msg)
-			r.Recorder.Eventf(obj, "Warning", "Failed", msg)
+			r.Recorder.Eventf(obj, corev1.EventTypeWarning, "Failed", msg)
 			continue
 		}
 
-		r.Recorder.Eventf(obj, "Normal", "Success", fmt.Sprintf("Job %q created in namespace %q", jobName, namespace))
+		r.Recorder.Eventf(obj, corev1.EventTypeNormal, "Success", fmt.Sprintf("Job %q created in namespace %q", jobName, namespace))
 		logger.Info("Job created", "Job", jobName, "Namespace", namespace)
 	}
 

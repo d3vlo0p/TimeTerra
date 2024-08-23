@@ -136,7 +136,7 @@ func (r *K8sHpaReconciler) setAutoscaling(ctx context.Context, key types.Namespa
 			msg := fmt.Sprintf("Failed to list HorizontalPodAutoscaler in namespace %q", namespace)
 			logger.Error(err, msg)
 			errorsList = append(errorsList, msg)
-			r.Recorder.Event(obj, "Warning", "Failed", msg)
+			r.Recorder.Event(obj, corev1.EventTypeWarning, "Failed", msg)
 			continue
 		}
 
@@ -150,11 +150,11 @@ func (r *K8sHpaReconciler) setAutoscaling(ctx context.Context, key types.Namespa
 				msg := fmt.Sprintf("Failed to update HorizontalPodAutoscaler %q/%q", hpa.Namespace, hpa.Name)
 				logger.Error(err, msg)
 				errorsList = append(errorsList, msg)
-				r.Recorder.Event(obj, "Warning", "Failed", msg)
+				r.Recorder.Event(obj, corev1.EventTypeWarning, "Failed", msg)
 				continue
 			}
 
-			r.Recorder.Eventf(obj, "Normal", "Updated", "HorizontalPodAutoscaler %q/%q updated min:%d max:%d", hpa.Namespace, hpa.Name, minReplicas, maxReplicas)
+			r.Recorder.Eventf(obj, corev1.EventTypeNormal, "Updated", "HorizontalPodAutoscaler %q/%q updated min:%d max:%d", hpa.Namespace, hpa.Name, minReplicas, maxReplicas)
 			logger.Info(fmt.Sprintf("HorizontalPodAutoscaler %q/%q updated min:%d max:%d", hpa.Namespace, hpa.Name, minReplicas, maxReplicas))
 		}
 	}

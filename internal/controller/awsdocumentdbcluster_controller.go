@@ -179,11 +179,11 @@ func (r *AwsDocumentDBClusterReconciler) startStopCluster(ctx context.Context, k
 				msg := fmt.Sprintf("unable to start cluster %s", cluster.Identifier)
 				logger.Error(err, msg)
 				errorsList = append(errorsList, msg)
-				r.Recorder.Eventf(obj, "Warning", "StartClusterFailed", msg)
+				r.Recorder.Eventf(obj, corev1.EventTypeWarning, "StartClusterFailed", msg)
 				continue
 			}
 
-			r.Recorder.Eventf(obj, "Normal", "StartClusterSucceeded", "Cluster %s is starting", cluster.Identifier)
+			r.Recorder.Eventf(obj, corev1.EventTypeNormal, "StartClusterSucceeded", "Cluster %s is starting", cluster.Identifier)
 			logger.Info("Cluster is starting", "identifier", cluster.Identifier)
 
 		case v1alpha1.AwsDocumentDBClusterCommandStop:
@@ -194,11 +194,11 @@ func (r *AwsDocumentDBClusterReconciler) startStopCluster(ctx context.Context, k
 				msg := fmt.Sprintf("unable to stop cluster %s", cluster.Identifier)
 				logger.Error(err, msg)
 				errorsList = append(errorsList, msg)
-				r.Recorder.Eventf(obj, "Warning", "StopClusterFailed", msg)
+				r.Recorder.Eventf(obj, corev1.EventTypeWarning, "StopClusterFailed", msg)
 				continue
 			}
 
-			r.Recorder.Eventf(obj, "Normal", "StopClusterSucceeded", "Cluster %s is stopping", cluster.Identifier)
+			r.Recorder.Eventf(obj, corev1.EventTypeNormal, "StopClusterSucceeded", "Cluster %s is stopping", cluster.Identifier)
 			logger.Info("Cluster is stopping", "identifier", cluster.Identifier)
 		}
 	}

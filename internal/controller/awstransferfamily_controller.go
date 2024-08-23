@@ -179,11 +179,11 @@ func (r *AwsTransferFamilyReconciler) startStopServer(ctx context.Context, key t
 				msg := fmt.Sprintf("unable to start server %s", server.Id)
 				logger.Error(err, msg)
 				errorsList = append(errorsList, msg)
-				r.Recorder.Eventf(obj, "Warning", "StartServerFailed", msg)
+				r.Recorder.Eventf(obj, corev1.EventTypeWarning, "StartServerFailed", msg)
 				continue
 			}
 
-			r.Recorder.Eventf(obj, "Normal", "StartServerSucceeded", "Server %s is starting", server.Id)
+			r.Recorder.Eventf(obj, corev1.EventTypeNormal, "StartServerSucceeded", "Server %s is starting", server.Id)
 			logger.Info("Server is starting", "id", server.Id)
 
 		case v1alpha1.AwsTransferFamilyCommandStop:
@@ -194,11 +194,11 @@ func (r *AwsTransferFamilyReconciler) startStopServer(ctx context.Context, key t
 				msg := fmt.Sprintf("unable to stop server %s", server.Id)
 				logger.Error(err, msg)
 				errorsList = append(errorsList, msg)
-				r.Recorder.Eventf(obj, "Warning", "StopServerFailed", msg)
+				r.Recorder.Eventf(obj, corev1.EventTypeWarning, "StopServerFailed", msg)
 				continue
 			}
 
-			r.Recorder.Eventf(obj, "Normal", "StopServerSucceeded", "Server %s is stopping", server.Id)
+			r.Recorder.Eventf(obj, corev1.EventTypeNormal, "StopServerSucceeded", "Server %s is stopping", server.Id)
 			logger.Info("Server is stopping", "id", server.Id)
 		}
 	}

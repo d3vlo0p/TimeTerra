@@ -178,17 +178,17 @@ func (r *ScheduleReconciler) reconcile(ctx context.Context, instance *v1alpha1.S
 					Reason:             "MissingAction",
 					Message:            fmt.Sprintf("action %s is used by %s, but was removed from the schedule", action, resource),
 				})
-				r.Recorder.Eventf(instance, "Warning", "MissingAction", "action %s is used by %s, but was removed from the schedule", action, resource)
+				r.Recorder.Eventf(instance, corev1.EventTypeWarning, "MissingAction", "action %s is used by %s, but was removed from the schedule", action, resource)
 				return nil
 			}
 			// proceed to refresh spec on active cron
 			updated := r.Cron.UpdateCronSpec(scheduleName, action, resource, instance.Spec.Actions[action].Cron)
 			if !updated {
 				logger.Info(fmt.Sprintf("failed to update resource %s cron spec for action %s", resource, action))
-				r.Recorder.Eventf(instance, "Warning", "FailedUpdate", "failed to update resource %s cron spec for action %s", resource, action)
+				r.Recorder.Eventf(instance, corev1.EventTypeWarning, "FailedUpdate", "failed to update resource %s cron spec for action %s", resource, action)
 			} else {
 				logger.Info(fmt.Sprintf("resource %s cron spec for action %s has been updated", resource, action))
-				r.Recorder.Eventf(instance, "Normal", "Updated", "resource %s cron spec for action %s has been updated", resource, action)
+				r.Recorder.Eventf(instance, corev1.EventTypeNormal, "Updated", "resource %s cron spec for action %s has been updated", resource, action)
 			}
 		}
 	}

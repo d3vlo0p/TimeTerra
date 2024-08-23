@@ -116,7 +116,7 @@ func (r *NotificationPolicyReconciler) reconcile(ctx context.Context, instance *
 				Reason:             "InvalidNotificationConfig",
 				Message:            "api notification type requires api configuration",
 			})
-			r.Recorder.Eventf(instance, "Warning", "InvalidNotificationConfig", "api notification type requires api configuration")
+			r.Recorder.Eventf(instance, corev1.EventTypeWarning, "InvalidNotificationConfig", "api notification type requires api configuration")
 			return nil
 		}
 		recipient = notification.NewApiNotification(ctx, notification.ApiNotificationConfig{
@@ -134,7 +134,7 @@ func (r *NotificationPolicyReconciler) reconcile(ctx context.Context, instance *
 				Reason:             "InvalidNotificationConfig",
 				Message:            "ms teams notification type requires ms teams configuration",
 			})
-			r.Recorder.Eventf(instance, "Warning", "InvalidNotificationConfig", "ms teams notification type requires ms teams configuration")
+			r.Recorder.Eventf(instance, corev1.EventTypeWarning, "InvalidNotificationConfig", "ms teams notification type requires ms teams configuration")
 			return nil
 		}
 		recipient = notification.NewMSTeamsNotification(ctx, notification.MSTeamsNotificationConfig{
@@ -150,7 +150,7 @@ func (r *NotificationPolicyReconciler) reconcile(ctx context.Context, instance *
 			Reason:             "UnknownNotificationType",
 			Message:            "Unknown notification type",
 		})
-		r.Recorder.Eventf(instance, "Warning", "UnknownNotificationType", "Unknown notification type: %s", instance.Spec.Type)
+		r.Recorder.Eventf(instance, corev1.EventTypeWarning, "UnknownNotificationType", "Unknown notification type: %s", instance.Spec.Type)
 		return nil
 	}
 

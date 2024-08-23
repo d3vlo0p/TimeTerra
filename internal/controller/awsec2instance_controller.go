@@ -179,11 +179,11 @@ func (r *AwsEc2InstanceReconciler) startStopInstances(ctx context.Context, key t
 				msg := fmt.Sprintf("unable to start ec2 %s", ec2Instance.Id)
 				logger.Error(err, msg)
 				errorsList = append(errorsList, msg)
-				r.Recorder.Eventf(obj, "Warning", "StartEc2Failed", msg)
+				r.Recorder.Eventf(obj, corev1.EventTypeWarning, "StartEc2Failed", msg)
 				continue
 			}
 
-			r.Recorder.Eventf(obj, "Normal", "StartEc2Succeeded", "Ec2 %s is starting", ec2Instance.Id)
+			r.Recorder.Eventf(obj, corev1.EventTypeNormal, "StartEc2Succeeded", "Ec2 %s is starting", ec2Instance.Id)
 			logger.Info("Ec2 is starting", "identifier", ec2Instance.Id)
 
 		case v1alpha1.AwsEc2InstanceCommandStop, v1alpha1.AwsEc2InstanceCommandHibernate:
@@ -197,11 +197,11 @@ func (r *AwsEc2InstanceReconciler) startStopInstances(ctx context.Context, key t
 				msg := fmt.Sprintf("unable to stop ec2 %s", ec2Instance.Id)
 				logger.Error(err, msg)
 				errorsList = append(errorsList, msg)
-				r.Recorder.Eventf(obj, "Warning", "StopEc2Failed", msg)
+				r.Recorder.Eventf(obj, corev1.EventTypeWarning, "StopEc2Failed", msg)
 				continue
 			}
 
-			r.Recorder.Eventf(obj, "Normal", "StopEc2Succeeded", "Ec2 %s is stopping", ec2Instance.Id)
+			r.Recorder.Eventf(obj, corev1.EventTypeNormal, "StopEc2Succeeded", "Ec2 %s is stopping", ec2Instance.Id)
 			logger.Info("Ec2 is stopping", "identifier", ec2Instance.Id)
 		}
 	}

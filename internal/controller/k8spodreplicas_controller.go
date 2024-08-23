@@ -143,7 +143,7 @@ func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, key types.Na
 				msg := fmt.Sprintf("Action %q failed to list deployments for namespace %q", actionName, namespace)
 				logger.Error(err, msg)
 				errorsList = append(errorsList, msg)
-				r.Recorder.Eventf(obj, "Warning", "Failed", msg)
+				r.Recorder.Eventf(obj, corev1.EventTypeWarning, "Failed", msg)
 				continue
 			}
 
@@ -155,11 +155,11 @@ func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, key types.Na
 					msg := fmt.Sprintf("failed to update deployment %q/%q", deployment.Namespace, deployment.Name)
 					logger.Error(err, msg)
 					errorsList = append(errorsList, msg)
-					r.Recorder.Eventf(obj, "Warning", "Failed", msg)
+					r.Recorder.Eventf(obj, corev1.EventTypeWarning, "Failed", msg)
 					continue
 				}
 
-				r.Recorder.Eventf(obj, "Normal", "Success", "updated deployment %q/%q to %d replicas", deployment.Namespace, deployment.Name, action.Replicas)
+				r.Recorder.Eventf(obj, corev1.EventTypeNormal, "Success", "updated deployment %q/%q to %d replicas", deployment.Namespace, deployment.Name, action.Replicas)
 				logger.Info(fmt.Sprintf("updated deployment %q/%q to %d replicas", deployment.Namespace, deployment.Name, action.Replicas))
 			}
 
@@ -174,7 +174,7 @@ func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, key types.Na
 				msg := fmt.Sprintf("Action %q failed to list statefulsets for namespace %q", actionName, namespace)
 				logger.Error(err, msg)
 				errorsList = append(errorsList, msg)
-				r.Recorder.Eventf(obj, "Warning", "Failed", msg)
+				r.Recorder.Eventf(obj, corev1.EventTypeWarning, "Failed", msg)
 				continue
 			}
 
@@ -186,11 +186,11 @@ func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, key types.Na
 					msg := fmt.Sprintf("failed to update statefulset %q/%q", statefulSet.Namespace, statefulSet.Name)
 					logger.Error(err, msg)
 					errorsList = append(errorsList, msg)
-					r.Recorder.Eventf(obj, "Warning", "Failed", msg)
+					r.Recorder.Eventf(obj, corev1.EventTypeWarning, "Failed", msg)
 					continue
 				}
 
-				r.Recorder.Eventf(obj, "Normal", "Success", "updated statefulset %q/%q to %d replicas", statefulSet.Namespace, statefulSet.Name, action.Replicas)
+				r.Recorder.Eventf(obj, corev1.EventTypeNormal, "Success", "updated statefulset %q/%q to %d replicas", statefulSet.Namespace, statefulSet.Name, action.Replicas)
 				logger.Info(fmt.Sprintf("updated statefulset %q/%q to %d replicas", statefulSet.Namespace, statefulSet.Name, action.Replicas))
 			}
 		}
