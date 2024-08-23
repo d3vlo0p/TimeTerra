@@ -87,6 +87,8 @@ func (r *NotificationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 		logger.Info("Failed to update NotificationPolicy resource status. Re-running reconcile.")
 		return ctrl.Result{}, err
 	}
+
+	r.Recorder.Eventf(instance, corev1.EventTypeNormal, "ReconcileSuccess", "Reconcile succeeded")
 	return ctrl.Result{}, nil
 }
 

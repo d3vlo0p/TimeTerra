@@ -113,6 +113,8 @@ func (r *AwsTransferFamilyReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		logger.Info("Failed to update AwsTransferFamily resource. Re-running reconcile.")
 		return ctrl.Result{}, err
 	}
+
+	r.Recorder.Eventf(instance, corev1.EventTypeNormal, "ReconcileSuccess", "Reconcile succeeded")
 	return ctrl.Result{}, nil
 }
 

@@ -113,6 +113,8 @@ func (r *AwsEc2InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		logger.Info("Failed to update AwsEc2Instance resource. Re-running reconcile.")
 		return ctrl.Result{}, err
 	}
+
+	r.Recorder.Eventf(instance, corev1.EventTypeNormal, "ReconcileSuccess", "Reconcile succeeded")
 	return ctrl.Result{}, nil
 }
 
