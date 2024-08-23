@@ -316,32 +316,32 @@ func getAwsCredentialProviderFromSecret(secret *corev1.Secret, keysRef *v1alpha1
 		return nil, err
 	}
 
-	var kAcceccKey, kSecretKey, kSessionKey = "accessKey", "secretKey", "sessionKey"
+	var kAccessKeyId, kSecretAccessKey, kSessionToken = "aws_access_key_id", "aws_secret_access_key", "aws_session_token"
 	// override default keys if specified
 	if keysRef != nil {
-		kAcceccKey, kSecretKey, kSessionKey = keysRef.AccessKey, keysRef.SecretKey, keysRef.SessionKey
+		kAccessKeyId, kSecretAccessKey, kSessionToken = keysRef.AccessKey, keysRef.SecretKey, keysRef.SessionKey
 	}
 
-	accessKey, ok := values[kAcceccKey]
+	accessKeyId, ok := values[kAccessKeyId]
 	if !ok {
-		return nil, fmt.Errorf("failed to get AccessKey from Secret resource, no %q key found", kAcceccKey)
+		return nil, fmt.Errorf("failed to get AccessKeyId from Secret resource, no %q key found", kAccessKeyId)
 	}
-	secretKey, ok := values[kSecretKey]
+	secretAccessKey, ok := values[kSecretAccessKey]
 	if !ok {
-		return nil, fmt.Errorf("failed to get SecretKey from Secret resource, no %q key found", kSecretKey)
+		return nil, fmt.Errorf("failed to get SecretAccessKey from Secret resource, no %q key found", kSecretAccessKey)
 	}
-	sessionKey := ""
-	if kSessionKey != "" {
-		sessionKey, ok = values[kSessionKey]
+	sessionToken := ""
+	if kSessionToken != "" {
+		sessionToken, ok = values[kSessionToken]
 		if !ok && keysRef != nil {
-			return nil, fmt.Errorf("failed to get SessionKey from Secret resource, no %q key found", kSessionKey)
+			return nil, fmt.Errorf("failed to get SessionToken from Secret resource, no %q key found", kSessionToken)
 		}
 	}
 
 	r := credentials.NewStaticCredentialsProvider(
-		accessKey,
-		secretKey,
-		sessionKey,
+		accessKeyId,
+		secretAccessKey,
+		sessionToken,
 	)
 
 	return &r, nil
