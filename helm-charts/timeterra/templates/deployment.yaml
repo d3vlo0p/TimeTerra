@@ -38,6 +38,14 @@ spec:
             - /manager
           args:
             - --leader-elect
+          {{- with .Values.env }}
+          env:
+            {{- toYaml .Values.env | nindent 12 }}
+          {{- end }}
+          {{- with .Values.envFrom }}
+          envFrom:
+            {{- toYaml .Values.envFrom | nindent 12 }}
+          {{- end }}
           ports:
             - name: metrics
               containerPort: 8080
