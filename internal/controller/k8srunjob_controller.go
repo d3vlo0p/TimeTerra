@@ -46,6 +46,7 @@ type K8sRunJobReconciler struct {
 	Cron                *cron.ScheduleService
 	NotificationService *notification.NotificationService
 	Recorder            record.EventRecorder
+	OperatorNamespace   string
 }
 
 //+kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=k8srunjobs,verbs=get;list;watch;create;update;patch;delete
@@ -128,7 +129,7 @@ func (r *K8sRunJobReconciler) runJob(ctx context.Context, key types.NamespacedNa
 
 	namespaces := obj.Spec.Namespaces
 	if len(namespaces) == 0 {
-		namespaces = []string{obj.Namespace}
+		namespaces = []string{r.OperatorNamespace}
 	}
 
 	//generate string suffix date with format YYYYMMDDHHmm

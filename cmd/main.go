@@ -276,6 +276,7 @@ func main() {
 		Cron:                c,
 		NotificationService: ns,
 		Recorder:            mgr.GetEventRecorderFor("k8srunjob-controller"),
+		OperatorNamespace:   operatorNamespace,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "K8sRunJob")
 		os.Exit(1)
