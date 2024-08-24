@@ -15,7 +15,7 @@ tasks:
   deploy:
     cmds:
       - kubectl apply --server-side -f ./helm-charts/timeterra/crds/
-      - helm upgrade --install --create-namespace -n timeterra operator {{.CHART_REPO}}/timeterra --version {{.CHART_VERSION}} --set image.repository={{.REPO}}/{{.IMG}}
+      - helm upgrade --install --create-namespace -n timeterra operator {{.CHART_REPO}}/timeterra --version {{.CHART_VERSION}} --set image.repository={{.REPO}}/{{.IMG}} --set image.pullPolicy=Always
 
   undeploy:
     cmds:
