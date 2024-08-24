@@ -34,15 +34,17 @@ To use TimeTerra, follow these steps:
 **Install the CRDs:**
 
 ```sh
-kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/timeterra.d3vlo0p.dev_awsdocumentdbclusters.yaml
-kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/timeterra.d3vlo0p.dev_awsec2instances.yaml
-kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/timeterra.d3vlo0p.dev_awsrdsauroraclusters.yaml
-kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/timeterra.d3vlo0p.dev_awstransferfamilies.yaml
-kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/timeterra.d3vlo0p.dev_k8shpas.yaml
-kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/timeterra.d3vlo0p.dev_k8spodreplicas.yaml
-kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/timeterra.d3vlo0p.dev_k8srunjobs.yaml
-kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/timeterra.d3vlo0p.dev_schedules.yaml
-kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/timeterra.d3vlo0p.dev_notificationpolicies.yaml
+#set chart version
+export CHART_VERSION=""
+kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/$CHART_VERSION/config/crd/bases/timeterra.d3vlo0p.dev_awsdocumentdbclusters.yaml
+kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/$CHART_VERSION/config/crd/bases/timeterra.d3vlo0p.dev_awsec2instances.yaml
+kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/$CHART_VERSION/config/crd/bases/timeterra.d3vlo0p.dev_awsrdsauroraclusters.yaml
+kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/$CHART_VERSION/config/crd/bases/timeterra.d3vlo0p.dev_awstransferfamilies.yaml
+kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/$CHART_VERSION/config/crd/bases/timeterra.d3vlo0p.dev_k8shpas.yaml
+kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/$CHART_VERSION/config/crd/bases/timeterra.d3vlo0p.dev_k8spodreplicas.yaml
+kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/$CHART_VERSION/config/crd/bases/timeterra.d3vlo0p.dev_k8srunjobs.yaml
+kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/$CHART_VERSION/config/crd/bases/timeterra.d3vlo0p.dev_schedules.yaml
+kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/$CHART_VERSION/config/crd/bases/timeterra.d3vlo0p.dev_notificationpolicies.yaml
 ```
 
 **Install the operator with Helm:**
@@ -62,15 +64,17 @@ kubectl delete namespace timeterra
 **Delete the CRDs from the cluster:**
 
 ```sh
-kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/timeterra.d3vlo0p.dev_awsdocumentdbclusters.yaml
-kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/timeterra.d3vlo0p.dev_awsec2instances.yaml
-kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/timeterra.d3vlo0p.dev_awsrdsauroraclusters.yaml
-kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/timeterra.d3vlo0p.dev_awstransferfamilies.yaml
-kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/timeterra.d3vlo0p.dev_k8shpas.yaml
-kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/timeterra.d3vlo0p.dev_k8spodreplicas.yaml
-kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/timeterra.d3vlo0p.dev_k8srunjobs.yaml
-kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/timeterra.d3vlo0p.dev_schedules.yaml
-kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/main/config/crd/bases/timeterra.d3vlo0p.dev_notificationpolicies.yaml
+#set chart version
+export CHART_VERSION=""
+kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/$CHART_VERSION/config/crd/bases/timeterra.d3vlo0p.dev_awsdocumentdbclusters.yaml
+kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/$CHART_VERSION/config/crd/bases/timeterra.d3vlo0p.dev_awsec2instances.yaml
+kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/$CHART_VERSION/config/crd/bases/timeterra.d3vlo0p.dev_awsrdsauroraclusters.yaml
+kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/$CHART_VERSION/config/crd/bases/timeterra.d3vlo0p.dev_awstransferfamilies.yaml
+kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/$CHART_VERSION/config/crd/bases/timeterra.d3vlo0p.dev_k8shpas.yaml
+kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/$CHART_VERSION/config/crd/bases/timeterra.d3vlo0p.dev_k8spodreplicas.yaml
+kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/$CHART_VERSION/config/crd/bases/timeterra.d3vlo0p.dev_k8srunjobs.yaml
+kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/$CHART_VERSION/config/crd/bases/timeterra.d3vlo0p.dev_schedules.yaml
+kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/$CHART_VERSION/config/crd/bases/timeterra.d3vlo0p.dev_notificationpolicies.yaml
 ```
 
 ### Define a Schedule
