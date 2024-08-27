@@ -71,8 +71,5 @@ define namespaces to watch
 - name: WATCH_NAMESPACE
   value: {{ default .Release.Namespace .Values.settings.watchNamespaces  }}
     {{- end }}
-{{- else -}}
-- name: WATCH_NAMESPACE
-  value: {{ .Release.Namespace }}
 {{- end }}
 {{- end }}

@@ -62,7 +62,7 @@ func init() {
 
 //RBAC operator
 //+kubebuilder:rbac:groups="",resources=events,verbs=create;patch
-//+kubebuilder:rbac:groups="",namespace="timeterra",resources=secrets,verbs=get;list;watch
+//+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
 
 // getOperatorNamespace returns the Namespace of the operator
 func getOperatorNamespace() (string, error) {

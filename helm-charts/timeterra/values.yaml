@@ -68,8 +68,9 @@ readinessProbe:
 settings: 
   ##enable Cluster Scope for the operator
   ##if set to true watchNamespaces is ignored
-  watchAllNamespaces: false
+  watchAllNamespaces: true
   ##set wich namespaces the operator should watch
+  ##limits the scope of the operator to specific namespaces
   ##if not set, it will watch the operator namespace
   ##if set with a list of namespaces, it will watch those namespaces
   watchNamespaces: ""
