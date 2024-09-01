@@ -2,11 +2,13 @@ package notification
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 
 	"github.com/go-logr/logr"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // https://api.slack.com/messaging/webhooks
@@ -18,6 +20,13 @@ type SlackNotificationConfig struct {
 type SlackNotification struct {
 	SlackNotificationConfig
 	logger logr.Logger
+}
+
+func NewSlackNotification(ctx context.Context, config SlackNotificationConfig) *SlackNotification {
+	return &SlackNotification{
+		SlackNotificationConfig: config,
+		logger:                  log.FromContext(ctx),
+	}
 }
 
 func (s *SlackNotification) Type() NotificationType {

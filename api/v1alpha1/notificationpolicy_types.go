@@ -32,6 +32,11 @@ type NotificationPolicyMSTeamsSpec struct {
 	CardTitle  string `json:"cardtitle"`
 }
 
+type NotificationPolicySlackSpec struct {
+	WebHookUrl string `json:"webhookurl"`
+	Title      string `json:"title"`
+}
+
 func (r NotificationPolicySpec) IsActive() bool {
 	return r.Enabled == nil || *r.Enabled
 }
@@ -40,10 +45,11 @@ func (r NotificationPolicySpec) IsActive() bool {
 type NotificationPolicySpec struct {
 	Enabled   *bool    `json:"enabled,omitempty"`
 	Schedules []string `json:"schedules"`
-	// +kubebuilder:validation:Enum:=api;msteams
+	// +kubebuilder:validation:Enum:=api;msteams;slack
 	Type    notification.NotificationType  `json:"type"`
 	Api     *NotificationPolicyApiSpec     `json:"api,omitempty"`
 	MSTeams *NotificationPolicyMSTeamsSpec `json:"msteams,omitempty"`
+	Slack   *NotificationPolicySlackSpec   `json:"slack,omitempty"`
 }
 
 // NotificationPolicyStatus defines the observed state of NotificationPolicy
