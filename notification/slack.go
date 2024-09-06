@@ -59,34 +59,63 @@ func (s *SlackNotification) Type() NotificationType {
 
 func (s *SlackNotification) Notify(id string, body NotificationBody) error {
 
-	metadata := ""
-	for key, value := range body.Metadata {
-		metadata += fmt.Sprintf("\t- %s: %v\n", key, value)
+	datailSection := []map[string]any{
+		{
+			"type": "mrkdwn",
+			"text": fmt.Sprintf("*Schedule:*\n%s", body.Schedule),
+		}, {
+			"type": "mrkdwn",
+			"text": fmt.Sprintf("*Action:*\n%s", body.Action),
+		}, {
+			"type": "mrkdwn",
+			"text": fmt.Sprintf("*Resource:*\n%s", body.Resource),
+		}, {
+			"type": "mrkdwn",
+			"text": fmt.Sprintf("*Status:*\n%s", body.Status),
+		},
 	}
 
-	message := fmt.Sprintf("- Schedule: %s\n- Action: %s\n- Resource: %s\n- Status: %s\n- Metadata: \n%s",
-		body.Schedule, body.Action, body.Resource, body.Status, metadata)
+	blocks := []map[string]any{
+		{
+			"type": "header",
+			"text": map[string]any{
+				"type":  "plain_text",
+				"text":  s.Title,
+				"emoji": true,
+			},
+		}, {
+			"type":   "section",
+			"fields": datailSection,
+		},
+	}
+
+	if len(body.Metadata) > 0 {
+		blocks = append(blocks,
+			map[string]any{
+				"type": "divider",
+			},
+			map[string]any{
+				"type": "section",
+				"text": map[string]any{
+					"type": "mrkdwn",
+					"text": "*Metadata:*",
+				},
+			},
+		)
+		for key, value := range body.Metadata {
+			blocks = append(blocks, map[string]any{
+				"type": "section",
+				"text": map[string]any{
+					"type": "mrkdwn",
+					"text": fmt.Sprintf("*%s:* %v", key, value),
+				},
+			})
+		}
+	}
 
 	payload := map[string]any{
-		"text": s.Title,
-		"blocks": []map[string]any{
-			{
-				"type": "header",
-				"text": map[string]any{
-					"type": "plain_text",
-					"text": s.Title,
-				},
-			},
-			{
-				"type": "section",
-				"fields": []map[string]any{
-					{
-						"type": "mrkdwn",
-						"text": message,
-					},
-				},
-			},
-		},
+		"text":   s.Title,
+		"blocks": blocks,
 	}
 
 	jsonBody, err := json.Marshal(payload)
