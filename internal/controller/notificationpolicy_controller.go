@@ -143,6 +143,25 @@ func (r *NotificationPolicyReconciler) reconcile(ctx context.Context, instance *
 			WebHookUrl: instance.Spec.MSTeams.WebHookUrl,
 			CardTitle:  instance.Spec.MSTeams.CardTitle,
 		})
+
+	case notification.NotificationTypeSlack:
+		logger.Info("Handling slack notification")
+		if instance.Spec.Slack == nil {
+			logger.Info("slack notification type requires slack configuration")
+			addToConditions(&instance.Status.Conditions, metav1.Condition{
+				LastTransitionTime: metav1.Now(),
+				Status:             metav1.ConditionFalse,
+				Type:               "Ready",
+				Reason:             "InvalidNotificationConfig",
+				Message:            "slack notification type requires slack configuration",
+			})
+			r.Recorder.Eventf(instance, corev1.EventTypeWarning, "InvalidNotificationConfig", "slack notification type requires slack configuration")
+			return nil
+		}
+		recipient = notification.NewSlackNotification(ctx, notification.SlackNotificationConfig{
+			WebHookUrl: instance.Spec.Slack.WebHookUrl,
+			Title:      instance.Spec.Slack.Title,
+		})
 	default:
 		logger.Info("Unknown notification type")
 		addToConditions(&instance.Status.Conditions, metav1.Condition{

@@ -33,7 +33,7 @@ type NotificationService struct {
 func NewNotificationService() *NotificationService {
 	return &NotificationService{
 		ch:      make(chan NotificationBody),
-		threads: 3,
+		threads: 1,
 	}
 }
 

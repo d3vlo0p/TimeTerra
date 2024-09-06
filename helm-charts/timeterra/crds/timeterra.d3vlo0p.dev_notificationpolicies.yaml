@@ -77,10 +77,21 @@ spec:
                 items:
                   type: string
                 type: array
+              slack:
+                properties:
+                  title:
+                    type: string
+                  webhookurl:
+                    type: string
+                required:
+                - title
+                - webhookurl
+                type: object
               type:
                 enum:
                 - api
                 - msteams
+                - slack
                 type: string
             required:
             - schedules
