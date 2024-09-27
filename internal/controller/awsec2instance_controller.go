@@ -68,7 +68,7 @@ func (r *AwsEc2InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	logger.Info(fmt.Sprintf("reconciling object %#q", req.NamespacedName))
 
-	resourceName := ResourceName("v1alpha1.AwsEc2Instance", req.Name)
+	resourceName := resourceName("v1alpha1.AwsEc2Instance", req.Name)
 	instance := &v1alpha1.AwsEc2Instance{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
@@ -88,7 +88,7 @@ func (r *AwsEc2InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		err = r.Get(ctx, key, secret)
 		if err != nil {
 			logger.Error(err, "Failed to get Secret.", "key", key)
-			r.Recorder.Eventf(instance, corev1.EventTypeWarning, "SecretError", "Secret %s error: %s", key.String(), err.Error())
+			r.Recorder.Eventf(instance, corev1.EventTypeWarning, "SecretError", "Secret %q error: %s", key.String(), err.Error())
 			return ctrl.Result{}, err
 		}
 	}
@@ -161,7 +161,7 @@ func (r *AwsEc2InstanceReconciler) startStopInstances(ctx context.Context, key t
 		}
 	}
 
-	actionType := ConditionTypeForAction(actionName)
+	actionType := conditionTypeForAction(actionName)
 	errorsList := make([]string, 0)
 	ec2Client := ec2.NewFromConfig(cfg)
 	for _, ec2Instance := range obj.Spec.Instances {
@@ -179,14 +179,14 @@ func (r *AwsEc2InstanceReconciler) startStopInstances(ctx context.Context, key t
 				InstanceIds: []string{ec2Instance.Id},
 			}, opts)
 			if err != nil {
-				msg := fmt.Sprintf("unable to start ec2 %s", ec2Instance.Id)
+				msg := fmt.Sprintf("unable to start ec2 %q", ec2Instance.Id)
 				logger.Error(err, msg)
 				errorsList = append(errorsList, msg)
 				r.Recorder.Eventf(obj, corev1.EventTypeWarning, "StartEc2Failed", msg)
 				continue
 			}
 
-			r.Recorder.Eventf(obj, corev1.EventTypeNormal, "StartEc2Succeeded", "Ec2 %s is starting", ec2Instance.Id)
+			r.Recorder.Eventf(obj, corev1.EventTypeNormal, "StartEc2Succeeded", "Ec2 %q is starting", ec2Instance.Id)
 			logger.Info("Ec2 is starting", "identifier", ec2Instance.Id)
 
 		case v1alpha1.AwsEc2InstanceCommandStop, v1alpha1.AwsEc2InstanceCommandHibernate:
@@ -197,14 +197,14 @@ func (r *AwsEc2InstanceReconciler) startStopInstances(ctx context.Context, key t
 				Force:       action.Force,
 			}, opts)
 			if err != nil {
-				msg := fmt.Sprintf("unable to stop ec2 %s", ec2Instance.Id)
+				msg := fmt.Sprintf("unable to stop ec2 %q", ec2Instance.Id)
 				logger.Error(err, msg)
 				errorsList = append(errorsList, msg)
 				r.Recorder.Eventf(obj, corev1.EventTypeWarning, "StopEc2Failed", msg)
 				continue
 			}
 
-			r.Recorder.Eventf(obj, corev1.EventTypeNormal, "StopEc2Succeeded", "Ec2 %s is stopping", ec2Instance.Id)
+			r.Recorder.Eventf(obj, corev1.EventTypeNormal, "StopEc2Succeeded", "Ec2 %q is stopping", ec2Instance.Id)
 			logger.Info("Ec2 is stopping", "identifier", ec2Instance.Id)
 		}
 	}
@@ -225,8 +225,8 @@ func (r *AwsEc2InstanceReconciler) startStopInstances(ctx context.Context, key t
 		LastTransitionTime: metav1.Now(),
 		Type:               actionType,
 		Status:             metav1.ConditionTrue,
-		Reason:             "Success",
-		Message:            fmt.Sprintf("Action %q, last execution start:%q end:%q", actionName, start.Format(time.RFC3339), time.Now().Format(time.RFC3339)),
+		Reason:             "Active",
+		Message:            fmt.Sprintf("last execution started:%q ended:%q", start.Format(time.RFC3339), time.Now().Format(time.RFC3339)),
 	})
 	r.Status().Update(ctx, obj)
 	return JobResultSuccess, metadata

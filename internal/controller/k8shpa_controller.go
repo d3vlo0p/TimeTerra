@@ -69,7 +69,7 @@ func (r *K8sHpaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 
 	logger.Info(fmt.Sprintf("reconciling object %#q", req.NamespacedName))
 
-	resourceName := ResourceName("v1alpha1.K8sHpa", req.Name)
+	resourceName := resourceName("v1alpha1.K8sHpa", req.Name)
 	instance := &v1alpha1.K8sHpa{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
@@ -130,7 +130,7 @@ func (r *K8sHpaReconciler) setAutoscaling(ctx context.Context, key types.Namespa
 	if len(obj.Spec.Namespaces) == 0 {
 		obj.Spec.Namespaces = []string{metav1.NamespaceAll}
 	}
-	actionType := ConditionTypeForAction(actionName)
+	actionType := conditionTypeForAction(actionName)
 	errorsList := make([]string, 0)
 	for _, namespace := range obj.Spec.Namespaces {
 		list := &autoscalingv2.HorizontalPodAutoscalerList{}
@@ -178,8 +178,8 @@ func (r *K8sHpaReconciler) setAutoscaling(ctx context.Context, key types.Namespa
 		LastTransitionTime: metav1.Now(),
 		Type:               actionType,
 		Status:             metav1.ConditionTrue,
-		Reason:             "Success",
-		Message:            fmt.Sprintf("Action %q, last execution start:%q end:%q", actionName, start.Format(time.RFC3339), time.Now().Format(time.RFC3339)),
+		Reason:             "Active",
+		Message:            fmt.Sprintf("last execution started:%q ended:%q", start.Format(time.RFC3339), time.Now().Format(time.RFC3339)),
 	})
 	r.Status().Update(ctx, obj)
 	return JobResultSuccess, metadata

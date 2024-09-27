@@ -59,8 +59,14 @@ func reconcileResource[Action Activable](
 
 	if !obj.IsActive() {
 		disableResource(r.GetScheduleService(), &conditions, resourceName)
+		addToConditions(&conditions, metav1.Condition{
+			LastTransitionTime: metav1.Now(),
+			Type:               "Ready",
+			Status:             metav1.ConditionFalse,
+			Reason:             "Disabled",
+		})
 		r.SetConditions(obj, conditions)
-		recorder.Eventf(obj, corev1.EventTypeNormal, "ResourceNotActive", "Resource %s is not active", obj.GetName())
+		recorder.Eventf(obj, corev1.EventTypeNormal, "Disabled", "Resource %q is not active", obj.GetName())
 		return ctrl.Result{}, updateStatus(ctx, r, obj, nil)
 	}
 
@@ -68,8 +74,15 @@ func reconcileResource[Action Activable](
 	err := r.Get(ctx, client.ObjectKey{Name: scheduleName}, schedule)
 	if err != nil {
 		logger.Info("Failed to get Schedule resource. Re-running reconcile.")
+		addToConditions(&conditions, metav1.Condition{
+			LastTransitionTime: metav1.Now(),
+			Type:               "Ready",
+			Status:             metav1.ConditionFalse,
+			Reason:             "ScheduleNotExist",
+			Message:            "Schedule specified in spec.schedule do not exist",
+		})
 		r.SetConditions(obj, conditions)
-		recorder.Eventf(obj, corev1.EventTypeWarning, "ScheduleNotFound", "Schedule %s not found", scheduleName)
+		recorder.Eventf(obj, corev1.EventTypeWarning, "ScheduleNotExist", "Schedule %q not exist", scheduleName)
 		return ctrl.Result{}, updateStatus(ctx, r, obj, err)
 	}
 
@@ -77,7 +90,7 @@ func reconcileResource[Action Activable](
 	if len(removedActions) > 0 {
 		logger.Info("Schedule has been changed, removed cron jobs of previous schedule")
 		for _, action := range removedActions {
-			removeFromConditions(&conditions, ConditionTypeForAction(action))
+			removeFromConditions(&conditions, conditionTypeForAction(action))
 		}
 	}
 
@@ -89,7 +102,7 @@ func reconcileResource[Action Activable](
 			if _, found := actions[action]; !found {
 				logger.Info(fmt.Sprintf("Action %q is no more defined in spec, removing it from cron", action))
 				cron.Remove(scheduleName, action, resourceName)
-				removeFromConditions(&conditions, ConditionTypeForAction(action))
+				removeFromConditions(&conditions, conditionTypeForAction(action))
 			} else {
 				scheduledActions = append(scheduledActions, action)
 			}
@@ -103,24 +116,24 @@ func reconcileResource[Action Activable](
 			cron.Remove(scheduleName, actionName, resourceName)
 			addToConditions(&conditions, metav1.Condition{
 				LastTransitionTime: metav1.Now(),
-				Type:               ConditionTypeForAction(actionName),
+				Type:               conditionTypeForAction(actionName),
 				Status:             metav1.ConditionFalse,
 				Reason:             "Disabled",
-				Message:            "This Action target is disabled",
 			})
 			continue
 		}
 		if !contains(scheduledActions, actionName) {
 			scheduleAction, found := schedule.Spec.Actions[actionName]
 			if !found {
-				logger.Info(fmt.Sprintf("action %q is not defined in schedule %s", actionName, scheduleName))
+				logger.Info(fmt.Sprintf("action %q is not defined in schedule %q", actionName, scheduleName))
 				addToConditions(&conditions, metav1.Condition{
 					LastTransitionTime: metav1.Now(),
-					Type:               "Ready",
+					Type:               conditionTypeForAction(actionName),
 					Status:             metav1.ConditionFalse,
 					Reason:             "MissingAction",
-					Message:            fmt.Sprintf("action %s not found in %s", actionName, scheduleName),
+					Message:            fmt.Sprintf("action not found in %q", scheduleName),
 				})
+				recorder.Eventf(obj, corev1.EventTypeWarning, "MissingAction", "action %q not found in %q", actionName, scheduleName)
 				continue
 			}
 			logger.Info(fmt.Sprintf("Action %q is not scheduled, scheduling it with %q", actionName, scheduleAction.Cron))
@@ -196,21 +209,33 @@ func reconcileResource[Action Activable](
 			})
 			if err != nil {
 				logger.Error(err, "failed to add cron job")
+				addToConditions(&conditions, metav1.Condition{
+					LastTransitionTime: metav1.Now(),
+					Type:               conditionTypeForAction(actionName),
+					Status:             metav1.ConditionFalse,
+					Reason:             "Error",
+					Message:            err.Error(),
+				})
 				r.SetConditions(obj, conditions)
-				recorder.Eventf(obj, corev1.EventTypeWarning, "FailedToSchedule", "Failed to schedule %s", actionName)
+				recorder.Eventf(obj, corev1.EventTypeWarning, "FailedToSchedule", "Failed to schedule %q", actionName)
 				return ctrl.Result{}, updateStatus(ctx, r, obj, err)
 			}
 			logger.Info(fmt.Sprintf("action %q is scheduled", actionName))
 			addToConditions(&conditions, metav1.Condition{
 				LastTransitionTime: metav1.Now(),
-				Type:               ConditionTypeForAction(actionName),
+				Type:               conditionTypeForAction(actionName),
 				Status:             metav1.ConditionTrue,
-				Reason:             "Scheduled",
-				Message:            fmt.Sprintf("action %s is scheduled", actionName),
+				Reason:             "Active",
 			})
 		}
 	}
 
+	addToConditions(&conditions, metav1.Condition{
+		LastTransitionTime: metav1.Now(),
+		Type:               "Ready",
+		Status:             metav1.ConditionTrue,
+		Reason:             "Active",
+	})
 	r.SetConditions(obj, conditions)
 	return ctrl.Result{}, updateStatus(ctx, r, obj, nil)
 }
@@ -243,11 +268,4 @@ func disableResource(scheduleService *cron.ScheduleService, conditions *[]metav1
 		}
 		*conditions = newConditions
 	}
-	addToConditions(conditions, metav1.Condition{
-		LastTransitionTime: metav1.Now(),
-		Type:               "Ready",
-		Status:             metav1.ConditionFalse,
-		Reason:             "Disabled",
-		Message:            "This Resource target is disabled",
-	})
 }

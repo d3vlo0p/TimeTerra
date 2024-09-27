@@ -68,7 +68,7 @@ func (r *K8sRunJobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	logger.Info(fmt.Sprintf("reconciling object %#q", req.NamespacedName))
 
-	resourceName := ResourceName("v1alpha1.K8sRunJob", req.Name)
+	resourceName := resourceName("v1alpha1.K8sRunJob", req.Name)
 	instance := &v1alpha1.K8sRunJob{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
@@ -126,7 +126,7 @@ func (r *K8sRunJobReconciler) runJob(ctx context.Context, key types.NamespacedNa
 		return JobResultError, metadata
 	}
 
-	actionType := ConditionTypeForAction(actionName)
+	actionType := conditionTypeForAction(actionName)
 	errorsList := make([]string, 0)
 
 	namespaces := obj.Spec.Namespaces
@@ -197,8 +197,8 @@ func (r *K8sRunJobReconciler) runJob(ctx context.Context, key types.NamespacedNa
 		LastTransitionTime: metav1.Now(),
 		Type:               actionType,
 		Status:             metav1.ConditionTrue,
-		Reason:             "Success",
-		Message:            fmt.Sprintf("Action %q, last execution start:%q end:%q", actionName, start.Format(time.RFC3339), time.Now().Format(time.RFC3339)),
+		Reason:             "Active",
+		Message:            fmt.Sprintf("last execution started:%q ended:%q", start.Format(time.RFC3339), time.Now().Format(time.RFC3339)),
 	})
 	r.Status().Update(ctx, obj)
 	return JobResultSuccess, metadata

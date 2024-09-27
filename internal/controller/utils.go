@@ -6,11 +6,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func ResourceName(kind string, name string) string {
+func resourceName(kind string, name string) string {
 	return fmt.Sprintf("%s:%s", kind, name)
 }
 
-func ConditionTypeForAction(name string) string {
+func conditionTypeForAction(name string) string {
 	return fmt.Sprintf("Action-%s", name)
 }
 

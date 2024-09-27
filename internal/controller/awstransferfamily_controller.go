@@ -68,7 +68,7 @@ func (r *AwsTransferFamilyReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	logger.Info(fmt.Sprintf("reconciling object %#q", req.NamespacedName))
 
-	resourceName := ResourceName("v1alpha1.AwsTransferFamily", req.Name)
+	resourceName := resourceName("v1alpha1.AwsTransferFamily", req.Name)
 	instance := &v1alpha1.AwsTransferFamily{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
@@ -88,7 +88,7 @@ func (r *AwsTransferFamilyReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		err = r.Get(ctx, key, secret)
 		if err != nil {
 			logger.Error(err, "Failed to get Secret.", "key", key)
-			r.Recorder.Eventf(instance, corev1.EventTypeWarning, "SecretError", "Secret %s error: %s", key.String(), err.Error())
+			r.Recorder.Eventf(instance, corev1.EventTypeWarning, "SecretError", "Secret %q error: %s", key.String(), err.Error())
 			return ctrl.Result{}, err
 		}
 	}
@@ -161,7 +161,7 @@ func (r *AwsTransferFamilyReconciler) startStopServer(ctx context.Context, key t
 		}
 	}
 
-	actionType := ConditionTypeForAction(actionName)
+	actionType := conditionTypeForAction(actionName)
 	errorsList := make([]string, 0)
 	transferClient := transfer.NewFromConfig(cfg)
 	for _, server := range obj.Spec.ServerIds {
@@ -179,14 +179,14 @@ func (r *AwsTransferFamilyReconciler) startStopServer(ctx context.Context, key t
 				ServerId: &server.Id,
 			}, opts)
 			if err != nil {
-				msg := fmt.Sprintf("unable to start server %s", server.Id)
+				msg := fmt.Sprintf("unable to start server %q", server.Id)
 				logger.Error(err, msg)
 				errorsList = append(errorsList, msg)
 				r.Recorder.Eventf(obj, corev1.EventTypeWarning, "StartServerFailed", msg)
 				continue
 			}
 
-			r.Recorder.Eventf(obj, corev1.EventTypeNormal, "StartServerSucceeded", "Server %s is starting", server.Id)
+			r.Recorder.Eventf(obj, corev1.EventTypeNormal, "StartServerSucceeded", "Server %q is starting", server.Id)
 			logger.Info("Server is starting", "id", server.Id)
 
 		case v1alpha1.AwsTransferFamilyCommandStop:
@@ -194,14 +194,14 @@ func (r *AwsTransferFamilyReconciler) startStopServer(ctx context.Context, key t
 				ServerId: &server.Id,
 			}, opts)
 			if err != nil {
-				msg := fmt.Sprintf("unable to stop server %s", server.Id)
+				msg := fmt.Sprintf("unable to stop server %q", server.Id)
 				logger.Error(err, msg)
 				errorsList = append(errorsList, msg)
 				r.Recorder.Eventf(obj, corev1.EventTypeWarning, "StopServerFailed", msg)
 				continue
 			}
 
-			r.Recorder.Eventf(obj, corev1.EventTypeNormal, "StopServerSucceeded", "Server %s is stopping", server.Id)
+			r.Recorder.Eventf(obj, corev1.EventTypeNormal, "StopServerSucceeded", "Server %q is stopping", server.Id)
 			logger.Info("Server is stopping", "id", server.Id)
 		}
 	}
@@ -222,8 +222,8 @@ func (r *AwsTransferFamilyReconciler) startStopServer(ctx context.Context, key t
 		LastTransitionTime: metav1.Now(),
 		Type:               actionType,
 		Status:             metav1.ConditionTrue,
-		Reason:             "Success",
-		Message:            fmt.Sprintf("Action %q, last execution started:%q ended:%q", actionName, start.Format(time.RFC3339), time.Now().Format(time.RFC3339)),
+		Reason:             "Active",
+		Message:            fmt.Sprintf("last execution started:%q ended:%q", start.Format(time.RFC3339), time.Now().Format(time.RFC3339)),
 	})
 	r.Status().Update(ctx, obj)
 	return JobResultSuccess, metadata

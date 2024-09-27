@@ -71,7 +71,7 @@ func (r *K8sPodReplicasReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	logger.Info(fmt.Sprintf("reconciling object %#q", req.NamespacedName))
 
-	resourceName := ResourceName("v1alpha1.K8sPodReplicas", req.Name)
+	resourceName := resourceName("v1alpha1.K8sPodReplicas", req.Name)
 	instance := &v1alpha1.K8sPodReplicas{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
@@ -131,7 +131,7 @@ func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, key types.Na
 	if len(obj.Spec.Namespaces) == 0 {
 		obj.Spec.Namespaces = []string{metav1.NamespaceAll}
 	}
-	actionType := ConditionTypeForAction(actionName)
+	actionType := conditionTypeForAction(actionName)
 	errorsList := make([]string, 0)
 	for _, namespace := range obj.Spec.Namespaces {
 		switch kind := obj.Spec.ResourceType; kind {
@@ -215,8 +215,8 @@ func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, key types.Na
 		LastTransitionTime: metav1.Now(),
 		Type:               actionType,
 		Status:             metav1.ConditionTrue,
-		Reason:             "Success",
-		Message:            fmt.Sprintf("Action %q, last execution start:%q end:%q", actionName, start.Format(time.RFC3339), time.Now().Format(time.RFC3339)),
+		Reason:             "Active",
+		Message:            fmt.Sprintf("last execution started:%q ended:%q", start.Format(time.RFC3339), time.Now().Format(time.RFC3339)),
 	})
 	r.Status().Update(ctx, obj)
 	return JobResultSuccess, metadata

@@ -68,7 +68,7 @@ func (r *AwsDocumentDBClusterReconciler) Reconcile(ctx context.Context, req ctrl
 
 	logger.Info(fmt.Sprintf("reconciling object %#q", req.NamespacedName))
 
-	resourceName := ResourceName("v1alpha1.AwsDocumentDBCluster", req.Name)
+	resourceName := resourceName("v1alpha1.AwsDocumentDBCluster", req.Name)
 	instance := &v1alpha1.AwsDocumentDBCluster{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
@@ -88,7 +88,7 @@ func (r *AwsDocumentDBClusterReconciler) Reconcile(ctx context.Context, req ctrl
 		err = r.Get(ctx, key, secret)
 		if err != nil {
 			logger.Error(err, "Failed to get Secret.", "key", key)
-			r.Recorder.Eventf(instance, corev1.EventTypeWarning, "SecretError", "Secret %s error: %s", key.String(), err.Error())
+			r.Recorder.Eventf(instance, corev1.EventTypeWarning, "SecretError", "Secret %q error: %s", key.String(), err.Error())
 			return ctrl.Result{}, err
 		}
 	}
@@ -161,7 +161,7 @@ func (r *AwsDocumentDBClusterReconciler) startStopCluster(ctx context.Context, k
 		}
 	}
 
-	actionType := ConditionTypeForAction(actionName)
+	actionType := conditionTypeForAction(actionName)
 	errorsList := make([]string, 0)
 	docDbClient := docdb.NewFromConfig(cfg)
 	for _, cluster := range obj.Spec.DBClusterIdentifiers {
@@ -179,14 +179,14 @@ func (r *AwsDocumentDBClusterReconciler) startStopCluster(ctx context.Context, k
 				DBClusterIdentifier: &cluster.Identifier,
 			}, opts)
 			if err != nil {
-				msg := fmt.Sprintf("unable to start cluster %s", cluster.Identifier)
+				msg := fmt.Sprintf("unable to start cluster %q", cluster.Identifier)
 				logger.Error(err, msg)
 				errorsList = append(errorsList, msg)
 				r.Recorder.Eventf(obj, corev1.EventTypeWarning, "StartClusterFailed", msg)
 				continue
 			}
 
-			r.Recorder.Eventf(obj, corev1.EventTypeNormal, "StartClusterSucceeded", "Cluster %s is starting", cluster.Identifier)
+			r.Recorder.Eventf(obj, corev1.EventTypeNormal, "StartClusterSucceeded", "Cluster %q is starting", cluster.Identifier)
 			logger.Info("Cluster is starting", "identifier", cluster.Identifier)
 
 		case v1alpha1.AwsDocumentDBClusterCommandStop:
@@ -194,14 +194,14 @@ func (r *AwsDocumentDBClusterReconciler) startStopCluster(ctx context.Context, k
 				DBClusterIdentifier: &cluster.Identifier,
 			}, opts)
 			if err != nil {
-				msg := fmt.Sprintf("unable to stop cluster %s", cluster.Identifier)
+				msg := fmt.Sprintf("unable to stop cluster %q", cluster.Identifier)
 				logger.Error(err, msg)
 				errorsList = append(errorsList, msg)
 				r.Recorder.Eventf(obj, corev1.EventTypeWarning, "StopClusterFailed", msg)
 				continue
 			}
 
-			r.Recorder.Eventf(obj, corev1.EventTypeNormal, "StopClusterSucceeded", "Cluster %s is stopping", cluster.Identifier)
+			r.Recorder.Eventf(obj, corev1.EventTypeNormal, "StopClusterSucceeded", "Cluster %q is stopping", cluster.Identifier)
 			logger.Info("Cluster is stopping", "identifier", cluster.Identifier)
 		}
 	}
@@ -222,8 +222,8 @@ func (r *AwsDocumentDBClusterReconciler) startStopCluster(ctx context.Context, k
 		LastTransitionTime: metav1.Now(),
 		Type:               actionType,
 		Status:             metav1.ConditionTrue,
-		Reason:             "Success",
-		Message:            fmt.Sprintf("Action %q, last execution start:%q end:%q", actionName, start.Format(time.RFC3339), time.Now().Format(time.RFC3339)),
+		Reason:             "Active",
+		Message:            fmt.Sprintf("last execution started:%q ended:%q", start.Format(time.RFC3339), time.Now().Format(time.RFC3339)),
 	})
 	r.Status().Update(ctx, obj)
 	return JobResultSuccess, metadata
