@@ -24,6 +24,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -210,6 +211,27 @@ func (r *ScheduleReconciler) reconcile(ctx context.Context, instance *v1alpha1.S
 		})
 	}
 	return nil
+}
+
+func removeMissingActionFromConditions(conditions *[]metav1.Condition, actions []string) {
+	// remove from orphanedConditions all current action, so will remain only conditions without actions
+	orphanedConditions := *conditions
+	for _, action := range actions {
+		cond := meta.FindStatusCondition(orphanedConditions, ConditionTypeForAction(action))
+		if cond != nil {
+			// find cond inside orphanedConditions and remove it
+			for _, c := range orphanedConditions {
+				if c.Type == cond.Type {
+					removeFromConditions(&orphanedConditions, c.Type)
+					break
+				}
+			}
+		}
+	}
+	// remove orphaned conditions
+	for _, c := range orphanedConditions {
+		removeFromConditions(conditions, c.Type)
+	}
 }
 
 // SetupWithManager sets up the controller with the Manager.

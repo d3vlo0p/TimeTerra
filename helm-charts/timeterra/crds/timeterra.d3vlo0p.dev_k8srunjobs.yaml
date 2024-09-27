@@ -8092,7 +8092,6 @@ spec:
             - schedule
             type: object
           status:
-            description: K8sRunJobStatus defines the observed state of K8sRunJob
             properties:
               conditions:
                 items:

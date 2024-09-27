@@ -63,9 +63,16 @@ type AwsRdsAuroraClusterSpec struct {
 	Credentials          *AwsCredentialsSpec                  `json:"credentials,omitempty"`
 }
 
-// AwsRdsAuroraClusterStatus defines the observed state of AwsRdsAuroraCluster
-type AwsRdsAuroraClusterStatus struct {
-	Conditions []metav1.Condition `json:"conditions"`
+func (r AwsRdsAuroraCluster) IsActive() bool {
+	return r.Spec.Enabled == nil || *r.Spec.Enabled
+}
+
+func (r AwsRdsAuroraCluster) GetSchedule() string {
+	return r.Spec.Schedule
+}
+
+func (r AwsRdsAuroraCluster) GetStatus() Status {
+	return r.Status
 }
 
 //+kubebuilder:object:root=true
@@ -79,8 +86,8 @@ type AwsRdsAuroraCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   AwsRdsAuroraClusterSpec   `json:"spec,omitempty"`
-	Status AwsRdsAuroraClusterStatus `json:"status,omitempty"`
+	Spec       AwsRdsAuroraClusterSpec `json:"spec,omitempty"`
+	StatusType `json:",inline"`
 }
 
 //+kubebuilder:object:root=true

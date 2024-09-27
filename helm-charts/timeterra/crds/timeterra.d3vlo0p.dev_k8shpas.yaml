@@ -120,7 +120,6 @@ spec:
             - schedule
             type: object
           status:
-            description: K8sHpaStatus defines the observed state of K8sHpa
             properties:
               conditions:
                 items:

@@ -106,7 +106,6 @@ spec:
             - schedule
             type: object
           status:
-            description: AwsRdsAuroraClusterStatus defines the observed state of AwsRdsAuroraCluster
             properties:
               conditions:
                 items:

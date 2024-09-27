@@ -68,21 +68,17 @@ func (r *AwsEc2InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	logger.Info(fmt.Sprintf("reconciling object %#q", req.NamespacedName))
 
-	resourceName := ResourceName("AwsEc2Instance", req.Name)
+	resourceName := ResourceName("v1alpha1.AwsEc2Instance", req.Name)
 	instance := &v1alpha1.AwsEc2Instance{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			logger.Info("AwsEc2Instance resource not found. object must has been deleted.")
+			logger.Info("Resource not found. object must has been deleted.")
 			r.Cron.RemoveResource(resourceName)
 			return ctrl.Result{}, nil
 		}
-		logger.Info("Failed to get AwsEc2Instance resource. Re-running reconcile.")
+		logger.Info("Failed to get resource. Re-running reconcile.")
 		return ctrl.Result{}, err
-	}
-
-	if instance.Status.Conditions == nil {
-		instance.Status.Conditions = make([]metav1.Condition, 0)
 	}
 
 	if instance.Spec.Credentials != nil {
@@ -97,25 +93,30 @@ func (r *AwsEc2InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}
 
-	if instance.Spec.Enabled != nil && !*instance.Spec.Enabled {
-		disableResource(r.Cron, &instance.Status.Conditions, resourceName)
-	} else {
-		err := reconcileResource(ctx, req, r.Client, r.Cron, r.NotificationService, instance.Spec.Actions, instance.Spec.Schedule, resourceName, r.startStopInstances, &instance.Status.Conditions)
-		if err != nil {
-			r.Recorder.Eventf(instance, corev1.EventTypeWarning, "ReconcileError", "Reconcile error: %s", err.Error())
-			return ctrl.Result{}, err
-		}
-	}
+	return reconcileResource(
+		ctx,
+		r,
+		instance,
+		resourceName,
+		instance.Spec.Actions,
+		r.startStopInstances,
+	)
+}
 
-	err = r.Status().Update(ctx, instance)
-	if err != nil {
-		r.Recorder.Eventf(instance, corev1.EventTypeWarning, "ReconcileError", "Reconcile error: %s", err.Error())
-		logger.Info("Failed to update AwsEc2Instance resource. Re-running reconcile.")
-		return ctrl.Result{}, err
-	}
+func (r *AwsEc2InstanceReconciler) GetScheduleService() *cron.ScheduleService {
+	return r.Cron
+}
 
-	r.Recorder.Eventf(instance, corev1.EventTypeNormal, "ReconcileSuccess", "Reconcile succeeded")
-	return ctrl.Result{}, nil
+func (r *AwsEc2InstanceReconciler) GetNotificationService() *notification.NotificationService {
+	return r.NotificationService
+}
+
+func (r *AwsEc2InstanceReconciler) GetRecorder() record.EventRecorder {
+	return r.Recorder
+}
+
+func (r *AwsEc2InstanceReconciler) SetConditions(obj client.Object, conditions []metav1.Condition) {
+	obj.(*v1alpha1.AwsEc2Instance).Status.Conditions = conditions
 }
 
 func (r *AwsEc2InstanceReconciler) startStopInstances(ctx context.Context, key types.NamespacedName, actionName string) (JobResult, JobMetadata) {

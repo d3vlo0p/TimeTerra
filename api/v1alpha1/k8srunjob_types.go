@@ -45,9 +45,16 @@ type K8sRunJobSpec struct {
 	Actions    map[string]K8sRunJobAction `json:"actions"`
 }
 
-// K8sRunJobStatus defines the observed state of K8sRunJob
-type K8sRunJobStatus struct {
-	Conditions []metav1.Condition `json:"conditions"`
+func (r K8sRunJob) IsActive() bool {
+	return r.Spec.Enabled == nil || *r.Spec.Enabled
+}
+
+func (r K8sRunJob) GetSchedule() string {
+	return r.Spec.Schedule
+}
+
+func (r K8sRunJob) GetStatus() Status {
+	return r.Status
 }
 
 //+kubebuilder:object:root=true
@@ -61,8 +68,8 @@ type K8sRunJob struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   K8sRunJobSpec   `json:"spec,omitempty"`
-	Status K8sRunJobStatus `json:"status,omitempty"`
+	Spec       K8sRunJobSpec `json:"spec,omitempty"`
+	StatusType `json:",inline"`
 }
 
 //+kubebuilder:object:root=true

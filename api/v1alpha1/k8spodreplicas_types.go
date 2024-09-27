@@ -43,10 +43,6 @@ type K8sPodReplicasAction struct {
 	Replicas int   `json:"replicas"`
 }
 
-func (r K8sPodReplicasSpec) IsActive() bool {
-	return r.Enabled == nil || *r.Enabled
-}
-
 // K8sPodReplicasSpec defines the desired state of K8sPodReplicas
 type K8sPodReplicasSpec struct {
 	Enabled    *bool    `json:"enabled,omitempty"`
@@ -58,9 +54,16 @@ type K8sPodReplicasSpec struct {
 	Actions       map[string]K8sPodReplicasAction `json:"actions"`
 }
 
-// K8sPodReplicasStatus defines the observed state of K8sPodReplicas
-type K8sPodReplicasStatus struct {
-	Conditions []metav1.Condition `json:"conditions"`
+func (r K8sPodReplicas) IsActive() bool {
+	return r.Spec.Enabled == nil || *r.Spec.Enabled
+}
+
+func (r K8sPodReplicas) GetSchedule() string {
+	return r.Spec.Schedule
+}
+
+func (r K8sPodReplicas) GetStatus() Status {
+	return r.Status
 }
 
 //+kubebuilder:object:root=true
@@ -75,8 +78,8 @@ type K8sPodReplicas struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   K8sPodReplicasSpec   `json:"spec,omitempty"`
-	Status K8sPodReplicasStatus `json:"status,omitempty"`
+	Spec       K8sPodReplicasSpec `json:"spec,omitempty"`
+	StatusType `json:",inline"`
 }
 
 //+kubebuilder:object:root=true

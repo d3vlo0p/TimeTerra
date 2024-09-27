@@ -108,7 +108,6 @@ spec:
             - schedule
             type: object
           status:
-            description: AwsEc2InstanceStatus defines the observed state of AwsEc2Instance
             properties:
               conditions:
                 items:

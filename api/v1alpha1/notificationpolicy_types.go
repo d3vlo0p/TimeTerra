@@ -52,11 +52,6 @@ type NotificationPolicySpec struct {
 	Slack   *NotificationPolicySlackSpec   `json:"slack,omitempty"`
 }
 
-// NotificationPolicyStatus defines the observed state of NotificationPolicy
-type NotificationPolicyStatus struct {
-	Conditions []metav1.Condition `json:"conditions"`
-}
-
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:scope=Cluster
@@ -68,8 +63,8 @@ type NotificationPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   NotificationPolicySpec   `json:"spec,omitempty"`
-	Status NotificationPolicyStatus `json:"status,omitempty"`
+	Spec       NotificationPolicySpec `json:"spec,omitempty"`
+	StatusType `json:",inline"`
 }
 
 //+kubebuilder:object:root=true

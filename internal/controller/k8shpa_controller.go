@@ -69,42 +69,43 @@ func (r *K8sHpaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 
 	logger.Info(fmt.Sprintf("reconciling object %#q", req.NamespacedName))
 
-	resourceName := ResourceName("K8sHpa", req.Name)
+	resourceName := ResourceName("v1alpha1.K8sHpa", req.Name)
 	instance := &v1alpha1.K8sHpa{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			logger.Info("K8sHpa resource not found. object must has been deleted.")
+			logger.Info("Resource not found. object must has been deleted.")
 			r.Cron.RemoveResource(resourceName)
 			return ctrl.Result{}, nil
 		}
-		logger.Info("Failed to get K8sHpa resource. Re-running reconcile.")
+		logger.Info("Failed to get resource. Re-running reconcile.")
 		return ctrl.Result{}, err
 	}
 
-	if instance.Status.Conditions == nil {
-		instance.Status.Conditions = make([]metav1.Condition, 0)
-	}
+	return reconcileResource(
+		ctx,
+		r,
+		instance,
+		resourceName,
+		instance.Spec.Actions,
+		r.setAutoscaling,
+	)
+}
 
-	if instance.Spec.Enabled != nil && !*instance.Spec.Enabled {
-		disableResource(r.Cron, &instance.Status.Conditions, resourceName)
-	} else {
-		err := reconcileResource(ctx, req, r.Client, r.Cron, r.NotificationService, instance.Spec.Actions, instance.Spec.Schedule, resourceName, r.setAutoscaling, &instance.Status.Conditions)
-		if err != nil {
-			r.Recorder.Eventf(instance, corev1.EventTypeWarning, "ReconcileError", "Reconcile error: %s", err.Error())
-			return ctrl.Result{}, err
-		}
-	}
+func (r *K8sHpaReconciler) GetScheduleService() *cron.ScheduleService {
+	return r.Cron
+}
 
-	err = r.Status().Update(ctx, instance)
-	if err != nil {
-		r.Recorder.Eventf(instance, corev1.EventTypeWarning, "ReconcileError", "Reconcile error: %s", err.Error())
-		logger.Info("Failed to update K8sHpa resource. Re-running reconcile.")
-		return ctrl.Result{}, err
-	}
+func (r *K8sHpaReconciler) GetNotificationService() *notification.NotificationService {
+	return r.NotificationService
+}
 
-	r.Recorder.Eventf(instance, corev1.EventTypeNormal, "ReconcileSuccess", "Reconcile succeeded")
-	return ctrl.Result{}, nil
+func (r *K8sHpaReconciler) GetRecorder() record.EventRecorder {
+	return r.Recorder
+}
+
+func (r *K8sHpaReconciler) SetConditions(obj client.Object, conditions []metav1.Condition) {
+	obj.(*v1alpha1.K8sHpa).Status.Conditions = conditions
 }
 
 func (r *K8sHpaReconciler) setAutoscaling(ctx context.Context, key types.NamespacedName, actionName string) (JobResult, JobMetadata) {

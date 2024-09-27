@@ -60,9 +60,16 @@ type AwsTransferFamilySpec struct {
 	Credentials     *AwsCredentialsSpec                `json:"credentials,omitempty"`
 }
 
-// AwsTransferFamilyStatus defines the observed state of AwsTransferFamily
-type AwsTransferFamilyStatus struct {
-	Conditions []metav1.Condition `json:"conditions"`
+func (r AwsTransferFamily) IsActive() bool {
+	return r.Spec.Enabled == nil || *r.Spec.Enabled
+}
+
+func (r AwsTransferFamily) GetSchedule() string {
+	return r.Spec.Schedule
+}
+
+func (r AwsTransferFamily) GetStatus() Status {
+	return r.Status
 }
 
 //+kubebuilder:object:root=true
@@ -76,8 +83,8 @@ type AwsTransferFamily struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   AwsTransferFamilySpec   `json:"spec,omitempty"`
-	Status AwsTransferFamilyStatus `json:"status,omitempty"`
+	Spec       AwsTransferFamilySpec `json:"spec,omitempty"`
+	StatusType `json:",inline"`
 }
 
 //+kubebuilder:object:root=true

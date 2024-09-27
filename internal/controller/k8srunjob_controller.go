@@ -68,41 +68,43 @@ func (r *K8sRunJobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	logger.Info(fmt.Sprintf("reconciling object %#q", req.NamespacedName))
 
-	resourceName := ResourceName("K8sRunJob", req.Name)
+	resourceName := ResourceName("v1alpha1.K8sRunJob", req.Name)
 	instance := &v1alpha1.K8sRunJob{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			logger.Info("RunJob resource not found. object must has been deleted.")
+			logger.Info("Resource not found. object must has been deleted.")
 			r.Cron.RemoveResource(resourceName)
 			return ctrl.Result{}, nil
 		}
-		logger.Info("Failed to get RunJob resource. Re-running reconcile.")
+		logger.Info("Failed to get resource. Re-running reconcile.")
 		return ctrl.Result{}, err
 	}
 
-	if instance.Status.Conditions == nil {
-		instance.Status.Conditions = make([]metav1.Condition, 0)
-	}
-	if instance.Spec.Enabled != nil && !*instance.Spec.Enabled {
-		disableResource(r.Cron, &instance.Status.Conditions, resourceName)
-	} else {
-		err := reconcileResource(ctx, req, r.Client, r.Cron, r.NotificationService, instance.Spec.Actions, instance.Spec.Schedule, resourceName, r.runJob, &instance.Status.Conditions)
-		if err != nil {
-			r.Recorder.Eventf(instance, corev1.EventTypeWarning, "ReconcileError", "Reconcile error: %s", err.Error())
-			return ctrl.Result{}, err
-		}
-	}
+	return reconcileResource(
+		ctx,
+		r,
+		instance,
+		resourceName,
+		instance.Spec.Actions,
+		r.runJob,
+	)
+}
 
-	err = r.Status().Update(ctx, instance)
-	if err != nil {
-		r.Recorder.Eventf(instance, corev1.EventTypeWarning, "ReconcileError", "Reconcile error: %s", err.Error())
-		logger.Info(fmt.Sprintf("failed to update status: %q", err))
-		return ctrl.Result{}, err
-	}
+func (r *K8sRunJobReconciler) GetScheduleService() *cron.ScheduleService {
+	return r.Cron
+}
 
-	r.Recorder.Eventf(instance, corev1.EventTypeNormal, "ReconcileSuccess", "Reconcile succeeded")
-	return ctrl.Result{}, nil
+func (r *K8sRunJobReconciler) GetNotificationService() *notification.NotificationService {
+	return r.NotificationService
+}
+
+func (r *K8sRunJobReconciler) GetRecorder() record.EventRecorder {
+	return r.Recorder
+}
+
+func (r *K8sRunJobReconciler) SetConditions(obj client.Object, conditions []metav1.Condition) {
+	obj.(*v1alpha1.K8sRunJob).Status.Conditions = conditions
 }
 
 func (r *K8sRunJobReconciler) runJob(ctx context.Context, key types.NamespacedName, actionName string) (JobResult, JobMetadata) {

@@ -106,8 +106,6 @@ spec:
             - schedule
             type: object
           status:
-            description: AwsDocumentDBClusterStatus defines the observed state of
-              AwsDocumentDBCluster
             properties:
               conditions:
                 items:

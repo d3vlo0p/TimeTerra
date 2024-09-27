@@ -68,21 +68,17 @@ func (r *AwsRdsAuroraClusterReconciler) Reconcile(ctx context.Context, req ctrl.
 
 	logger.Info(fmt.Sprintf("reconciling object %#q", req.NamespacedName))
 
-	resourceName := ResourceName("AwsRdsAuroraCluster", req.Name)
+	resourceName := ResourceName("v1alpha1.AwsRdsAuroraCluster", req.Name)
 	instance := &v1alpha1.AwsRdsAuroraCluster{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			logger.Info("AwsRdsAuroraCluster resource not found. object must has been deleted.")
+			logger.Info("Resource not found. object must has been deleted.")
 			r.Cron.RemoveResource(resourceName)
 			return ctrl.Result{}, nil
 		}
-		logger.Info("Failed to get AwsRdsAuroraCluster resource. Re-running reconcile.")
+		logger.Info("Failed to get resource. Re-running reconcile.")
 		return ctrl.Result{}, err
-	}
-
-	if instance.Status.Conditions == nil {
-		instance.Status.Conditions = make([]metav1.Condition, 0)
 	}
 
 	if instance.Spec.Credentials != nil {
@@ -97,25 +93,30 @@ func (r *AwsRdsAuroraClusterReconciler) Reconcile(ctx context.Context, req ctrl.
 		}
 	}
 
-	if instance.Spec.Enabled != nil && !*instance.Spec.Enabled {
-		disableResource(r.Cron, &instance.Status.Conditions, resourceName)
-	} else {
-		err := reconcileResource(ctx, req, r.Client, r.Cron, r.NotificationService, instance.Spec.Actions, instance.Spec.Schedule, resourceName, r.startStopCluster, &instance.Status.Conditions)
-		if err != nil {
-			r.Recorder.Eventf(instance, corev1.EventTypeWarning, "ReconcileError", "Reconcile error: %s", err.Error())
-			return ctrl.Result{}, err
-		}
-	}
+	return reconcileResource(
+		ctx,
+		r,
+		instance,
+		resourceName,
+		instance.Spec.Actions,
+		r.startStopCluster,
+	)
+}
 
-	err = r.Status().Update(ctx, instance)
-	if err != nil {
-		r.Recorder.Eventf(instance, corev1.EventTypeWarning, "ReconcileError", "Reconcile error: %s", err.Error())
-		logger.Info("Failed to update AwsRdsAuroraCluster resource. Re-running reconcile.")
-		return ctrl.Result{}, err
-	}
+func (r *AwsRdsAuroraClusterReconciler) GetScheduleService() *cron.ScheduleService {
+	return r.Cron
+}
 
-	r.Recorder.Eventf(instance, corev1.EventTypeNormal, "ReconcileSuccess", "Reconcile succeeded")
-	return ctrl.Result{}, nil
+func (r *AwsRdsAuroraClusterReconciler) GetNotificationService() *notification.NotificationService {
+	return r.NotificationService
+}
+
+func (r *AwsRdsAuroraClusterReconciler) GetRecorder() record.EventRecorder {
+	return r.Recorder
+}
+
+func (r *AwsRdsAuroraClusterReconciler) SetConditions(obj client.Object, conditions []metav1.Condition) {
+	obj.(*v1alpha1.AwsRdsAuroraCluster).Status.Conditions = conditions
 }
 
 func (r *AwsRdsAuroraClusterReconciler) startStopCluster(ctx context.Context, key types.NamespacedName, actionName string) (JobResult, JobMetadata) {
