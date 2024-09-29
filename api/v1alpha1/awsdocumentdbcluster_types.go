@@ -63,9 +63,16 @@ type AwsDocumentDBClusterSpec struct {
 	Credentials          *AwsCredentialsSpec                   `json:"credentials,omitempty"`
 }
 
-// AwsDocumentDBClusterStatus defines the observed state of AwsDocumentDBCluster
-type AwsDocumentDBClusterStatus struct {
-	Conditions []metav1.Condition `json:"conditions"`
+func (r AwsDocumentDBCluster) IsActive() bool {
+	return r.Spec.Enabled == nil || *r.Spec.Enabled
+}
+
+func (r AwsDocumentDBCluster) GetSchedule() string {
+	return r.Spec.Schedule
+}
+
+func (r AwsDocumentDBCluster) GetStatus() Status {
+	return r.Status
 }
 
 //+kubebuilder:object:root=true
@@ -79,8 +86,8 @@ type AwsDocumentDBCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   AwsDocumentDBClusterSpec   `json:"spec,omitempty"`
-	Status AwsDocumentDBClusterStatus `json:"status,omitempty"`
+	Spec       AwsDocumentDBClusterSpec `json:"spec,omitempty"`
+	StatusType `json:",inline"`
 }
 
 //+kubebuilder:object:root=true

@@ -62,9 +62,16 @@ type AwsEc2InstanceSpec struct {
 	Credentials     *AwsCredentialsSpec             `json:"credentials,omitempty"`
 }
 
-// AwsEc2InstanceStatus defines the observed state of AwsEc2Instance
-type AwsEc2InstanceStatus struct {
-	Conditions []metav1.Condition `json:"conditions"`
+func (r AwsEc2Instance) IsActive() bool {
+	return r.Spec.Enabled == nil || *r.Spec.Enabled
+}
+
+func (r AwsEc2Instance) GetSchedule() string {
+	return r.Spec.Schedule
+}
+
+func (r AwsEc2Instance) GetStatus() Status {
+	return r.Status
 }
 
 //+kubebuilder:object:root=true
@@ -78,8 +85,8 @@ type AwsEc2Instance struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   AwsEc2InstanceSpec   `json:"spec,omitempty"`
-	Status AwsEc2InstanceStatus `json:"status,omitempty"`
+	Spec       AwsEc2InstanceSpec `json:"spec,omitempty"`
+	StatusType `json:",inline"`
 }
 
 //+kubebuilder:object:root=true

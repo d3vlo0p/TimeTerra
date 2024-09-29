@@ -46,9 +46,16 @@ type K8sHpaSpec struct {
 	Actions       map[string]K8sHpaAction `json:"actions"`
 }
 
-// K8sHpaStatus defines the observed state of K8sHpa
-type K8sHpaStatus struct {
-	Conditions []metav1.Condition `json:"conditions"`
+func (r K8sHpa) IsActive() bool {
+	return r.Spec.Enabled == nil || *r.Spec.Enabled
+}
+
+func (r K8sHpa) GetSchedule() string {
+	return r.Spec.Schedule
+}
+
+func (r K8sHpa) GetStatus() Status {
+	return r.Status
 }
 
 //+kubebuilder:object:root=true
@@ -62,8 +69,8 @@ type K8sHpa struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   K8sHpaSpec   `json:"spec,omitempty"`
-	Status K8sHpaStatus `json:"status,omitempty"`
+	Spec       K8sHpaSpec `json:"spec,omitempty"`
+	StatusType `json:",inline"`
 }
 
 //+kubebuilder:object:root=true

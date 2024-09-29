@@ -126,7 +126,6 @@ spec:
             - schedule
             type: object
           status:
-            description: K8sPodReplicasStatus defines the observed state of K8sPodReplicas
             properties:
               conditions:
                 items:

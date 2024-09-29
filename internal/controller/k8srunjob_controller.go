@@ -35,6 +35,7 @@ import (
 	v1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 	"github.com/d3vlo0p/TimeTerra/internal/cron"
 	"github.com/d3vlo0p/TimeTerra/notification"
+	"github.com/go-logr/logr"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -66,65 +67,66 @@ type K8sRunJobReconciler struct {
 func (r *K8sRunJobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
-	logger.Info(fmt.Sprintf("reconciling object %#q", req.NamespacedName))
+	logger.Info("reconciling resource")
 
-	resourceName := ResourceName("K8sRunJob", req.Name)
+	resourceName := resourceName("v1alpha1.K8sRunJob", req.Name)
 	instance := &v1alpha1.K8sRunJob{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			logger.Info("RunJob resource not found. object must has been deleted.")
+			logger.Info("Resource not found. object must has been deleted.")
 			r.Cron.RemoveResource(resourceName)
 			return ctrl.Result{}, nil
 		}
-		logger.Info("Failed to get RunJob resource. Re-running reconcile.")
+		logger.Info("Failed to get resource. Re-running reconcile.")
 		return ctrl.Result{}, err
 	}
 
-	if instance.Status.Conditions == nil {
-		instance.Status.Conditions = make([]metav1.Condition, 0)
-	}
-	if instance.Spec.Enabled != nil && !*instance.Spec.Enabled {
-		disableResource(r.Cron, &instance.Status.Conditions, resourceName)
-	} else {
-		err := reconcileResource(ctx, req, r.Client, r.Cron, r.NotificationService, instance.Spec.Actions, instance.Spec.Schedule, resourceName, r.runJob, &instance.Status.Conditions)
-		if err != nil {
-			r.Recorder.Eventf(instance, corev1.EventTypeWarning, "ReconcileError", "Reconcile error: %s", err.Error())
-			return ctrl.Result{}, err
-		}
-	}
-
-	err = r.Status().Update(ctx, instance)
-	if err != nil {
-		r.Recorder.Eventf(instance, corev1.EventTypeWarning, "ReconcileError", "Reconcile error: %s", err.Error())
-		logger.Info(fmt.Sprintf("failed to update status: %q", err))
-		return ctrl.Result{}, err
-	}
-
-	r.Recorder.Eventf(instance, corev1.EventTypeNormal, "ReconcileSuccess", "Reconcile succeeded")
-	return ctrl.Result{}, nil
+	return reconcileResource(
+		ctx,
+		r,
+		instance,
+		resourceName,
+		instance.Spec.Actions,
+		r.runJob,
+	)
 }
 
-func (r *K8sRunJobReconciler) runJob(ctx context.Context, key types.NamespacedName, actionName string) (JobResult, JobMetadata) {
+func (r *K8sRunJobReconciler) GetScheduleService() *cron.ScheduleService {
+	return r.Cron
+}
+
+func (r *K8sRunJobReconciler) GetNotificationService() *notification.NotificationService {
+	return r.NotificationService
+}
+
+func (r *K8sRunJobReconciler) GetRecorder() record.EventRecorder {
+	return r.Recorder
+}
+
+func (r *K8sRunJobReconciler) SetConditions(obj client.Object, conditions []metav1.Condition) {
+	obj.(*v1alpha1.K8sRunJob).Status.Conditions = conditions
+}
+
+func (r *K8sRunJobReconciler) runJob(ctx context.Context, logger logr.Logger, key types.NamespacedName, actionName string) (JobResult, JobMetadata) {
 	metadata := JobMetadata{}
-	logger := log.FromContext(ctx)
 	start := time.Now()
 	obj := &v1alpha1.K8sRunJob{}
 	err := r.Get(ctx, key, obj)
 	if err != nil {
-		logger.Error(err, "Failed to get RunJob resource.")
+		logger.Error(err, "Failed to get RunJob resource")
 		metadata["error"] = err.Error()
 		return JobResultError, metadata
 	}
 
 	action, ok := obj.Spec.Actions[actionName]
 	if !ok {
-		logger.Info(fmt.Sprintf("Action %q not found in RunJob resource.", actionName))
-		metadata["error"] = fmt.Sprintf("Action %q not found in RunJob resource.", actionName)
+		logger.Info("Action not found in RunJob resource")
+		metadata["error"] = fmt.Sprintf("Action %q not found in RunJob resource", actionName)
 		return JobResultError, metadata
 	}
 
-	actionType := ConditionTypeForAction(actionName)
+	actionType := conditionTypeForAction(actionName)
 	errorsList := make([]string, 0)
 
 	namespaces := obj.Spec.Namespaces
@@ -195,8 +197,8 @@ func (r *K8sRunJobReconciler) runJob(ctx context.Context, key types.NamespacedNa
 		LastTransitionTime: metav1.Now(),
 		Type:               actionType,
 		Status:             metav1.ConditionTrue,
-		Reason:             "Success",
-		Message:            fmt.Sprintf("Action %q, last execution start:%q end:%q", actionName, start.Format(time.RFC3339), time.Now().Format(time.RFC3339)),
+		Reason:             "Active",
+		Message:            fmt.Sprintf("last execution started:%q ended:%q", start.Format(time.RFC3339), time.Now().Format(time.RFC3339)),
 	})
 	r.Status().Update(ctx, obj)
 	return JobResultSuccess, metadata

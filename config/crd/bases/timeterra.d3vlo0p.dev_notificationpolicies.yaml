@@ -98,7 +98,6 @@ spec:
             - type
             type: object
           status:
-            description: NotificationPolicyStatus defines the observed state of NotificationPolicy
             properties:
               conditions:
                 items:

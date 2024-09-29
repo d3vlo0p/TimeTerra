@@ -38,6 +38,7 @@ import (
 	v1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 	"github.com/d3vlo0p/TimeTerra/internal/cron"
 	"github.com/d3vlo0p/TimeTerra/notification"
+	"github.com/go-logr/logr"
 )
 
 // AwsEc2InstanceReconciler reconciles a AwsEc2Instance object
@@ -66,23 +67,19 @@ type AwsEc2InstanceReconciler struct {
 func (r *AwsEc2InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
-	logger.Info(fmt.Sprintf("reconciling object %#q", req.NamespacedName))
+	logger.Info("reconciling resource")
 
-	resourceName := ResourceName("AwsEc2Instance", req.Name)
+	resourceName := resourceName("v1alpha1.AwsEc2Instance", req.Name)
 	instance := &v1alpha1.AwsEc2Instance{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			logger.Info("AwsEc2Instance resource not found. object must has been deleted.")
+			logger.Info("Resource not found. object must has been deleted")
 			r.Cron.RemoveResource(resourceName)
 			return ctrl.Result{}, nil
 		}
-		logger.Info("Failed to get AwsEc2Instance resource. Re-running reconcile.")
+		logger.Info("Failed to get resource. Re-running reconcile")
 		return ctrl.Result{}, err
-	}
-
-	if instance.Status.Conditions == nil {
-		instance.Status.Conditions = make([]metav1.Condition, 0)
 	}
 
 	if instance.Spec.Credentials != nil {
@@ -92,47 +89,51 @@ func (r *AwsEc2InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		err = r.Get(ctx, key, secret)
 		if err != nil {
 			logger.Error(err, "Failed to get Secret.", "key", key)
-			r.Recorder.Eventf(instance, corev1.EventTypeWarning, "SecretError", "Secret %s error: %s", key.String(), err.Error())
+			r.Recorder.Eventf(instance, corev1.EventTypeWarning, "SecretError", "Secret %q error: %s", key.String(), err.Error())
 			return ctrl.Result{}, err
 		}
 	}
 
-	if instance.Spec.Enabled != nil && !*instance.Spec.Enabled {
-		disableResource(r.Cron, &instance.Status.Conditions, resourceName)
-	} else {
-		err := reconcileResource(ctx, req, r.Client, r.Cron, r.NotificationService, instance.Spec.Actions, instance.Spec.Schedule, resourceName, r.startStopInstances, &instance.Status.Conditions)
-		if err != nil {
-			r.Recorder.Eventf(instance, corev1.EventTypeWarning, "ReconcileError", "Reconcile error: %s", err.Error())
-			return ctrl.Result{}, err
-		}
-	}
-
-	err = r.Status().Update(ctx, instance)
-	if err != nil {
-		r.Recorder.Eventf(instance, corev1.EventTypeWarning, "ReconcileError", "Reconcile error: %s", err.Error())
-		logger.Info("Failed to update AwsEc2Instance resource. Re-running reconcile.")
-		return ctrl.Result{}, err
-	}
-
-	r.Recorder.Eventf(instance, corev1.EventTypeNormal, "ReconcileSuccess", "Reconcile succeeded")
-	return ctrl.Result{}, nil
+	return reconcileResource(
+		ctx,
+		r,
+		instance,
+		resourceName,
+		instance.Spec.Actions,
+		r.startStopInstances,
+	)
 }
 
-func (r *AwsEc2InstanceReconciler) startStopInstances(ctx context.Context, key types.NamespacedName, actionName string) (JobResult, JobMetadata) {
+func (r *AwsEc2InstanceReconciler) GetScheduleService() *cron.ScheduleService {
+	return r.Cron
+}
+
+func (r *AwsEc2InstanceReconciler) GetNotificationService() *notification.NotificationService {
+	return r.NotificationService
+}
+
+func (r *AwsEc2InstanceReconciler) GetRecorder() record.EventRecorder {
+	return r.Recorder
+}
+
+func (r *AwsEc2InstanceReconciler) SetConditions(obj client.Object, conditions []metav1.Condition) {
+	obj.(*v1alpha1.AwsEc2Instance).Status.Conditions = conditions
+}
+
+func (r *AwsEc2InstanceReconciler) startStopInstances(ctx context.Context, logger logr.Logger, key types.NamespacedName, actionName string) (JobResult, JobMetadata) {
 	metadata := JobMetadata{}
-	logger := log.FromContext(ctx)
 	start := time.Now()
 	obj := &v1alpha1.AwsEc2Instance{}
 	err := r.Get(ctx, key, obj)
 	if err != nil {
-		logger.Error(err, "Failed to get AwsEc2Instance resource.")
+		logger.Error(err, "Failed to get AwsEc2Instance resource")
 		metadata["error"] = err.Error()
 		return JobResultError, metadata
 	}
 	action, ok := obj.Spec.Actions[actionName]
 	if !ok {
-		logger.Info(fmt.Sprintf("Action %q not found in AWSEc2Instance resource.", actionName))
-		metadata["error"] = fmt.Sprintf("Action %q not found in AWSEc2Instance resource.", actionName)
+		logger.Info("Action not found in AWSEc2Instance resource")
+		metadata["error"] = fmt.Sprintf("Action %q not found in AWSEc2Instance resource", actionName)
 		return JobResultError, metadata
 	}
 
@@ -147,7 +148,7 @@ func (r *AwsEc2InstanceReconciler) startStopInstances(ctx context.Context, key t
 		secret := &corev1.Secret{}
 		err = r.Get(ctx, types.NamespacedName{Name: obj.Spec.Credentials.SecretName, Namespace: defaultNamespace(r.OperatorNamespace, obj.Spec.Credentials.Namespace)}, secret)
 		if err != nil {
-			logger.Error(err, "Failed to get Secret resource.")
+			logger.Error(err, "Failed to get Secret resource")
 			metadata["error"] = err.Error()
 			return JobResultError, metadata
 		}
@@ -160,7 +161,7 @@ func (r *AwsEc2InstanceReconciler) startStopInstances(ctx context.Context, key t
 		}
 	}
 
-	actionType := ConditionTypeForAction(actionName)
+	actionType := conditionTypeForAction(actionName)
 	errorsList := make([]string, 0)
 	ec2Client := ec2.NewFromConfig(cfg)
 	for _, ec2Instance := range obj.Spec.Instances {
@@ -178,14 +179,14 @@ func (r *AwsEc2InstanceReconciler) startStopInstances(ctx context.Context, key t
 				InstanceIds: []string{ec2Instance.Id},
 			}, opts)
 			if err != nil {
-				msg := fmt.Sprintf("unable to start ec2 %s", ec2Instance.Id)
+				msg := fmt.Sprintf("unable to start ec2 %q", ec2Instance.Id)
 				logger.Error(err, msg)
 				errorsList = append(errorsList, msg)
 				r.Recorder.Eventf(obj, corev1.EventTypeWarning, "StartEc2Failed", msg)
 				continue
 			}
 
-			r.Recorder.Eventf(obj, corev1.EventTypeNormal, "StartEc2Succeeded", "Ec2 %s is starting", ec2Instance.Id)
+			r.Recorder.Eventf(obj, corev1.EventTypeNormal, "StartEc2Succeeded", "Ec2 %q is starting", ec2Instance.Id)
 			logger.Info("Ec2 is starting", "identifier", ec2Instance.Id)
 
 		case v1alpha1.AwsEc2InstanceCommandStop, v1alpha1.AwsEc2InstanceCommandHibernate:
@@ -196,14 +197,14 @@ func (r *AwsEc2InstanceReconciler) startStopInstances(ctx context.Context, key t
 				Force:       action.Force,
 			}, opts)
 			if err != nil {
-				msg := fmt.Sprintf("unable to stop ec2 %s", ec2Instance.Id)
+				msg := fmt.Sprintf("unable to stop ec2 %q", ec2Instance.Id)
 				logger.Error(err, msg)
 				errorsList = append(errorsList, msg)
 				r.Recorder.Eventf(obj, corev1.EventTypeWarning, "StopEc2Failed", msg)
 				continue
 			}
 
-			r.Recorder.Eventf(obj, corev1.EventTypeNormal, "StopEc2Succeeded", "Ec2 %s is stopping", ec2Instance.Id)
+			r.Recorder.Eventf(obj, corev1.EventTypeNormal, "StopEc2Succeeded", "Ec2 %q is stopping", ec2Instance.Id)
 			logger.Info("Ec2 is stopping", "identifier", ec2Instance.Id)
 		}
 	}
@@ -224,8 +225,8 @@ func (r *AwsEc2InstanceReconciler) startStopInstances(ctx context.Context, key t
 		LastTransitionTime: metav1.Now(),
 		Type:               actionType,
 		Status:             metav1.ConditionTrue,
-		Reason:             "Success",
-		Message:            fmt.Sprintf("Action %q, last execution start:%q end:%q", actionName, start.Format(time.RFC3339), time.Now().Format(time.RFC3339)),
+		Reason:             "Active",
+		Message:            fmt.Sprintf("last execution started:%q ended:%q", start.Format(time.RFC3339), time.Now().Format(time.RFC3339)),
 	})
 	r.Status().Update(ctx, obj)
 	return JobResultSuccess, metadata

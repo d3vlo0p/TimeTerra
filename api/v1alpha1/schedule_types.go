@@ -54,11 +54,6 @@ type ScheduleSpec struct {
 	InactivePeriods []TimePeriod              `json:"inactivePeriods,omitempty"`
 }
 
-// ScheduleStatus defines the observed state of Schedule
-type ScheduleStatus struct {
-	Conditions []metav1.Condition `json:"conditions"`
-}
-
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:scope=Cluster
@@ -69,8 +64,8 @@ type Schedule struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ScheduleSpec   `json:"spec,omitempty"`
-	Status ScheduleStatus `json:"status,omitempty"`
+	Spec       ScheduleSpec `json:"spec,omitempty"`
+	StatusType `json:",inline"`
 }
 
 //+kubebuilder:object:root=true

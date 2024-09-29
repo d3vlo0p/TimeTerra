@@ -87,7 +87,6 @@ spec:
                 type: array
             type: object
           status:
-            description: ScheduleStatus defines the observed state of Schedule
             properties:
               conditions:
                 items:

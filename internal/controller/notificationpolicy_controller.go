@@ -58,16 +58,17 @@ type NotificationPolicyReconciler struct {
 func (r *NotificationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
-	logger.Info(fmt.Sprintf("reconciling object %#q", req.NamespacedName))
+	logger.Info("reconciling notification policy")
+
 	instance := &v1alpha1.NotificationPolicy{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			logger.Info("NotificationPolicy resource not found. object must has been deleted.")
+			logger.Info("NotificationPolicy resource not found. object must has been deleted")
 			r.NotificationService.RemoveRecipient(req.Name)
 			return ctrl.Result{}, nil
 		}
-		logger.Info("Failed to get NotificationPolicy resource. Re-running reconcile.")
+		logger.Info("Failed to get NotificationPolicy resource. Re-running reconcile")
 		return ctrl.Result{}, err
 	}
 
@@ -84,7 +85,7 @@ func (r *NotificationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 	err = r.Status().Update(ctx, instance)
 	if err != nil {
 		r.Recorder.Eventf(instance, corev1.EventTypeWarning, "ReconcileError", "Reconcile error: %s", err.Error())
-		logger.Info("Failed to update NotificationPolicy resource status. Re-running reconcile.")
+		logger.Info("Failed to update NotificationPolicy resource status. Re-running reconcile")
 		return ctrl.Result{}, err
 	}
 
@@ -93,13 +94,13 @@ func (r *NotificationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 }
 
 func (r *NotificationPolicyReconciler) reconcile(ctx context.Context, instance *v1alpha1.NotificationPolicy) error {
-	logger := log.FromContext(ctx)
+	logger := log.FromContext(ctx).WithValues("notificationPolicy", instance.Name)
 	r.NotificationService.RemoveRecipient(instance.Name)
 	if !instance.Spec.IsActive() {
 		addToConditions(&instance.Status.Conditions, metav1.Condition{
 			LastTransitionTime: metav1.Now(),
-			Status:             metav1.ConditionFalse,
 			Type:               "Ready",
+			Status:             metav1.ConditionFalse,
 			Reason:             "Disabled",
 		})
 		return nil
@@ -110,33 +111,34 @@ func (r *NotificationPolicyReconciler) reconcile(ctx context.Context, instance *
 	case notification.NotificationTypeApi:
 		logger.Info("Handling API notification")
 		if instance.Spec.Api == nil {
-			logger.Info("api notification type requires api configuration")
+			logger.Info("api notification type requires spec.api configuration")
 			addToConditions(&instance.Status.Conditions, metav1.Condition{
 				LastTransitionTime: metav1.Now(),
-				Status:             metav1.ConditionFalse,
 				Type:               "Ready",
+				Status:             metav1.ConditionFalse,
 				Reason:             "InvalidNotificationConfig",
-				Message:            "api notification type requires api configuration",
+				Message:            "api notification type requires spec.api configuration",
 			})
-			r.Recorder.Eventf(instance, corev1.EventTypeWarning, "InvalidNotificationConfig", "api notification type requires api configuration")
+			r.Recorder.Eventf(instance, corev1.EventTypeWarning, "InvalidNotificationConfig", "api notification type requires spec.api configuration")
 			return nil
 		}
 		recipient = notification.NewApiNotification(ctx, notification.ApiNotificationConfig{
 			Url:    instance.Spec.Api.Url,
 			Method: instance.Spec.Api.Method,
 		})
+
 	case notification.NotificationTypeMSTeams:
 		logger.Info("Handling MS Teams notification")
 		if instance.Spec.MSTeams == nil {
-			logger.Info("ms teams notification type requires ms teams configuration")
+			logger.Info("ms teams notification type requires spec.msteams configuration")
 			addToConditions(&instance.Status.Conditions, metav1.Condition{
 				LastTransitionTime: metav1.Now(),
-				Status:             metav1.ConditionFalse,
 				Type:               "Ready",
+				Status:             metav1.ConditionFalse,
 				Reason:             "InvalidNotificationConfig",
-				Message:            "ms teams notification type requires ms teams configuration",
+				Message:            "ms teams notification type requires spec.msteams configuration",
 			})
-			r.Recorder.Eventf(instance, corev1.EventTypeWarning, "InvalidNotificationConfig", "ms teams notification type requires ms teams configuration")
+			r.Recorder.Eventf(instance, corev1.EventTypeWarning, "InvalidNotificationConfig", "ms teams notification type requires spec.msteams configuration")
 			return nil
 		}
 		recipient = notification.NewMSTeamsNotification(ctx, notification.MSTeamsNotificationConfig{
@@ -147,32 +149,34 @@ func (r *NotificationPolicyReconciler) reconcile(ctx context.Context, instance *
 	case notification.NotificationTypeSlack:
 		logger.Info("Handling slack notification")
 		if instance.Spec.Slack == nil {
-			logger.Info("slack notification type requires slack configuration")
+			logger.Info("slack notification type requires spec.slack configuration")
 			addToConditions(&instance.Status.Conditions, metav1.Condition{
 				LastTransitionTime: metav1.Now(),
-				Status:             metav1.ConditionFalse,
 				Type:               "Ready",
+				Status:             metav1.ConditionFalse,
 				Reason:             "InvalidNotificationConfig",
-				Message:            "slack notification type requires slack configuration",
+				Message:            "slack notification type requires spec.slack configuration",
 			})
-			r.Recorder.Eventf(instance, corev1.EventTypeWarning, "InvalidNotificationConfig", "slack notification type requires slack configuration")
+			r.Recorder.Eventf(instance, corev1.EventTypeWarning, "InvalidNotificationConfig", "slack notification type requires spec.slack configuration")
 			return nil
 		}
 		recipient = notification.NewSlackNotification(ctx, notification.SlackNotificationConfig{
 			WebHookUrl: instance.Spec.Slack.WebHookUrl,
 			Title:      instance.Spec.Slack.Title,
 		})
+
 	default:
-		logger.Info("Unknown notification type")
+		logger.Info("Not supported notification type", "NotificationType", instance.Spec.Type)
 		addToConditions(&instance.Status.Conditions, metav1.Condition{
 			LastTransitionTime: metav1.Now(),
-			Status:             metav1.ConditionFalse,
 			Type:               "Ready",
-			Reason:             "UnknownNotificationType",
-			Message:            "Unknown notification type",
+			Status:             metav1.ConditionFalse,
+			Reason:             "NotSupportedNotificationType",
+			Message:            fmt.Sprintf("Notification type %q not supported", instance.Spec.Type),
 		})
-		r.Recorder.Eventf(instance, corev1.EventTypeWarning, "UnknownNotificationType", "Unknown notification type: %s", instance.Spec.Type)
+		r.Recorder.Eventf(instance, corev1.EventTypeWarning, "NotSupportedNotificationType", "Notification type %q not supported", instance.Spec.Type)
 		return nil
+
 	}
 
 	for _, schedule := range instance.Spec.Schedules {
@@ -183,7 +187,7 @@ func (r *NotificationPolicyReconciler) reconcile(ctx context.Context, instance *
 		LastTransitionTime: metav1.Now(),
 		Status:             metav1.ConditionTrue,
 		Type:               "Ready",
-		Reason:             "Ready",
+		Reason:             "Active",
 	})
 	return nil
 }
