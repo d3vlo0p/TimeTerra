@@ -11,6 +11,7 @@ import (
 	"github.com/d3vlo0p/TimeTerra/internal/cron"
 	"github.com/d3vlo0p/TimeTerra/monitoring"
 	"github.com/d3vlo0p/TimeTerra/notification"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,12 +45,12 @@ func reconcileResource[Action Activable](
 	obj ReconcileResource,
 	resourceName string,
 	actions map[string]Action,
-	job func(ctx context.Context, key types.NamespacedName, actionName string) (JobResult, JobMetadata),
+	job func(ctx context.Context, logger logr.Logger, key types.NamespacedName, actionName string) (JobResult, JobMetadata),
 ) (ctrl.Result, error) {
-	logger := log.FromContext(ctx)
+	logger := log.FromContext(ctx).WithValues("resource", resourceName)
 	recorder := r.GetRecorder()
 	scheduleName := obj.GetSchedule()
-	cron := r.GetScheduleService()
+	scheduleService := r.GetScheduleService()
 	notificationService := r.GetNotificationService()
 
 	conditions := obj.GetStatus().Conditions
@@ -65,15 +66,14 @@ func reconcileResource[Action Activable](
 			Status:             metav1.ConditionFalse,
 			Reason:             "Disabled",
 		})
-		r.SetConditions(obj, conditions)
 		recorder.Eventf(obj, corev1.EventTypeNormal, "Disabled", "Resource %q is not active", obj.GetName())
-		return ctrl.Result{}, updateStatus(ctx, r, obj, nil)
+		return ctrl.Result{}, updateStatus(ctx, r, obj, conditions, nil)
 	}
 
 	schedule := &v1alpha1.Schedule{}
 	err := r.Get(ctx, client.ObjectKey{Name: scheduleName}, schedule)
 	if err != nil {
-		logger.Info("Failed to get Schedule resource. Re-running reconcile.")
+		logger.Error(err, "Failed to get Schedule resource. Re-running reconcile.", "schedule", scheduleName)
 		addToConditions(&conditions, metav1.Condition{
 			LastTransitionTime: metav1.Now(),
 			Type:               "Ready",
@@ -81,27 +81,26 @@ func reconcileResource[Action Activable](
 			Reason:             "ScheduleNotExist",
 			Message:            "Schedule specified in spec.schedule do not exist",
 		})
-		r.SetConditions(obj, conditions)
 		recorder.Eventf(obj, corev1.EventTypeWarning, "ScheduleNotExist", "Schedule %q not exist", scheduleName)
-		return ctrl.Result{}, updateStatus(ctx, r, obj, err)
+		return ctrl.Result{}, updateStatus(ctx, r, obj, conditions, err)
 	}
 
-	removedActions := cron.RemoveActionsOfResourceFromNonCurrentSchedule(scheduleName, resourceName)
+	removedActions := scheduleService.RemoveActionsOfResourceFromNonCurrentSchedule(scheduleName, resourceName)
 	if len(removedActions) > 0 {
-		logger.Info("Schedule has been changed, removed cron jobs of previous schedule")
+		logger.Info("Schedule has been changed, removing cron jobs of previous schedule")
 		for _, action := range removedActions {
 			removeFromConditions(&conditions, conditionTypeForAction(action))
 		}
 	}
 
 	scheduledActions := make([]string, 0)
-	for action, id := range cron.GetActionsOfResource(scheduleName, resourceName) {
-		entry := cron.Get(id)
+	for action, id := range scheduleService.GetActionsOfResource(scheduleName, resourceName) {
+		entry := scheduleService.Get(id)
 		if entry.Valid() {
 			// delete scheduled action if action is not defined in instance spec
 			if _, found := actions[action]; !found {
-				logger.Info(fmt.Sprintf("Action %q is no more defined in spec, removing it from cron", action))
-				cron.Remove(scheduleName, action, resourceName)
+				logger.Info("Action is no more defined in spec, removing it from cron", "action", action)
+				scheduleService.Remove(scheduleName, action, resourceName)
 				removeFromConditions(&conditions, conditionTypeForAction(action))
 			} else {
 				scheduledActions = append(scheduledActions, action)
@@ -112,8 +111,8 @@ func reconcileResource[Action Activable](
 	for actionName, action := range actions {
 		actionName := actionName
 		if !action.IsActive() {
-			logger.Info(fmt.Sprintf("Action %q is not active, removing it from cron", actionName))
-			cron.Remove(scheduleName, actionName, resourceName)
+			logger.Info("Action not active, removing it from cron", "action", actionName)
+			scheduleService.Remove(scheduleName, actionName, resourceName)
 			addToConditions(&conditions, metav1.Condition{
 				LastTransitionTime: metav1.Now(),
 				Type:               conditionTypeForAction(actionName),
@@ -125,7 +124,7 @@ func reconcileResource[Action Activable](
 		if !contains(scheduledActions, actionName) {
 			scheduleAction, found := schedule.Spec.Actions[actionName]
 			if !found {
-				logger.Info(fmt.Sprintf("action %q is not defined in schedule %q", actionName, scheduleName))
+				logger.Info("The action is not specified in the referenced schedule", "action", actionName, "schedule", scheduleName)
 				addToConditions(&conditions, metav1.Condition{
 					LastTransitionTime: metav1.Now(),
 					Type:               conditionTypeForAction(actionName),
@@ -136,27 +135,28 @@ func reconcileResource[Action Activable](
 				recorder.Eventf(obj, corev1.EventTypeWarning, "MissingAction", "action %q not found in %q", actionName, scheduleName)
 				continue
 			}
-			logger.Info(fmt.Sprintf("Action %q is not scheduled, scheduling it with %q", actionName, scheduleAction.Cron))
-			_, err := cron.Add(scheduleName, actionName, resourceName, scheduleAction.Cron, func() {
+			logger.Info("The action is not scheduled, let's schedule it", "action", actionName, "schedule", scheduleName, "cron", scheduleAction.Cron)
+			_, err := scheduleService.Add(scheduleName, actionName, resourceName, scheduleAction.Cron, func() {
 				// retrive schedule for cheking if it is active
 				// we do the check here because the check is simpler, and it avoids us having to delete and create objects in cron schedule
+				innerLogger := logger.WithValues("action", actionName, "schedule", scheduleName)
 				start := time.Now()
 				s := &v1alpha1.Schedule{}
 				err := r.Get(ctx, client.ObjectKey{Name: scheduleName}, s)
 				if err != nil {
-					logger.Error(err, "Cron run, failed to get schedule", "name", scheduleName)
+					innerLogger.Error(err, "Cron run, failed to get schedule")
 					monitoring.TimeterraActionLatency.WithLabelValues(scheduleName, actionName, resourceName, JobResultError.String()).Observe(time.Since(start).Seconds())
 					return
 				}
 
 				if !s.Spec.IsActive() {
-					logger.Info(fmt.Sprintf("Achedule %q is not active, skipping execution", scheduleName))
+					innerLogger.Info("The schedule is not active, skipping execution")
 					monitoring.TimeterraActionLatency.WithLabelValues(scheduleName, actionName, resourceName, JobResultSkipped.String()).Observe(time.Since(start).Seconds())
 					return
 				}
 
 				if a, ok := s.Spec.Actions[actionName]; !ok || !a.IsActive() {
-					logger.Info(fmt.Sprintf("Action %q is not active, skipping execution", actionName))
+					innerLogger.Info("The action is not active, skipping execution")
 					monitoring.TimeterraActionLatency.WithLabelValues(scheduleName, actionName, resourceName, JobResultSkipped.String()).Observe(time.Since(start).Seconds())
 					return
 				}
@@ -175,7 +175,7 @@ func reconcileResource[Action Activable](
 						}
 					}
 					if !active {
-						logger.Info(fmt.Sprintf("Scheduled action %q is outside an active period, skipping execution", actionName))
+						innerLogger.Info("The execution job action is outside an active period, skipping execution")
 						monitoring.TimeterraActionLatency.WithLabelValues(scheduleName, actionName, resourceName, JobResultSkipped.String()).Observe(time.Since(start).Seconds())
 						return
 					}
@@ -190,14 +190,14 @@ func reconcileResource[Action Activable](
 						}
 					}
 					if !active {
-						logger.Info(fmt.Sprintf("Scheduled action %q is inside an inactive period, skipping execution", actionName))
+						innerLogger.Info("The execution job action  is inside an inactive period, skipping execution")
 						monitoring.TimeterraActionLatency.WithLabelValues(scheduleName, actionName, resourceName, JobResultSkipped.String()).Observe(time.Since(start).Seconds())
 						return
 					}
 				}
 
-				logger.Info(fmt.Sprintf("Scheduled action %q is starting for resource %q", actionName, resourceName))
-				status, metadata := job(ctx, client.ObjectKey{Name: obj.GetName(), Namespace: obj.GetNamespace()}, actionName)
+				innerLogger.Info("Scheduled job action is starting")
+				status, metadata := job(ctx, innerLogger, client.ObjectKey{Name: obj.GetName(), Namespace: obj.GetNamespace()}, actionName)
 				monitoring.TimeterraActionLatency.WithLabelValues(scheduleName, actionName, resourceName, status.String()).Observe(time.Since(start).Seconds())
 				notificationService.Send(notification.NotificationBody{
 					Schedule: scheduleName,
@@ -216,11 +216,11 @@ func reconcileResource[Action Activable](
 					Reason:             "Error",
 					Message:            err.Error(),
 				})
-				r.SetConditions(obj, conditions)
 				recorder.Eventf(obj, corev1.EventTypeWarning, "FailedToSchedule", "Failed to schedule %q", actionName)
-				return ctrl.Result{}, updateStatus(ctx, r, obj, err)
+				return ctrl.Result{}, updateStatus(ctx, r, obj, conditions, err)
 			}
-			logger.Info(fmt.Sprintf("action %q is scheduled", actionName))
+
+			logger.Info("action is scheduled", "action", actionName)
 			addToConditions(&conditions, metav1.Condition{
 				LastTransitionTime: metav1.Now(),
 				Type:               conditionTypeForAction(actionName),
@@ -236,11 +236,11 @@ func reconcileResource[Action Activable](
 		Status:             metav1.ConditionTrue,
 		Reason:             "Active",
 	})
-	r.SetConditions(obj, conditions)
-	return ctrl.Result{}, updateStatus(ctx, r, obj, nil)
+	return ctrl.Result{}, updateStatus(ctx, r, obj, conditions, nil)
 }
 
-func updateStatus(ctx context.Context, r Reconciler, res ReconcileResource, err error) error {
+func updateStatus(ctx context.Context, r Reconciler, res ReconcileResource, conditions []metav1.Condition, err error) error {
+	r.SetConditions(res, conditions)
 	e := r.Status().Update(ctx, res)
 	if e != nil {
 		return errors.Join(e, err)

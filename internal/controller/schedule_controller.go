@@ -53,15 +53,16 @@ type ScheduleReconciler struct {
 func (r *ScheduleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
-	logger.Info(fmt.Sprintf("reconciling object %#q", req.NamespacedName))
+	logger.Info("reconciling schedule")
+
 	instance := &v1alpha1.Schedule{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			logger.Info("Schedule resource not found. object must has been deleted.")
+			logger.Info("Schedule resource not found. object must has been deleted")
 			return ctrl.Result{}, nil
 		}
-		logger.Info("Failed to get Schedule resource. Re-running reconcile.")
+		logger.Info("Failed to get Schedule resource. Re-running reconcile")
 		return ctrl.Result{}, err
 	}
 
@@ -97,7 +98,7 @@ func (r *ScheduleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		err = r.Update(ctx, instance)
 		if err != nil {
 			r.Recorder.Eventf(instance, corev1.EventTypeWarning, "ReconcileError", "Reconcile error: %s", err.Error())
-			logger.Info("Failed to update Schedule resource. Re-running reconcile.")
+			logger.Info("Failed to update Schedule resource. Re-running reconcile")
 			return ctrl.Result{}, err
 		}
 		// return and trigger another reconcile for the update
@@ -113,7 +114,7 @@ func (r *ScheduleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	err = r.Status().Update(ctx, instance)
 	if err != nil {
 		r.Recorder.Eventf(instance, corev1.EventTypeWarning, "ReconcileError", "Reconcile error: %s", err.Error())
-		logger.Info("Failed to update Schedule resource status. Re-running reconcile.")
+		logger.Info("Failed to update Schedule resource status. Re-running reconcile")
 		return ctrl.Result{}, err
 	}
 
@@ -122,7 +123,7 @@ func (r *ScheduleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 }
 
 func (r *ScheduleReconciler) reconcile(ctx context.Context, instance *v1alpha1.Schedule) error {
-	logger := log.FromContext(ctx)
+	logger := log.FromContext(ctx).WithValues("schedule", instance.Name)
 	scheduleName := instance.Name
 	// checking if the cron expression of the actions is correct
 	ret := false

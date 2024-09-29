@@ -38,6 +38,7 @@ import (
 	v1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 	"github.com/d3vlo0p/TimeTerra/internal/cron"
 	"github.com/d3vlo0p/TimeTerra/notification"
+	"github.com/go-logr/logr"
 )
 
 // K8sPodReplicasReconciler reconciles a K8sPodReplicas object
@@ -69,18 +70,18 @@ type K8sPodReplicasReconciler struct {
 func (r *K8sPodReplicasReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
-	logger.Info(fmt.Sprintf("reconciling object %#q", req.NamespacedName))
+	logger.Info("reconciling resource")
 
 	resourceName := resourceName("v1alpha1.K8sPodReplicas", req.Name)
 	instance := &v1alpha1.K8sPodReplicas{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			logger.Info("Resource not found. object must has been deleted.")
+			logger.Info("Resource not found. object must has been deleted")
 			r.Cron.RemoveResource(resourceName)
 			return ctrl.Result{}, nil
 		}
-		logger.Info("Failed to get resource. Re-running reconcile.")
+		logger.Info("Failed to get resource. Re-running reconcile")
 		return ctrl.Result{}, err
 	}
 
@@ -110,21 +111,20 @@ func (r *K8sPodReplicasReconciler) SetConditions(obj client.Object, conditions [
 	obj.(*v1alpha1.K8sPodReplicas).Status.Conditions = conditions
 }
 
-func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, key types.NamespacedName, actionName string) (JobResult, JobMetadata) {
+func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, logger logr.Logger, key types.NamespacedName, actionName string) (JobResult, JobMetadata) {
 	metadata := JobMetadata{}
-	logger := log.FromContext(ctx)
 	start := time.Now()
 	obj := &v1alpha1.K8sPodReplicas{}
 	err := r.Get(ctx, key, obj)
 	if err != nil {
-		logger.Error(err, "Failed to get PodReplicas resource.")
+		logger.Error(err, "Failed to get PodReplicas resource")
 		metadata["error"] = err.Error()
 		return JobResultError, metadata
 	}
 	action, ok := obj.Spec.Actions[actionName]
 	if !ok {
-		logger.Info(fmt.Sprintf("Action %q not found in PodReplicas resource.", actionName))
-		metadata["error"] = fmt.Sprintf("Action %q not found in PodReplicas resource.", actionName)
+		logger.Info("Action not found in PodReplicas resource")
+		metadata["error"] = fmt.Sprintf("Action %q not found in PodReplicas resource", actionName)
 		return JobResultError, metadata
 	}
 	selector := labels.SelectorFromSet(obj.Spec.LabelSelector.MatchLabels)

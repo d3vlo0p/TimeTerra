@@ -58,16 +58,17 @@ type NotificationPolicyReconciler struct {
 func (r *NotificationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
-	logger.Info(fmt.Sprintf("reconciling object %#q", req.NamespacedName))
+	logger.Info("reconciling notification policy")
+
 	instance := &v1alpha1.NotificationPolicy{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			logger.Info("NotificationPolicy resource not found. object must has been deleted.")
+			logger.Info("NotificationPolicy resource not found. object must has been deleted")
 			r.NotificationService.RemoveRecipient(req.Name)
 			return ctrl.Result{}, nil
 		}
-		logger.Info("Failed to get NotificationPolicy resource. Re-running reconcile.")
+		logger.Info("Failed to get NotificationPolicy resource. Re-running reconcile")
 		return ctrl.Result{}, err
 	}
 
@@ -84,7 +85,7 @@ func (r *NotificationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 	err = r.Status().Update(ctx, instance)
 	if err != nil {
 		r.Recorder.Eventf(instance, corev1.EventTypeWarning, "ReconcileError", "Reconcile error: %s", err.Error())
-		logger.Info("Failed to update NotificationPolicy resource status. Re-running reconcile.")
+		logger.Info("Failed to update NotificationPolicy resource status. Re-running reconcile")
 		return ctrl.Result{}, err
 	}
 
@@ -93,7 +94,7 @@ func (r *NotificationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 }
 
 func (r *NotificationPolicyReconciler) reconcile(ctx context.Context, instance *v1alpha1.NotificationPolicy) error {
-	logger := log.FromContext(ctx)
+	logger := log.FromContext(ctx).WithValues("notificationPolicy", instance.Name)
 	r.NotificationService.RemoveRecipient(instance.Name)
 	if !instance.Spec.IsActive() {
 		addToConditions(&instance.Status.Conditions, metav1.Condition{

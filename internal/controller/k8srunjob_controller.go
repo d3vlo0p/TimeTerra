@@ -35,6 +35,7 @@ import (
 	v1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 	"github.com/d3vlo0p/TimeTerra/internal/cron"
 	"github.com/d3vlo0p/TimeTerra/notification"
+	"github.com/go-logr/logr"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -66,7 +67,7 @@ type K8sRunJobReconciler struct {
 func (r *K8sRunJobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
-	logger.Info(fmt.Sprintf("reconciling object %#q", req.NamespacedName))
+	logger.Info("reconciling resource")
 
 	resourceName := resourceName("v1alpha1.K8sRunJob", req.Name)
 	instance := &v1alpha1.K8sRunJob{}
@@ -107,22 +108,21 @@ func (r *K8sRunJobReconciler) SetConditions(obj client.Object, conditions []meta
 	obj.(*v1alpha1.K8sRunJob).Status.Conditions = conditions
 }
 
-func (r *K8sRunJobReconciler) runJob(ctx context.Context, key types.NamespacedName, actionName string) (JobResult, JobMetadata) {
+func (r *K8sRunJobReconciler) runJob(ctx context.Context, logger logr.Logger, key types.NamespacedName, actionName string) (JobResult, JobMetadata) {
 	metadata := JobMetadata{}
-	logger := log.FromContext(ctx)
 	start := time.Now()
 	obj := &v1alpha1.K8sRunJob{}
 	err := r.Get(ctx, key, obj)
 	if err != nil {
-		logger.Error(err, "Failed to get RunJob resource.")
+		logger.Error(err, "Failed to get RunJob resource")
 		metadata["error"] = err.Error()
 		return JobResultError, metadata
 	}
 
 	action, ok := obj.Spec.Actions[actionName]
 	if !ok {
-		logger.Info(fmt.Sprintf("Action %q not found in RunJob resource.", actionName))
-		metadata["error"] = fmt.Sprintf("Action %q not found in RunJob resource.", actionName)
+		logger.Info("Action not found in RunJob resource")
+		metadata["error"] = fmt.Sprintf("Action %q not found in RunJob resource", actionName)
 		return JobResultError, metadata
 	}
 

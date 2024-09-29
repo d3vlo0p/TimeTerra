@@ -38,6 +38,7 @@ import (
 	v1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 	"github.com/d3vlo0p/TimeTerra/internal/cron"
 	"github.com/d3vlo0p/TimeTerra/notification"
+	"github.com/go-logr/logr"
 )
 
 // AwsEc2InstanceReconciler reconciles a AwsEc2Instance object
@@ -66,18 +67,18 @@ type AwsEc2InstanceReconciler struct {
 func (r *AwsEc2InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
-	logger.Info(fmt.Sprintf("reconciling object %#q", req.NamespacedName))
+	logger.Info("reconciling resource")
 
 	resourceName := resourceName("v1alpha1.AwsEc2Instance", req.Name)
 	instance := &v1alpha1.AwsEc2Instance{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			logger.Info("Resource not found. object must has been deleted.")
+			logger.Info("Resource not found. object must has been deleted")
 			r.Cron.RemoveResource(resourceName)
 			return ctrl.Result{}, nil
 		}
-		logger.Info("Failed to get resource. Re-running reconcile.")
+		logger.Info("Failed to get resource. Re-running reconcile")
 		return ctrl.Result{}, err
 	}
 
@@ -119,21 +120,20 @@ func (r *AwsEc2InstanceReconciler) SetConditions(obj client.Object, conditions [
 	obj.(*v1alpha1.AwsEc2Instance).Status.Conditions = conditions
 }
 
-func (r *AwsEc2InstanceReconciler) startStopInstances(ctx context.Context, key types.NamespacedName, actionName string) (JobResult, JobMetadata) {
+func (r *AwsEc2InstanceReconciler) startStopInstances(ctx context.Context, logger logr.Logger, key types.NamespacedName, actionName string) (JobResult, JobMetadata) {
 	metadata := JobMetadata{}
-	logger := log.FromContext(ctx)
 	start := time.Now()
 	obj := &v1alpha1.AwsEc2Instance{}
 	err := r.Get(ctx, key, obj)
 	if err != nil {
-		logger.Error(err, "Failed to get AwsEc2Instance resource.")
+		logger.Error(err, "Failed to get AwsEc2Instance resource")
 		metadata["error"] = err.Error()
 		return JobResultError, metadata
 	}
 	action, ok := obj.Spec.Actions[actionName]
 	if !ok {
-		logger.Info(fmt.Sprintf("Action %q not found in AWSEc2Instance resource.", actionName))
-		metadata["error"] = fmt.Sprintf("Action %q not found in AWSEc2Instance resource.", actionName)
+		logger.Info("Action not found in AWSEc2Instance resource")
+		metadata["error"] = fmt.Sprintf("Action %q not found in AWSEc2Instance resource", actionName)
 		return JobResultError, metadata
 	}
 
@@ -148,7 +148,7 @@ func (r *AwsEc2InstanceReconciler) startStopInstances(ctx context.Context, key t
 		secret := &corev1.Secret{}
 		err = r.Get(ctx, types.NamespacedName{Name: obj.Spec.Credentials.SecretName, Namespace: defaultNamespace(r.OperatorNamespace, obj.Spec.Credentials.Namespace)}, secret)
 		if err != nil {
-			logger.Error(err, "Failed to get Secret resource.")
+			logger.Error(err, "Failed to get Secret resource")
 			metadata["error"] = err.Error()
 			return JobResultError, metadata
 		}
