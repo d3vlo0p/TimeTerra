@@ -139,8 +139,8 @@ func main() {
 
 	cacheOptions := cache.Options{}
 	watchNamespace, err := getWatchNamespace()
-	if err != nil {
-		setupLog.Error(err, "unable to get WatchNamespace, the manager will watch and manage resources in all Namespaces")
+	if err != nil || watchNamespace == "" {
+		setupLog.Info("WatchNamespace not specified, the manager will watch and manage resources in all Namespaces")
 	} else {
 		if strings.Contains(watchNamespace, ",") {
 			namespaces := strings.Split(watchNamespace, ",")
