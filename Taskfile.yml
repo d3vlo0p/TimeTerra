@@ -10,10 +10,10 @@ vars:
   IMG: d3vlo0p/timeterra-operator
   REPO: ttl.sh
   GH_REPO: ghcr.io
-  VERSION: "0.4.1"
+  VERSION: "0.4.2"
   CHART_REPO: oci://ttl.sh/d3vlo0p
   GH_CHART_REPO: oci://ghcr.io/d3vlo0p
-  CHART_VERSION: "0.4.1"
+  CHART_VERSION: "0.4.2"
 
 tasks:
   build-deploy:
