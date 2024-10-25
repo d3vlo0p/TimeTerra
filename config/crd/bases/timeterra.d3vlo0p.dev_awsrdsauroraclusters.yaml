@@ -54,9 +54,29 @@ spec:
                       enum:
                       - stop
                       - start
+                      - scale
                       type: string
                     enabled:
                       type: boolean
+                    scale:
+                      properties:
+                        primary:
+                          properties:
+                            instanceClass:
+                              type: string
+                          required:
+                          - instanceClass
+                          type: object
+                        replicas:
+                          properties:
+                            instanceClass:
+                              type: string
+                          required:
+                          - instanceClass
+                          type: object
+                      required:
+                      - primary
+                      type: object
                   required:
                   - command
                   type: object

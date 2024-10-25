@@ -35,6 +35,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/rds"
+	rdsTypes "github.com/aws/aws-sdk-go-v2/service/rds/types"
 	v1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 	"github.com/d3vlo0p/TimeTerra/internal/cron"
 	"github.com/d3vlo0p/TimeTerra/notification"
@@ -203,6 +204,89 @@ func (r *AwsRdsAuroraClusterReconciler) startStopCluster(ctx context.Context, lo
 
 			r.Recorder.Eventf(obj, corev1.EventTypeNormal, "StopClusterSucceeded", "Cluster %q is stopping", cluster.Identifier)
 			logger.Info("Cluster is stopping", "identifier", cluster.Identifier)
+
+		case v1alpha1.AwsRdsAuroraClusterCommandScale:
+			c, err := getClusterInfo(ctx, rdsClient, cluster.Identifier)
+			if err != nil {
+				msg := fmt.Sprintf("unable to get cluster info %q", cluster.Identifier)
+				logger.Error(err, msg)
+				errorsList = append(errorsList, msg)
+				r.Recorder.Eventf(obj, corev1.EventTypeWarning, "ScaleClusterFailed", msg)
+				continue
+			}
+
+			if len(c.DBClusterMembers) == 1 {
+				instanceId := *c.DBClusterMembers[0].DBInstanceIdentifier
+				err = scaleDBInstance(ctx, rdsClient, instanceId, action.Scale.Primary.InstanceClass)
+				if err != nil {
+					msg := fmt.Sprintf("unable to scale cluster %q", cluster.Identifier)
+					logger.Error(err, msg)
+					errorsList = append(errorsList, msg)
+					r.Recorder.Eventf(obj, corev1.EventTypeWarning, "ScaleClusterFailed", msg)
+					continue
+				}
+			} else if len(c.DBClusterMembers) > 1 {
+				var newPrimary string
+				var otherInstances []string
+				for _, member := range c.DBClusterMembers {
+					if !*member.IsClusterWriter && newPrimary == "" {
+						newPrimary = *member.DBInstanceIdentifier
+					} else {
+						otherInstances = append(otherInstances, *member.DBInstanceIdentifier)
+					}
+				}
+
+				err = scaleDBInstance(ctx, rdsClient, newPrimary, action.Scale.Primary.InstanceClass)
+				if err != nil {
+					msg := fmt.Sprintf("unable to scale cluster %q", cluster.Identifier)
+					logger.Error(err, msg)
+					errorsList = append(errorsList, msg)
+					r.Recorder.Eventf(obj, corev1.EventTypeWarning, "ScaleClusterFailed", msg)
+					continue
+				}
+
+				err = waitForDBInstanceAvailable(ctx, rdsClient, newPrimary)
+				if err != nil {
+					msg := fmt.Sprintf("unable to scale cluster %q", cluster.Identifier)
+					logger.Error(err, msg)
+					errorsList = append(errorsList, msg)
+					r.Recorder.Eventf(obj, corev1.EventTypeWarning, "ScaleClusterFailed", msg)
+					continue
+				}
+
+				err = failoverDBCluster(ctx, rdsClient, cluster.Identifier, newPrimary)
+				if err != nil {
+					msg := fmt.Sprintf("unable to scale cluster %q", cluster.Identifier)
+					logger.Error(err, msg)
+					errorsList = append(errorsList, msg)
+					r.Recorder.Eventf(obj, corev1.EventTypeWarning, "ScaleClusterFailed", msg)
+					continue
+				}
+
+				if action.Scale.Replicas != nil {
+					for _, instance := range otherInstances {
+						err = scaleDBInstance(ctx, rdsClient, instance, action.Scale.Replicas.InstanceClass)
+						if err != nil {
+							msg := fmt.Sprintf("unable to scale cluster %q", cluster.Identifier)
+							logger.Error(err, msg)
+							errorsList = append(errorsList, msg)
+							r.Recorder.Eventf(obj, corev1.EventTypeWarning, "ScaleClusterFailed", msg)
+							continue
+						}
+						err = waitForDBInstanceAvailable(ctx, rdsClient, instance)
+						if err != nil {
+							msg := fmt.Sprintf("unable to scale cluster %q", cluster.Identifier)
+							logger.Error(err, msg)
+							errorsList = append(errorsList, msg)
+							r.Recorder.Eventf(obj, corev1.EventTypeWarning, "ScaleClusterFailed", msg)
+							continue
+						}
+					}
+				}
+			}
+
+		default:
+			logger.Info("Unknown command", "command", action.Command)
 		}
 	}
 	if len(errorsList) > 0 {
@@ -227,6 +311,48 @@ func (r *AwsRdsAuroraClusterReconciler) startStopCluster(ctx context.Context, lo
 	})
 	r.Status().Update(ctx, obj)
 	return JobResultSuccess, metadata
+}
+
+func getClusterInfo(ctx context.Context, client *rds.Client, clusterIdentifier string) (*rdsTypes.DBCluster, error) {
+	input := &rds.DescribeDBClustersInput{
+		DBClusterIdentifier: &clusterIdentifier,
+	}
+	result, err := client.DescribeDBClusters(ctx, input)
+	if err != nil {
+		return nil, err
+	}
+	if len(result.DBClusters) == 0 {
+		return nil, fmt.Errorf("no cluster found with identifier: %s", clusterIdentifier)
+	}
+	return &result.DBClusters[0], nil
+}
+
+func scaleDBInstance(ctx context.Context, client *rds.Client, instanceIdentifier, newInstanceClass string) error {
+	applyNow := true
+	input := &rds.ModifyDBInstanceInput{
+		DBInstanceIdentifier: &instanceIdentifier,
+		DBInstanceClass:      &newInstanceClass,
+		ApplyImmediately:     &applyNow,
+	}
+	_, err := client.ModifyDBInstance(ctx, input)
+	return err
+}
+
+func waitForDBInstanceAvailable(ctx context.Context, client *rds.Client, instanceIdentifier string) error {
+	waiter := rds.NewDBInstanceAvailableWaiter(client)
+	input := &rds.DescribeDBInstancesInput{
+		DBInstanceIdentifier: &instanceIdentifier,
+	}
+	return waiter.Wait(ctx, input, 30*time.Minute)
+}
+
+func failoverDBCluster(ctx context.Context, client *rds.Client, clusterIdentifier, targetInstance string) error {
+	input := &rds.FailoverDBClusterInput{
+		DBClusterIdentifier:        &clusterIdentifier,
+		TargetDBInstanceIdentifier: &targetInstance,
+	}
+	_, err := client.FailoverDBCluster(ctx, input)
+	return err
 }
 
 // SetupWithManager sets up the controller with the Manager.
