@@ -25,3 +25,8 @@ go.work
 
 # local env
 .local
+
+#AI
+.amazonq
+GEMINI.md
+.ai
