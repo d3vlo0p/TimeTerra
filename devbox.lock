@@ -1,53 +1,9 @@
 {
   "lockfile_version": "1",
   "packages": {
-    "dagger@latest": {
-      "last_modified": "2023-10-15T14:24:03Z",
-      "resolved": "github:NixOS/nixpkgs/12bdeb01ff9e2d3917e6a44037ed7df6e6c3df9d#dagger",
-      "source": "devbox-search",
-      "version": "0.8.8",
-      "systems": {
-        "aarch64-darwin": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/6122yp2f4jihyc1mfg43ihq0dsbd8daw-dagger-0.8.8",
-              "default": true
-            }
-          ],
-          "store_path": "/nix/store/6122yp2f4jihyc1mfg43ihq0dsbd8daw-dagger-0.8.8"
-        },
-        "aarch64-linux": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/jzdw4vnjw2dix8i3c66l1qw2frr3v5as-dagger-0.8.8",
-              "default": true
-            }
-          ],
-          "store_path": "/nix/store/jzdw4vnjw2dix8i3c66l1qw2frr3v5as-dagger-0.8.8"
-        },
-        "x86_64-darwin": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/sra5844nczr02jzmzq71wrjda462qg32-dagger-0.8.8",
-              "default": true
-            }
-          ],
-          "store_path": "/nix/store/sra5844nczr02jzmzq71wrjda462qg32-dagger-0.8.8"
-        },
-        "x86_64-linux": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/x28iymrc9y01yswccxanrkdbhwjj3b79-dagger-0.8.8",
-              "default": true
-            }
-          ],
-          "store_path": "/nix/store/x28iymrc9y01yswccxanrkdbhwjj3b79-dagger-0.8.8"
-        }
-      }
+    "github:NixOS/nixpkgs/nixpkgs-unstable": {
+      "last_modified": "2025-08-15T14:26:43Z",
+      "resolved": "github:NixOS/nixpkgs/32f313e49e42f715491e1ea7b306a87c16fe0388?lastModified=1755268003&narHash=sha256-nNaeJjo861wFR0tjHDyCnHs1rbRtrMgxAKMoig9Sj%2Fw%3D"
     },
     "gnumake@latest": {
       "last_modified": "2024-12-23T21:10:33Z",
@@ -189,99 +145,99 @@
         }
       }
     },
-    "go@1.22.10": {
-      "last_modified": "2024-12-23T21:10:33Z",
-      "resolved": "github:NixOS/nixpkgs/de1864217bfa9b5845f465e771e0ecb48b30e02d#go_1_22",
+    "go@1.21.13": {
+      "last_modified": "2024-09-10T15:01:03Z",
+      "resolved": "github:NixOS/nixpkgs/5ed627539ac84809c78b2dd6d26a5cebeb5ae269#go_1_21",
       "source": "devbox-search",
-      "version": "1.22.10",
+      "version": "1.21.13",
       "systems": {
         "aarch64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/g2g0s9bdccqnj3xvimfgkjkrgzd6qcrj-go-1.22.10",
+              "path": "/nix/store/59bymri4pr8mq5zh678smrf381i3fmy2-go-1.21.13",
               "default": true
             }
           ],
-          "store_path": "/nix/store/g2g0s9bdccqnj3xvimfgkjkrgzd6qcrj-go-1.22.10"
+          "store_path": "/nix/store/59bymri4pr8mq5zh678smrf381i3fmy2-go-1.21.13"
         },
         "aarch64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/gbidq6smzj09j6qmcdklrvrjgllxmr5j-go-1.22.10",
+              "path": "/nix/store/7dqbqicx8szqnyzag6l41gwbjmh1xdk0-go-1.21.13",
               "default": true
             }
           ],
-          "store_path": "/nix/store/gbidq6smzj09j6qmcdklrvrjgllxmr5j-go-1.22.10"
+          "store_path": "/nix/store/7dqbqicx8szqnyzag6l41gwbjmh1xdk0-go-1.21.13"
         },
         "x86_64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/9082rvf4mz8qmb696fa7d3fdsf9m0fwk-go-1.22.10",
+              "path": "/nix/store/ws9bs446vgwmxchqnpjp9503x420iz75-go-1.21.13",
               "default": true
             }
           ],
-          "store_path": "/nix/store/9082rvf4mz8qmb696fa7d3fdsf9m0fwk-go-1.22.10"
+          "store_path": "/nix/store/ws9bs446vgwmxchqnpjp9503x420iz75-go-1.21.13"
         },
         "x86_64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/1hd6kq7rssk14py6v8mrdq2pn5ciiw6y-go-1.22.10",
+              "path": "/nix/store/yij3vkkjv7ghn055v0rqhbjzyh0dy4nq-go-1.21.13",
               "default": true
             }
           ],
-          "store_path": "/nix/store/1hd6kq7rssk14py6v8mrdq2pn5ciiw6y-go-1.22.10"
+          "store_path": "/nix/store/yij3vkkjv7ghn055v0rqhbjzyh0dy4nq-go-1.21.13"
         }
       }
     },
-    "operator-sdk@latest": {
-      "last_modified": "2024-12-23T21:10:33Z",
-      "resolved": "github:NixOS/nixpkgs/de1864217bfa9b5845f465e771e0ecb48b30e02d#operator-sdk",
+    "operator-sdk@1.37.0": {
+      "last_modified": "2024-11-16T04:25:12Z",
+      "resolved": "github:NixOS/nixpkgs/34a626458d686f1b58139620a8b2793e9e123bba#operator-sdk",
       "source": "devbox-search",
-      "version": "1.38.0",
+      "version": "1.37.0",
       "systems": {
         "aarch64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/54p2lx3q7qslnjgdpa79i77440836z8k-operator-sdk-1.38.0",
+              "path": "/nix/store/92ywnaqk2k9vhdann0j2limsm1qrbk86-operator-sdk-1.37.0",
               "default": true
             }
           ],
-          "store_path": "/nix/store/54p2lx3q7qslnjgdpa79i77440836z8k-operator-sdk-1.38.0"
+          "store_path": "/nix/store/92ywnaqk2k9vhdann0j2limsm1qrbk86-operator-sdk-1.37.0"
         },
         "aarch64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/4fp1ypncmvjf50z83mqra5012fdl79mr-operator-sdk-1.38.0",
+              "path": "/nix/store/95avmjmjzr3xps6fh9hakwc98hz16yjb-operator-sdk-1.37.0",
               "default": true
             }
           ],
-          "store_path": "/nix/store/4fp1ypncmvjf50z83mqra5012fdl79mr-operator-sdk-1.38.0"
+          "store_path": "/nix/store/95avmjmjzr3xps6fh9hakwc98hz16yjb-operator-sdk-1.37.0"
         },
         "x86_64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/acq83jsgpywr9gci5pyn1gzpgq6dh488-operator-sdk-1.38.0",
+              "path": "/nix/store/afa62xvzx832jbxm22h328wi40wq42p1-operator-sdk-1.37.0",
               "default": true
             }
           ],
-          "store_path": "/nix/store/acq83jsgpywr9gci5pyn1gzpgq6dh488-operator-sdk-1.38.0"
+          "store_path": "/nix/store/afa62xvzx832jbxm22h328wi40wq42p1-operator-sdk-1.37.0"
         },
         "x86_64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/0cmgkm7ni0q16ygrskg3910kw24sf7x2-operator-sdk-1.38.0",
+              "path": "/nix/store/bdcgl0p82jqkj7swckyb5pzfdb6cl53x-operator-sdk-1.37.0",
               "default": true
             }
           ],
-          "store_path": "/nix/store/0cmgkm7ni0q16ygrskg3910kw24sf7x2-operator-sdk-1.38.0"
+          "store_path": "/nix/store/bdcgl0p82jqkj7swckyb5pzfdb6cl53x-operator-sdk-1.37.0"
         }
       }
     }

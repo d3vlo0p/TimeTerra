@@ -58,6 +58,10 @@ spec:
               activePeriods:
                 items:
                   properties:
+                    actions:
+                      items:
+                        type: string
+                      type: array
                     end:
                       format: date-time
                       type: string
@@ -74,6 +78,10 @@ spec:
               inactivePeriods:
                 items:
                   properties:
+                    actions:
+                      items:
+                        type: string
+                      type: array
                     end:
                       format: date-time
                       type: string

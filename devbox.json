@@ -1,10 +1,9 @@
 {
   "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.13.7/.schema/devbox.schema.json",
   "packages": [
-    "operator-sdk@latest",
-    "go@1.22.10",
+    "operator-sdk@1.37.0",
+    "go@1.21.13",
     "go-task@latest",
-    "dagger@latest",
     "gnumake@latest"
   ],
   "shell": {

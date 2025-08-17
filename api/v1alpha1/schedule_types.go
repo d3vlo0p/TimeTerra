@@ -44,6 +44,8 @@ type TimePeriod struct {
 	// +kubebuilder:validation:Type=string
 	// +kubebuilder:validation:Format=date-time
 	End metav1.Time `json:"end"`
+
+	Actions []string `json:"actions,omitempty"`
 }
 
 // ScheduleSpec defines the desired state of Schedule
