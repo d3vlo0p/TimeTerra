@@ -73,8 +73,7 @@ func (r *ScheduleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// Check periods
 	update := false
 	if len(instance.Spec.ActivePeriods) > 0 {
-		for i := 0; i < len(instance.Spec.ActivePeriods); i++ {
-			period := instance.Spec.ActivePeriods[0]
+		for i, period := range instance.Spec.ActivePeriods {
 			if period.Start.After(period.End.Time) {
 				logger.Info("Start date is after end date, switching them")
 				instance.Spec.ActivePeriods[i].End = period.Start
@@ -84,8 +83,7 @@ func (r *ScheduleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 	}
 	if len(instance.Spec.InactivePeriods) > 0 {
-		for i := 0; i < len(instance.Spec.InactivePeriods); i++ {
-			period := instance.Spec.InactivePeriods[0]
+		for i, period := range instance.Spec.InactivePeriods {
 			if period.Start.After(period.End.Time) {
 				logger.Info("Start date is after end date, switching them")
 				instance.Spec.InactivePeriods[i].End = period.Start

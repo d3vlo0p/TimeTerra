@@ -170,7 +170,17 @@ func reconcileResource[Action Activable](
 					// check if current date is inside an Active Period, if not then skip exec
 					for _, p := range s.Spec.ActivePeriods {
 						if (now.After(p.Start.Time) && now.Before(p.End.Time)) || now.Equal(p.Start.Time) || now.Equal(p.End.Time) {
-							active = true
+							if len(p.Actions) > 0 {
+								// check if current action is inside an Active Period, if not then skip exec
+								for _, action := range p.Actions {
+									if action == actionName {
+										active = true
+										break
+									}
+								}
+							} else {
+								active = true
+							}
 							break
 						}
 					}
@@ -185,12 +195,22 @@ func reconcileResource[Action Activable](
 					// check if current date is inside an Inactive Period, if it is then skip exec
 					for _, p := range s.Spec.InactivePeriods {
 						if (now.After(p.Start.Time) && now.Before(p.End.Time)) || now.Equal(p.Start.Time) || now.Equal(p.End.Time) {
-							active = false
+							if len(p.Actions) > 0 {
+								// check if current action is inside an Inactive Period, then skip exec
+								for _, action := range p.Actions {
+									if action == actionName {
+										active = false
+										break
+									}
+								}
+							} else {
+								active = false
+							}
 							break
 						}
 					}
 					if !active {
-						innerLogger.Info("The execution job action  is inside an inactive period, skipping execution")
+						innerLogger.Info("The execution job action is inside an inactive period, skipping execution")
 						monitoring.TimeterraActionLatency.WithLabelValues(scheduleName, actionName, resourceName, JobResultSkipped.String()).Observe(time.Since(start).Seconds())
 						return
 					}
