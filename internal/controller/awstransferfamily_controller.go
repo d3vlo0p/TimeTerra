@@ -234,5 +234,6 @@ func (r *AwsTransferFamilyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.AwsTransferFamily{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
+		Named("awstransferfamily").
 		Complete(r)
 }

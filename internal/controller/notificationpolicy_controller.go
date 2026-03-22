@@ -197,5 +197,6 @@ func (r *NotificationPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.NotificationPolicy{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
+		Named("notificationpolicy").
 		Complete(r)
 }

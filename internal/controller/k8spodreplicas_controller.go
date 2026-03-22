@@ -227,5 +227,6 @@ func (r *K8sPodReplicasReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.K8sPodReplicas{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
+		Named("k8spodreplicas").
 		Complete(r)
 }

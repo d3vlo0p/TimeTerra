@@ -237,5 +237,6 @@ func (r *AwsEc2InstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.AwsEc2Instance{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
+		Named("awsec2instance").
 		Complete(r)
 }

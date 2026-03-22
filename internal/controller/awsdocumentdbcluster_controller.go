@@ -234,5 +234,6 @@ func (r *AwsDocumentDBClusterReconciler) SetupWithManager(mgr ctrl.Manager) erro
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.AwsDocumentDBCluster{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
+		Named("awsdocumentdbcluster").
 		Complete(r)
 }
