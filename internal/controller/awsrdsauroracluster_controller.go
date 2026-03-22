@@ -234,5 +234,6 @@ func (r *AwsRdsAuroraClusterReconciler) SetupWithManager(mgr ctrl.Manager) error
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.AwsRdsAuroraCluster{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
+		Named("awsrdsauroracluster").
 		Complete(r)
 }

@@ -209,5 +209,6 @@ func (r *K8sRunJobReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.K8sRunJob{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
+		Named("k8srunjob").
 		Complete(r)
 }

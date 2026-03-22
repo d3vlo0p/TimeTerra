@@ -236,5 +236,6 @@ func (r *ScheduleReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.Schedule{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
+		Named("schedule").
 		Complete(r)
 }

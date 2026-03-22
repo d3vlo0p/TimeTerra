@@ -190,5 +190,6 @@ func (r *K8sHpaReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.K8sHpa{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
+		Named("k8shpa").
 		Complete(r)
 }
