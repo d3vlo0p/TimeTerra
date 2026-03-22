@@ -38,6 +38,7 @@ spec:
             - /manager
           args:
             - --leader-elect
+            - --health-probe-bind-address=:8081
           env:
             - name: NAMESPACE
               value: {{ .Release.Namespace }}
@@ -50,8 +51,8 @@ spec:
             {{- toYaml .Values.envFrom | nindent 12 }}
           {{- end }}
           ports:
-            - name: metrics
-              containerPort: 8080
+            - name: https
+              containerPort: 8443
               protocol: TCP
             - name: health
               containerPort: 8081

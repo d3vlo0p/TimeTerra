@@ -27,6 +27,4 @@ go.work
 .local
 
 #AI
-.amazonq
-GEMINI.md
-.ai
+.ai/

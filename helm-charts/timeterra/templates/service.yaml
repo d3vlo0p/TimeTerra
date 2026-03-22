@@ -8,8 +8,8 @@ spec:
   type: {{ .Values.service.type }}
   ports:
     - port: {{ .Values.service.port }}
-      targetPort: metrics
+      targetPort: https
       protocol: TCP
-      name: metrics
+      name: https
   selector:
     {{- include "timeterra.selectorLabels" . | nindent 4 }}
