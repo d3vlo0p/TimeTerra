@@ -1,0 +1,33 @@
+
+apiVersion: timeterra.d3vlo0p.dev/v1alpha1
+kind: Schedule
+metadata:
+  name: schedule-sample
+spec:
+  enabled: True
+  activePeriods: []
+  inactivePeriods: []
+  actions:
+    scaleup:
+      cron: '0/4 * * * *'
+    scalein:
+      cron: '2/4 * * * *'
+---
+apiVersion: timeterra.d3vlo0p.dev/v1alpha1
+kind: K8sPodReplicas
+metadata:
+  name: k8spodreplicas-sample
+spec:
+  enabled: True
+  resourceType: Deployment
+  labelSelector:
+    matchLabels:
+      app: hello-k8s
+  namespaces:
+    - default
+  schedule: schedule-sample
+  actions:
+    scalein:
+      replicas: 1
+    scaleup:
+      replicas: 2

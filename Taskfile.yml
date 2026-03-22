@@ -32,6 +32,11 @@ tasks:
     cmds:
       - task: chart:deploy
 
+  deploy-examples:
+    cmds:
+      - kubectl create deployment hello-k8s --image=nginx:alpine --replicas=2
+      - kubectl apply --server-side -f examples/simple_pod_replicas.yaml
+
   publish-release:
     vars:
       REPO: "{{.GH_REPO}}"
