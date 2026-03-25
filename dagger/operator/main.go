@@ -34,17 +34,17 @@ func (m *Operator) Build(platforms []dagger.Platform, src *dagger.Directory) *Op
 	for _, platform := range platforms {
 		p := strings.Split(string(platform), "/")
 
-		ctn := dag.Container(dagger.ContainerOpts{Platform: platform}).
-			Build(src, dagger.ContainerBuildOpts{
-				Dockerfile: "Dockerfile.dagger",
-				BuildArgs: []dagger.BuildArg{{
-					Name:  "TARGETOS",
-					Value: string(p[0]),
-				}, {
-					Name:  "TARGETARCH",
-					Value: string(p[1]),
-				}},
-			})
+		ctn := src.DockerBuild(dagger.DirectoryDockerBuildOpts{
+			Platform:   platform,
+			Dockerfile: "Dockerfile.dagger",
+			BuildArgs: []dagger.BuildArg{{
+				Name:  "TARGETOS",
+				Value: string(p[0]),
+			}, {
+				Name:  "TARGETARCH",
+				Value: string(p[1]),
+			}},
+		})
 
 		platformVariants = append(platformVariants, ctn)
 	}

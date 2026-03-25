@@ -21,7 +21,7 @@ jobs:
       - name: Build operator container and publish to ghcr.io
         uses: dagger/dagger-for-github@v8.4.0
         with:
-          version: "v0.13.5"
+          version: "v0.20.3"
           verb: call
           module: ./dagger/operator
           args: build --src=. --platforms=$DOCKER_IMAGE_PLATFORMS credentials --user=$DOCKER_USERNAME --password=env:DOCKER_PASSWORD publish --registry=$DOCKER_REGISTRY --img=d3vlo0p/timeterra-operator:$DOCKER_IMAGE_TAG
@@ -37,7 +37,7 @@ jobs:
       - name: Build helm chart and publish to ghcr.io
         uses: dagger/dagger-for-github@v8.4.0
         with:
-          version: "v0.13.5"
+          version: "v0.20.3"
           verb: call
           module: ./dagger/helm
           args: package --chart=./helm-charts/timeterra --version=$CHART_VERSION --app-version=$CHART_VERSION credentials --user=$DOCKER_USERNAME --password=env:DOCKER_PASSWORD push --scheme=oci --registry=$DOCKER_REGISTRY --repository=d3vlo0p
