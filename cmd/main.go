@@ -42,10 +42,12 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	"path/filepath"
+
+	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
+
 	v1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 	"github.com/d3vlo0p/TimeTerra/internal/controller"
-	"path/filepath"
-	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -365,6 +367,16 @@ func main() {
 		Recorder:            mgr.GetEventRecorderFor("notificationpolicy-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "NotificationPolicy")
+		os.Exit(1)
+	}
+	if err := (&controller.ActionExecutionReconciler{
+		Client:              mgr.GetClient(),
+		Scheme:              mgr.GetScheme(),
+		NotificationService: ns,
+		Recorder:            mgr.GetEventRecorderFor("actionexecution-controller"),
+		OperatorNamespace:   operatorNamespace,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ActionExecution")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

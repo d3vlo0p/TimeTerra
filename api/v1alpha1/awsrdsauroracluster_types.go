@@ -28,6 +28,7 @@ type AwsRdsAuroraClusterCommand string
 const (
 	AwsRdsAuroraClusterCommandStop  AwsRdsAuroraClusterCommand = "stop"
 	AwsRdsAuroraClusterCommandStart AwsRdsAuroraClusterCommand = "start"
+	AwsRdsAuroraClusterCommandScale AwsRdsAuroraClusterCommand = "scale"
 )
 
 func (r AwsRdsAuroraClusterCommand) String() string {
@@ -40,8 +41,9 @@ func (r AwsRdsAuroraClusterAction) IsActive() bool {
 
 type AwsRdsAuroraClusterAction struct {
 	Enabled *bool `json:"enabled,omitempty"`
-	// +kubebuilder:validation:Enum:=stop;start
-	Command AwsRdsAuroraClusterCommand `json:"command"`
+	// +kubebuilder:validation:Enum:=stop;start;scale
+	Command       AwsRdsAuroraClusterCommand `json:"command"`
+	InstanceClass *string                    `json:"instanceClass,omitempty"`
 }
 
 type AwsRdsAuroraClusterIdentifier struct {
