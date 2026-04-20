@@ -54,9 +54,12 @@ spec:
                       enum:
                       - stop
                       - start
+                      - scale
                       type: string
                     enabled:
                       type: boolean
+                    instanceClass:
+                      type: string
                   required:
                   - command
                   type: object

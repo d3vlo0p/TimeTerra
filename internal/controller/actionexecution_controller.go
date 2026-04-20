@@ -83,6 +83,13 @@ func (r *ActionExecutionReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			SecretProvider:    getAwsCredentialProviderFromSecret,
 		}
 		result, done, handlerErr = handler.Execute(ctx, logger, op)
+	case "DocumentDbVerticalScale":
+		handler := &action.DocumentDbScaleHandler{
+			Client:            r.Client,
+			OperatorNamespace: r.OperatorNamespace,
+			SecretProvider:    getAwsCredentialProviderFromSecret,
+		}
+		result, done, handlerErr = handler.Execute(ctx, logger, op)
 	default:
 		logger.Info("Unknown action type", "type", op.Spec.ActionType)
 		return ctrl.Result{}, nil // Ignore
@@ -130,6 +137,37 @@ func (r *ActionExecutionReconciler) finalizeAction(ctx context.Context, logger l
 	// 2. Bubble up to target resource
 	if op.Spec.TargetResource.Kind == "AwsRdsAuroraCluster" {
 		target := &timeterrav1alpha1.AwsRdsAuroraCluster{}
+		err := r.Get(ctx, types.NamespacedName{Name: op.Spec.TargetResource.Name, Namespace: op.Spec.TargetResource.Namespace}, target)
+		if err == nil {
+			condType := "Action" + op.Spec.ActionType
+			reason := "Active"
+			status := metav1.ConditionTrue
+			msg := "Action execution completed successfully"
+
+			if handlerErr != nil {
+				reason = "Failed"
+				status = metav1.ConditionFalse
+				msg = handlerErr.Error()
+			}
+
+			meta.SetStatusCondition(&target.Status.Conditions, metav1.Condition{
+				Type:               condType,
+				Status:             status,
+				Reason:             reason,
+				Message:            msg,
+				LastTransitionTime: metav1.Now(),
+			})
+			if updateErr := r.Status().Update(ctx, target); updateErr != nil {
+				logger.Error(updateErr, "Failed to bubble up conditions to parent resource")
+			} else {
+				// Emit K8s event on the parent
+				r.Recorder.Event(target, corev1.EventTypeNormal, reason, msg)
+			}
+		} else {
+			logger.Error(err, "Failed to get target resource for finalization")
+		}
+	} else if op.Spec.TargetResource.Kind == "AwsDocumentDBCluster" {
+		target := &timeterrav1alpha1.AwsDocumentDBCluster{}
 		err := r.Get(ctx, types.NamespacedName{Name: op.Spec.TargetResource.Name, Namespace: op.Spec.TargetResource.Namespace}, target)
 		if err == nil {
 			condType := "Action" + op.Spec.ActionType

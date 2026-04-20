@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -36,6 +37,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/docdb"
 	v1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
+	"github.com/d3vlo0p/TimeTerra/internal/action"
 	"github.com/d3vlo0p/TimeTerra/internal/cron"
 	"github.com/d3vlo0p/TimeTerra/notification"
 	"github.com/go-logr/logr"
@@ -130,11 +132,57 @@ func (r *AwsDocumentDBClusterReconciler) startStopCluster(ctx context.Context, l
 		metadata["error"] = err.Error()
 		return JobResultError, metadata
 	}
-	action, ok := obj.Spec.Actions[actionName]
+	targetAction, ok := obj.Spec.Actions[actionName]
 	if !ok {
 		logger.Info("Action not found in AWSDocumentDb resource")
 		metadata["error"] = fmt.Sprintf("Action %q not found in AWSDocumentDb resource.", actionName)
 		return JobResultError, metadata
+	}
+
+	if targetAction.Command == v1alpha1.AwsDocumentDBClusterCommandScale {
+		actionType := conditionTypeForAction(actionName)
+		opName := fmt.Sprintf("%s-%s-%d", key.Name, actionName, time.Now().Unix())
+		op := &v1alpha1.ActionExecution{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      opName,
+				Namespace: key.Namespace,
+			},
+			Spec: v1alpha1.ActionExecutionSpec{
+				TargetResource: corev1.ObjectReference{
+					APIVersion: "timeterra.d3vlo0p.dev/v1alpha1",
+					Kind:       "AwsDocumentDBCluster",
+					Name:       key.Name,
+					Namespace:  key.Namespace,
+				},
+				ActionType: "DocumentDbVerticalScale",
+				ActionName: actionName,
+			},
+		}
+
+		if targetAction.InstanceClass != nil {
+			params := action.DocumentDBScaleParams{InstanceClass: *targetAction.InstanceClass}
+			paramsBytes, _ := json.Marshal(params)
+			op.Spec.Parameters = string(paramsBytes)
+		}
+
+		err := r.Create(ctx, op)
+		if err != nil {
+			logger.Error(err, "Failed to create ActionExecution for scaling")
+			metadata["error"] = err.Error()
+			return JobResultError, metadata
+		}
+
+		r.Recorder.Eventf(obj, corev1.EventTypeNormal, "ScalingTriggered", "Vertical scaling triggered via ActionExecution %s", op.Name)
+
+		addToConditions(&obj.Status.Conditions, metav1.Condition{
+			LastTransitionTime: metav1.Now(),
+			Type:               actionType,
+			Status:             metav1.ConditionTrue,
+			Reason:             "Active",
+			Message:            fmt.Sprintf("Scaling triggered at:%q", time.Now().Format(time.RFC3339)),
+		})
+		r.Status().Update(ctx, obj)
+		return JobResultSuccess, metadata
 	}
 
 	cfg, err := config.LoadDefaultConfig(ctx)
@@ -172,7 +220,7 @@ func (r *AwsDocumentDBClusterReconciler) startStopCluster(ctx context.Context, l
 			}
 		}
 
-		switch action.Command {
+		switch targetAction.Command {
 
 		case v1alpha1.AwsDocumentDBClusterCommandStart:
 			_, err := docDbClient.StartDBCluster(ctx, &docdb.StartDBClusterInput{
