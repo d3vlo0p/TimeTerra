@@ -39,6 +39,9 @@ spec:
           args:
             - --leader-elect
             - --health-probe-bind-address=:8081
+            {{- if .Values.settings.featureGates }}
+            - --feature-gates={{ .Values.settings.featureGates }}
+            {{- end }}
           env:
             - name: NAMESPACE
               value: {{ .Release.Namespace }}

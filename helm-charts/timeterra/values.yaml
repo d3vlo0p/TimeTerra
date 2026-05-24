@@ -74,6 +74,11 @@ settings:
   ##if not set, it will watch the operator namespace
   ##if set with a list of namespaces, it will watch those namespaces
   watchNamespaces: ""
+  ##enable experimental feature gates (comma-separated list of feature names)
+  ##use "ALL" to enable every experimental feature at once
+  ##available feature gates: AuroraVerticalScaling, DocumentDBVerticalScaling
+  ##by default all experimental features are disabled
+  featureGates: ""
 
 # Additional env vars
 env: []

@@ -39,6 +39,7 @@ import (
 	v1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 	"github.com/d3vlo0p/TimeTerra/internal/action"
 	"github.com/d3vlo0p/TimeTerra/internal/cron"
+	"github.com/d3vlo0p/TimeTerra/internal/feature"
 	"github.com/d3vlo0p/TimeTerra/notification"
 	"github.com/go-logr/logr"
 )
@@ -51,6 +52,9 @@ type AwsDocumentDBClusterReconciler struct {
 	NotificationService *notification.NotificationService
 	Recorder            record.EventRecorder
 	OperatorNamespace   string
+	// FeatureRegistry controls which experimental features are enabled.
+	// Use --feature-gates at startup to configure it.
+	FeatureRegistry *feature.Registry
 }
 
 //+kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=awsdocumentdbclusters,verbs=get;list;watch;create;update;patch;delete
@@ -140,6 +144,16 @@ func (r *AwsDocumentDBClusterReconciler) startStopCluster(ctx context.Context, l
 	}
 
 	if targetAction.Command == v1alpha1.AwsDocumentDBClusterCommandScale {
+		// Gate: DocumentDBVerticalScaling is an experimental feature that must be
+		// explicitly enabled via --feature-gates=DocumentDBVerticalScaling.
+		if !r.FeatureRegistry.IsEnabled(feature.DocumentDBVerticalScaling) {
+			logger.Info("DocumentDB vertical scaling is disabled; enable it with --feature-gates=DocumentDBVerticalScaling",
+				"action", actionName)
+			r.Recorder.Eventf(obj, corev1.EventTypeWarning, "FeatureDisabled",
+				"Action %q skipped: DocumentDBVerticalScaling feature gate is not enabled", actionName)
+			return JobResultSkipped, metadata
+		}
+
 		actionType := conditionTypeForAction(actionName)
 		opName := fmt.Sprintf("%s-%s-%d", key.Name, actionName, time.Now().Unix())
 		op := &v1alpha1.ActionExecution{
