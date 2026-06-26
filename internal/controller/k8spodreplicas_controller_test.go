@@ -69,8 +69,10 @@ var _ = Describe("K8sPodReplicas Controller", func() {
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
 			controllerReconciler := &K8sPodReplicasReconciler{
-				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
+				BaseReconciler: BaseReconciler{
+					Client: k8sClient,
+					Scheme: k8sClient.Scheme(),
+				},
 			}
 
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{

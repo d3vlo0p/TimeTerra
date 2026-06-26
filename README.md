@@ -188,6 +188,77 @@ Example of AWS IAM Policy to attach to the IAM user / role.
 }
 ```
 
+## Feature Gates
+
+Some features are marked as **experimental** and must be explicitly enabled at operator startup.
+By default all experimental features are **disabled**.
+
+### Available Feature Gates
+
+| Feature | Description |
+|---|---|
+| `AuroraVerticalScaling` | Enables vertical instance-class scaling (`scale` command) for `AwsRdsAuroraCluster` resources. |
+| `DocumentDBVerticalScaling` | Enables vertical instance-class scaling (`scale` command) for `AwsDocumentDBCluster` resources. |
+
+### How to enable
+
+**CLI flag** (takes precedence over the env var):
+
+```sh
+# Enable specific features
+./manager --feature-gates=AuroraVerticalScaling,DocumentDBVerticalScaling
+
+# Enable all experimental features at once
+./manager --feature-gates=ALL
+```
+
+**Environment variable** (fallback when the flag is not set):
+
+```sh
+FEATURE_GATES=AuroraVerticalScaling ./manager
+```
+
+**Helm** (recommended for production deployments):
+
+```yaml
+# values.yaml
+settings:
+  featureGates: "AuroraVerticalScaling,DocumentDBVerticalScaling"
+  # or: featureGates: "ALL"
+```
+
+```sh
+helm upgrade -n timeterra --install operator oci://ghcr.io/d3vlo0p/timeterra \
+  --set settings.featureGates="AuroraVerticalScaling,DocumentDBVerticalScaling"
+```
+
+When a `scale` action fires on a resource whose feature gate is not enabled, the operator:
+- Logs a warning with the flag name needed to enable it.
+- Emits a `FeatureDisabled` Kubernetes Warning event on the CR.
+- Records the action as `Skipped` in Prometheus metrics.
+
+### AWS IAM permissions for vertical scaling
+
+If you enable vertical scaling, ensure the IAM role also has the following permissions:
+
+```json
+{
+  "Sid": "verticalScaling",
+  "Action": [
+    "rds:DescribeDBClusters",
+    "rds:DescribeDBInstances",
+    "rds:ModifyDBInstance",
+    "rds:FailoverDBCluster",
+    "docdb:DescribeDBClusters",
+    "docdb:DescribeDBInstances",
+    "docdb:ModifyDBInstance",
+    "docdb:FailoverDBCluster"
+  ],
+  "Effect": "Allow",
+  "Resource": "*"
+}
+```
+
 ## License
 
 Copyright 2024.

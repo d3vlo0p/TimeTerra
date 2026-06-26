@@ -20,15 +20,10 @@ import (
 	"context"
 	"fmt"
 
-	sc "github.com/d3vlo0p/TimeTerra/internal/cron"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -38,10 +33,7 @@ import (
 
 // ScheduleReconciler reconciles a Schedule object
 type ScheduleReconciler struct {
-	client.Client
-	Scheme   *runtime.Scheme
-	Cron     *sc.ScheduleService
-	Recorder record.EventRecorder
+	BaseReconciler
 }
 
 //+kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=schedules,verbs=get;list;watch;create;update;patch;delete

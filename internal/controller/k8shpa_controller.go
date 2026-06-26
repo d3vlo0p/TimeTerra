@@ -27,27 +27,19 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	v1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
-	"github.com/d3vlo0p/TimeTerra/internal/cron"
-	"github.com/d3vlo0p/TimeTerra/notification"
 	"github.com/go-logr/logr"
 )
 
 // K8sHpaReconciler reconciles a K8sHpa object
 type K8sHpaReconciler struct {
-	client.Client
-	Scheme              *runtime.Scheme
-	Cron                *cron.ScheduleService
-	NotificationService *notification.NotificationService
-	Recorder            record.EventRecorder
+	BaseReconciler
 }
 
 //+kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=k8shpas,verbs=get;list;watch;create;update;patch;delete
@@ -91,18 +83,6 @@ func (r *K8sHpaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		instance.Spec.Actions,
 		r.setAutoscaling,
 	)
-}
-
-func (r *K8sHpaReconciler) GetScheduleService() *cron.ScheduleService {
-	return r.Cron
-}
-
-func (r *K8sHpaReconciler) GetNotificationService() *notification.NotificationService {
-	return r.NotificationService
-}
-
-func (r *K8sHpaReconciler) GetRecorder() record.EventRecorder {
-	return r.Recorder
 }
 
 func (r *K8sHpaReconciler) SetConditions(obj client.Object, conditions []metav1.Condition) {

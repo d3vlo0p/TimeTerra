@@ -11,6 +11,7 @@ resources:
 - bases/timeterra.d3vlo0p.dev_awsec2instances.yaml
 - bases/timeterra.d3vlo0p.dev_k8srunjobs.yaml
 - bases/timeterra.d3vlo0p.dev_notificationpolicies.yaml
+- bases/timeterra.d3vlo0p.dev_actionexecutions.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patches:

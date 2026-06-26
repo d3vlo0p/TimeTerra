@@ -69,8 +69,10 @@ var _ = Describe("AwsRdsAuroraCluster Controller", func() {
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
 			controllerReconciler := &AwsRdsAuroraClusterReconciler{
-				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
+				BaseReconciler: BaseReconciler{
+					Client: k8sClient,
+					Scheme: k8sClient.Scheme(),
+				},
 			}
 
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{

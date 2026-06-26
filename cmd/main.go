@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/d3vlo0p/TimeTerra/internal/cron"
+	"github.com/d3vlo0p/TimeTerra/internal/feature"
 	"github.com/d3vlo0p/TimeTerra/monitoring"
 	"github.com/d3vlo0p/TimeTerra/notification"
 
@@ -42,10 +43,12 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	"path/filepath"
+
+	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
+
 	v1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 	"github.com/d3vlo0p/TimeTerra/internal/controller"
-	"path/filepath"
-	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -99,6 +102,7 @@ func main() {
 	var secureMetrics bool
 	var enableHTTP2 bool
 	var tlsOpts []func(*tls.Config)
+	var featureGates string
 
 	var metricsCertPath, metricsCertName, metricsCertKey string
 	var webhookCertPath, webhookCertName, webhookCertKey string
@@ -121,13 +125,68 @@ func main() {
 	flag.StringVar(&metricsCertName, "metrics-cert-name", "tls.crt", "The name of the metrics server certificate file.")
 	flag.StringVar(&metricsCertKey, "metrics-cert-key", "tls.key", "The name of the metrics server key file.")
 
+	// Feature gates: comma-separated list of feature names to enable.
+	// Falls back to the FEATURE_GATES environment variable when the flag is not
+	// set explicitly on the command line. CLI flag takes precedence.
+	knownFeatureNames := make([]string, 0, len(feature.All))
+	for _, f := range feature.All {
+		knownFeatureNames = append(knownFeatureNames, string(f))
+	}
+	flag.StringVar(&featureGates, "feature-gates", "",
+		fmt.Sprintf("Comma-separated list of experimental feature flags to enable. Use ALL to enable every flag. Known flags: %s",
+			strings.Join(knownFeatureNames, ", ")))
+
 	opts := zap.Options{
 		Development: true,
 	}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
+	// If --feature-gates was not explicitly provided on the CLI, fall back to
+	// the FEATURE_GATES environment variable.
+	if featureGates == "" {
+		featureGates = os.Getenv("FEATURE_GATES")
+	}
+
+	// Parse and validate feature names; build the registry.
+	// The special value "ALL" (case-insensitive) enables every known feature.
+	enabledFeatures := make([]feature.Feature, 0)
+	if strings.EqualFold(strings.TrimSpace(featureGates), "all") {
+		enabledFeatures = append(enabledFeatures, feature.All...)
+	} else if featureGates != "" {
+		knownSet := make(map[feature.Feature]struct{}, len(feature.All))
+		for _, f := range feature.All {
+			knownSet[f] = struct{}{}
+		}
+		for _, name := range strings.Split(featureGates, ",") {
+			name = strings.TrimSpace(name)
+			if name == "" {
+				continue
+			}
+			f := feature.Feature(name)
+			if _, ok := knownSet[f]; !ok {
+				setupLog.Error(fmt.Errorf("unknown feature gate %q", name), "invalid --feature-gates value",
+					"known", append(knownFeatureNames, "ALL"))
+				os.Exit(1)
+			}
+			enabledFeatures = append(enabledFeatures, f)
+		}
+	}
+	featureRegistry := feature.NewRegistry(enabledFeatures...)
+
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	// Log which feature gates are active so operators have clear observability.
+	enabled := featureRegistry.EnabledList()
+	if len(enabled) == 0 {
+		setupLog.Info("Feature gates: none enabled (all experimental features are disabled)")
+	} else {
+		enabledStrs := make([]string, len(enabled))
+		for i, f := range enabled {
+			enabledStrs[i] = string(f)
+		}
+		setupLog.Info("Feature gates enabled", "features", strings.Join(enabledStrs, ", "))
+	}
 
 	// if the enable-http2 flag is false (the default), http/2 should be disabled
 	// due to its vulnerabilities. More specifically, disabling http/2 will
@@ -275,96 +334,128 @@ func main() {
 	}
 
 	if err = (&controller.ScheduleReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Cron:     c,
-		Recorder: mgr.GetEventRecorderFor("schedule-controller"),
+		BaseReconciler: controller.BaseReconciler{
+			Client:   mgr.GetClient(),
+			Scheme:   mgr.GetScheme(),
+			Cron:     c,
+			Recorder: mgr.GetEventRecorderFor("schedule-controller"),
+		},
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Schedule")
 		os.Exit(1)
 	}
 	if err = (&controller.K8sHpaReconciler{
-		Client:              mgr.GetClient(),
-		Scheme:              mgr.GetScheme(),
-		Cron:                c,
-		NotificationService: ns,
-		Recorder:            mgr.GetEventRecorderFor("k8shpa-controller"),
+		BaseReconciler: controller.BaseReconciler{
+			Client:              mgr.GetClient(),
+			Scheme:              mgr.GetScheme(),
+			Cron:                c,
+			NotificationService: ns,
+			Recorder:            mgr.GetEventRecorderFor("k8shpa-controller"),
+		},
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "K8sHpa")
 		os.Exit(1)
 	}
 	if err = (&controller.K8sPodReplicasReconciler{
-		Client:              mgr.GetClient(),
-		Scheme:              mgr.GetScheme(),
-		Cron:                c,
-		NotificationService: ns,
-		Recorder:            mgr.GetEventRecorderFor("k8spodreplicas-controller"),
+		BaseReconciler: controller.BaseReconciler{
+			Client:              mgr.GetClient(),
+			Scheme:              mgr.GetScheme(),
+			Cron:                c,
+			NotificationService: ns,
+			Recorder:            mgr.GetEventRecorderFor("k8spodreplicas-controller"),
+		},
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "K8sPodReplicas")
 		os.Exit(1)
 	}
 	if err = (&controller.AwsRdsAuroraClusterReconciler{
-		Client:              mgr.GetClient(),
-		Scheme:              mgr.GetScheme(),
-		Cron:                c,
-		NotificationService: ns,
-		Recorder:            mgr.GetEventRecorderFor("awsrdsauroracluster-controller"),
-		OperatorNamespace:   operatorNamespace,
+		BaseReconciler: controller.BaseReconciler{
+			Client:              mgr.GetClient(),
+			Scheme:              mgr.GetScheme(),
+			Cron:                c,
+			NotificationService: ns,
+			Recorder:            mgr.GetEventRecorderFor("awsrdsauroracluster-controller"),
+		},
+		OperatorNamespace: operatorNamespace,
+		FeatureRegistry:   featureRegistry,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AwsRdsAuroraCluster")
 		os.Exit(1)
 	}
 	if err = (&controller.AwsDocumentDBClusterReconciler{
-		Client:              mgr.GetClient(),
-		Scheme:              mgr.GetScheme(),
-		Cron:                c,
-		NotificationService: ns,
-		Recorder:            mgr.GetEventRecorderFor("awsdocumentdbcluster-controller"),
-		OperatorNamespace:   operatorNamespace,
+		BaseReconciler: controller.BaseReconciler{
+			Client:              mgr.GetClient(),
+			Scheme:              mgr.GetScheme(),
+			Cron:                c,
+			NotificationService: ns,
+			Recorder:            mgr.GetEventRecorderFor("awsdocumentdbcluster-controller"),
+		},
+		OperatorNamespace: operatorNamespace,
+		FeatureRegistry:   featureRegistry,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AwsDocumentDBCluster")
 		os.Exit(1)
 	}
 	if err = (&controller.AwsTransferFamilyReconciler{
-		Client:              mgr.GetClient(),
-		Scheme:              mgr.GetScheme(),
-		Cron:                c,
-		NotificationService: ns,
-		Recorder:            mgr.GetEventRecorderFor("awstransferfamily-controller"),
-		OperatorNamespace:   operatorNamespace,
+		BaseReconciler: controller.BaseReconciler{
+			Client:              mgr.GetClient(),
+			Scheme:              mgr.GetScheme(),
+			Cron:                c,
+			NotificationService: ns,
+			Recorder:            mgr.GetEventRecorderFor("awstransferfamily-controller"),
+		},
+		OperatorNamespace: operatorNamespace,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AwsTransferFamily")
 		os.Exit(1)
 	}
 	if err = (&controller.AwsEc2InstanceReconciler{
-		Client:              mgr.GetClient(),
-		Scheme:              mgr.GetScheme(),
-		Cron:                c,
-		NotificationService: ns,
-		Recorder:            mgr.GetEventRecorderFor("awsec2instance-controller"),
-		OperatorNamespace:   operatorNamespace,
+		BaseReconciler: controller.BaseReconciler{
+			Client:              mgr.GetClient(),
+			Scheme:              mgr.GetScheme(),
+			Cron:                c,
+			NotificationService: ns,
+			Recorder:            mgr.GetEventRecorderFor("awsec2instance-controller"),
+		},
+		OperatorNamespace: operatorNamespace,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AwsEc2Instance")
 		os.Exit(1)
 	}
 	if err = (&controller.K8sRunJobReconciler{
-		Client:              mgr.GetClient(),
-		Scheme:              mgr.GetScheme(),
-		Cron:                c,
-		NotificationService: ns,
-		Recorder:            mgr.GetEventRecorderFor("k8srunjob-controller"),
-		OperatorNamespace:   operatorNamespace,
+		BaseReconciler: controller.BaseReconciler{
+			Client:              mgr.GetClient(),
+			Scheme:              mgr.GetScheme(),
+			Cron:                c,
+			NotificationService: ns,
+			Recorder:            mgr.GetEventRecorderFor("k8srunjob-controller"),
+		},
+		OperatorNamespace: operatorNamespace,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "K8sRunJob")
 		os.Exit(1)
 	}
 	if err = (&controller.NotificationPolicyReconciler{
-		Client:              mgr.GetClient(),
-		Scheme:              mgr.GetScheme(),
-		NotificationService: ns,
-		Recorder:            mgr.GetEventRecorderFor("notificationpolicy-controller"),
+		BaseReconciler: controller.BaseReconciler{
+			Client:              mgr.GetClient(),
+			Scheme:              mgr.GetScheme(),
+			NotificationService: ns,
+			Recorder:            mgr.GetEventRecorderFor("notificationpolicy-controller"),
+		},
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "NotificationPolicy")
+		os.Exit(1)
+	}
+	if err := (&controller.ActionExecutionReconciler{
+		BaseReconciler: controller.BaseReconciler{
+			Client:              mgr.GetClient(),
+			Scheme:              mgr.GetScheme(),
+			NotificationService: ns,
+			Recorder:            mgr.GetEventRecorderFor("actionexecution-controller"),
+		},
+		OperatorNamespace: operatorNamespace,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ActionExecution")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

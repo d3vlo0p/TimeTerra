@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -25,9 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -36,19 +35,18 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/rds"
 	v1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
-	"github.com/d3vlo0p/TimeTerra/internal/cron"
-	"github.com/d3vlo0p/TimeTerra/notification"
+	"github.com/d3vlo0p/TimeTerra/internal/action"
+	"github.com/d3vlo0p/TimeTerra/internal/feature"
 	"github.com/go-logr/logr"
 )
 
 // AwsRdsAuroraClusterReconciler reconciles a AwsRdsAuroraCluster object
 type AwsRdsAuroraClusterReconciler struct {
-	client.Client
-	Scheme              *runtime.Scheme
-	Cron                *cron.ScheduleService
-	NotificationService *notification.NotificationService
-	Recorder            record.EventRecorder
-	OperatorNamespace   string
+	BaseReconciler
+	OperatorNamespace string
+	// FeatureRegistry controls which experimental features are enabled.
+	// Use --feature-gates at startup to configure it.
+	FeatureRegistry *feature.Registry
 }
 
 //+kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=awsrdsauroraclusters,verbs=get;list;watch;create;update;patch;delete
@@ -104,18 +102,6 @@ func (r *AwsRdsAuroraClusterReconciler) Reconcile(ctx context.Context, req ctrl.
 	)
 }
 
-func (r *AwsRdsAuroraClusterReconciler) GetScheduleService() *cron.ScheduleService {
-	return r.Cron
-}
-
-func (r *AwsRdsAuroraClusterReconciler) GetNotificationService() *notification.NotificationService {
-	return r.NotificationService
-}
-
-func (r *AwsRdsAuroraClusterReconciler) GetRecorder() record.EventRecorder {
-	return r.Recorder
-}
-
 func (r *AwsRdsAuroraClusterReconciler) SetConditions(obj client.Object, conditions []metav1.Condition) {
 	obj.(*v1alpha1.AwsRdsAuroraCluster).Status.Conditions = conditions
 }
@@ -130,11 +116,67 @@ func (r *AwsRdsAuroraClusterReconciler) startStopCluster(ctx context.Context, lo
 		metadata["error"] = err.Error()
 		return JobResultError, metadata
 	}
-	action, ok := obj.Spec.Actions[actionName]
+	targetAction, ok := obj.Spec.Actions[actionName]
 	if !ok {
 		logger.Info("Action not found in AWSRdsCluster resource")
 		metadata["error"] = fmt.Sprintf("Action %q not found in AWSRdsCluster resource.", actionName)
 		return JobResultError, metadata
+	}
+
+	if targetAction.Command == v1alpha1.AwsRdsAuroraClusterCommandScale {
+		// Gate: AuroraVerticalScaling is an experimental feature that must be
+		// explicitly enabled via --feature-gates=AuroraVerticalScaling.
+		if !r.FeatureRegistry.IsEnabled(feature.AuroraVerticalScaling) {
+			logger.Info("Aurora vertical scaling is disabled; enable it with --feature-gates=AuroraVerticalScaling",
+				"action", actionName)
+			r.Recorder.Eventf(obj, corev1.EventTypeWarning, "FeatureDisabled",
+				"Action %q skipped: AuroraVerticalScaling feature gate is not enabled", actionName)
+			return JobResultSkipped, metadata
+		}
+
+		actionType := conditionTypeForAction(actionName)
+		opName := fmt.Sprintf("%s-%s-%d", key.Name, actionName, time.Now().Unix())
+		op := &v1alpha1.ActionExecution{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      opName,
+				Namespace: key.Namespace,
+			},
+			Spec: v1alpha1.ActionExecutionSpec{
+				TargetResource: corev1.ObjectReference{
+					APIVersion: "timeterra.d3vlo0p.dev/v1alpha1",
+					Kind:       "AwsRdsAuroraCluster",
+					Name:       key.Name,
+					Namespace:  key.Namespace,
+				},
+				ActionType: "AuroraVerticalScale",
+				ActionName: actionName,
+			},
+		}
+
+		if targetAction.InstanceClass != nil {
+			params := action.AuroraScaleParams{InstanceClass: *targetAction.InstanceClass}
+			paramsBytes, _ := json.Marshal(params)
+			op.Spec.Parameters = string(paramsBytes)
+		}
+
+		err := r.Create(ctx, op)
+		if err != nil {
+			logger.Error(err, "Failed to create ActionExecution for scaling")
+			metadata["error"] = err.Error()
+			return JobResultError, metadata
+		}
+
+		r.Recorder.Eventf(obj, corev1.EventTypeNormal, "ScalingTriggered", "Vertical scaling triggered via ActionExecution %s", op.Name)
+
+		addToConditions(&obj.Status.Conditions, metav1.Condition{
+			LastTransitionTime: metav1.Now(),
+			Type:               actionType,
+			Status:             metav1.ConditionTrue,
+			Reason:             "Active",
+			Message:            fmt.Sprintf("Scaling triggered at:%q", time.Now().Format(time.RFC3339)),
+		})
+		r.Status().Update(ctx, obj)
+		return JobResultSuccess, metadata
 	}
 
 	cfg, err := config.LoadDefaultConfig(ctx)
@@ -172,7 +214,7 @@ func (r *AwsRdsAuroraClusterReconciler) startStopCluster(ctx context.Context, lo
 			}
 		}
 
-		switch action.Command {
+		switch targetAction.Command {
 
 		case v1alpha1.AwsRdsAuroraClusterCommandStart:
 			_, err := rdsClient.StartDBCluster(ctx, &rds.StartDBClusterInput{

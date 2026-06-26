@@ -83,4 +83,13 @@ resources:
   kind: NotificationPolicy
   path: github.com/d3vlo0p/TimeTerra/api/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: d3vlo0p.dev
+  group: timeterra
+  kind: ActionExecution
+  path: github.com/d3vlo0p/TimeTerra/api/v1alpha1
+  version: v1alpha1
 version: "3"

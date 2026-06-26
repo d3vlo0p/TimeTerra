@@ -22,3 +22,7 @@ tasks:
       - helm uninstall -n timeterra operator
       - kubectl delete -f ./helm-charts/timeterra/crds/
       - kubectl delete namespace timeterra
+
+  template:
+    cmds:
+      - helm template -n timeterra operator ./helm-charts/timeterra --version {{.CHART_VERSION}} --set image.repository={{.REPO}}/{{.IMG}} --set image.pullPolicy=Always {{.CLI_ARGS}}

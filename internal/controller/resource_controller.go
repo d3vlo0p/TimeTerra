@@ -15,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -30,6 +31,26 @@ type Reconciler interface {
 	GetNotificationService() *notification.NotificationService
 	GetRecorder() record.EventRecorder
 	SetConditions(obj client.Object, conditions []metav1.Condition)
+}
+
+type BaseReconciler struct {
+	client.Client
+	Scheme              *runtime.Scheme
+	Cron                *cron.ScheduleService
+	NotificationService *notification.NotificationService
+	Recorder            record.EventRecorder
+}
+
+func (r *BaseReconciler) GetScheduleService() *cron.ScheduleService {
+	return r.Cron
+}
+
+func (r *BaseReconciler) GetNotificationService() *notification.NotificationService {
+	return r.NotificationService
+}
+
+func (r *BaseReconciler) GetRecorder() record.EventRecorder {
+	return r.Recorder
 }
 
 type ReconcileResource interface {

@@ -27,27 +27,19 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	v1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
-	"github.com/d3vlo0p/TimeTerra/internal/cron"
-	"github.com/d3vlo0p/TimeTerra/notification"
 	"github.com/go-logr/logr"
 )
 
 // K8sPodReplicasReconciler reconciles a K8sPodReplicas object
 type K8sPodReplicasReconciler struct {
-	client.Client
-	Scheme              *runtime.Scheme
-	Cron                *cron.ScheduleService
-	NotificationService *notification.NotificationService
-	Recorder            record.EventRecorder
+	BaseReconciler
 }
 
 //+kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=k8spodreplicas,verbs=get;list;watch;create;update;patch;delete
@@ -93,18 +85,6 @@ func (r *K8sPodReplicasReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		instance.Spec.Actions,
 		r.setReplicas,
 	)
-}
-
-func (r *K8sPodReplicasReconciler) GetScheduleService() *cron.ScheduleService {
-	return r.Cron
-}
-
-func (r *K8sPodReplicasReconciler) GetNotificationService() *notification.NotificationService {
-	return r.NotificationService
-}
-
-func (r *K8sPodReplicasReconciler) GetRecorder() record.EventRecorder {
-	return r.Recorder
 }
 
 func (r *K8sPodReplicasReconciler) SetConditions(obj client.Object, conditions []metav1.Condition) {

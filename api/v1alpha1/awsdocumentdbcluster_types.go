@@ -28,6 +28,7 @@ type AwsDocumentDBClusterCommand string
 const (
 	AwsDocumentDBClusterCommandStop  AwsDocumentDBClusterCommand = "stop"
 	AwsDocumentDBClusterCommandStart AwsDocumentDBClusterCommand = "start"
+	AwsDocumentDBClusterCommandScale AwsDocumentDBClusterCommand = "scale"
 )
 
 func (r AwsDocumentDBClusterCommand) String() string {
@@ -40,8 +41,9 @@ func (r AwsDocumentDBClusterAction) IsActive() bool {
 
 type AwsDocumentDBClusterAction struct {
 	Enabled *bool `json:"enabled,omitempty"`
-	// +kubebuilder:validation:Enum:=stop;start
-	Command AwsDocumentDBClusterCommand `json:"command"`
+	// +kubebuilder:validation:Enum:=stop;start;scale
+	Command       AwsDocumentDBClusterCommand `json:"command"`
+	InstanceClass *string                     `json:"instanceClass,omitempty"`
 }
 
 type AwsDocumentDBClusterIdentifier struct {

@@ -318,3 +318,21 @@ rules:
   - subjectaccessreviews
   verbs:
   - create
+- apiGroups:
+  - timeterra.d3vlo0p.dev
+  resources:
+  - actionexecutions
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - timeterra.d3vlo0p.dev
+  resources:
+  - actionexecutions/status
+  verbs:
+  - get
