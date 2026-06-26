@@ -15,6 +15,7 @@ With TimeTerra, you can create a schedule using cron expressions on which you ca
 - **Start and stop DocumentDB clusters** on AWS.
 - **Start and stop Ec2 instances** on AWS.
 - **Start and stop Transfer Family servers** on AWS.
+- **Scale RDS Aurora and DocumentDB clusters vertically** (scaling the instance class using the `scale` action, controlled by feature gates).
 
 ### Use Cases
 
@@ -36,6 +37,7 @@ To use TimeTerra, follow these steps:
 ```sh
 #set chart version
 export CHART_VERSION=""
+kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/$CHART_VERSION/config/crd/bases/timeterra.d3vlo0p.dev_actionexecutions.yaml
 kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/$CHART_VERSION/config/crd/bases/timeterra.d3vlo0p.dev_awsdocumentdbclusters.yaml
 kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/$CHART_VERSION/config/crd/bases/timeterra.d3vlo0p.dev_awsec2instances.yaml
 kubectl apply -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/$CHART_VERSION/config/crd/bases/timeterra.d3vlo0p.dev_awsrdsauroraclusters.yaml
@@ -66,6 +68,7 @@ kubectl delete namespace timeterra
 ```sh
 #set chart version
 export CHART_VERSION=""
+kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/$CHART_VERSION/config/crd/bases/timeterra.d3vlo0p.dev_actionexecutions.yaml
 kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/$CHART_VERSION/config/crd/bases/timeterra.d3vlo0p.dev_awsdocumentdbclusters.yaml
 kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/$CHART_VERSION/config/crd/bases/timeterra.d3vlo0p.dev_awsec2instances.yaml
 kubectl delete -f https://raw.githubusercontent.com/d3vlo0p/TimeTerra/$CHART_VERSION/config/crd/bases/timeterra.d3vlo0p.dev_awsrdsauroraclusters.yaml
@@ -116,6 +119,63 @@ spec:
       replicas: 2
 ```
 more samples [here](./config/samples/)
+
+## Notification Policies
+
+TimeTerra supports sending execution reports (notifications) when cron actions run. You can configure a cluster-scoped `NotificationPolicy` CR to send messages to Slack, MS Teams, or trigger a custom API Webhook.
+
+Here are examples of configuring each notification type:
+
+### Slack Notification
+
+```yaml
+apiVersion: timeterra.d3vlo0p.dev/v1alpha1
+kind: NotificationPolicy
+metadata:
+  name: slack-notification-sample
+spec:
+  enabled: true
+  schedules:
+    - schedule-sample
+  type: slack
+  slack:
+    webhookurl: "https://hooks.slack.com/services/T0000/B0000/XXXXXX"
+    title: "TimeTerra Scaling Notification"
+```
+
+### MS Teams Notification
+
+```yaml
+apiVersion: timeterra.d3vlo0p.dev/v1alpha1
+kind: NotificationPolicy
+metadata:
+  name: msteams-notification-sample
+spec:
+  enabled: true
+  schedules:
+    - schedule-sample
+  type: msteams
+  msteams:
+    webhookurl: "https://outlook.office.com/webhook/..."
+    cardtitle: "TimeTerra Database Scaling Activity"
+```
+
+### Custom API Webhook
+
+```yaml
+apiVersion: timeterra.d3vlo0p.dev/v1alpha1
+kind: NotificationPolicy
+metadata:
+  name: api-notification-sample
+spec:
+  enabled: true
+  schedules:
+    - schedule-sample
+  type: api
+  api:
+    url: "https://my-endpoint.com/webhook-receiver"
+    method: post  # Supports post, put, or patch
+```
 
 ## AWS
 
