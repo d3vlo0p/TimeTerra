@@ -37,6 +37,11 @@ tasks:
       - kubectl create deployment hello-k8s --image=nginx:alpine --replicas=2
       - kubectl apply --server-side -f examples/simple_pod_replicas.yaml
 
+  undeploy-examples:
+    cmds:
+      - kubectl delete -f examples/simple_pod_replicas.yaml
+      - kubectl delete deployment hello-k8s
+
   publish-release:
     vars:
       REPO: "{{.GH_REPO}}"
