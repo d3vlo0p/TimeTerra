@@ -26,9 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -38,20 +36,14 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/docdb"
 	v1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 	"github.com/d3vlo0p/TimeTerra/internal/action"
-	"github.com/d3vlo0p/TimeTerra/internal/cron"
 	"github.com/d3vlo0p/TimeTerra/internal/feature"
-	"github.com/d3vlo0p/TimeTerra/notification"
 	"github.com/go-logr/logr"
 )
 
 // AwsDocumentDBClusterReconciler reconciles a AwsDocumentDBCluster object
 type AwsDocumentDBClusterReconciler struct {
-	client.Client
-	Scheme              *runtime.Scheme
-	Cron                *cron.ScheduleService
-	NotificationService *notification.NotificationService
-	Recorder            record.EventRecorder
-	OperatorNamespace   string
+	BaseReconciler
+	OperatorNamespace string
 	// FeatureRegistry controls which experimental features are enabled.
 	// Use --feature-gates at startup to configure it.
 	FeatureRegistry *feature.Registry
@@ -108,18 +100,6 @@ func (r *AwsDocumentDBClusterReconciler) Reconcile(ctx context.Context, req ctrl
 		instance.Spec.Actions,
 		r.startStopCluster,
 	)
-}
-
-func (r *AwsDocumentDBClusterReconciler) GetScheduleService() *cron.ScheduleService {
-	return r.Cron
-}
-
-func (r *AwsDocumentDBClusterReconciler) GetNotificationService() *notification.NotificationService {
-	return r.NotificationService
-}
-
-func (r *AwsDocumentDBClusterReconciler) GetRecorder() record.EventRecorder {
-	return r.Recorder
 }
 
 func (r *AwsDocumentDBClusterReconciler) SetConditions(obj client.Object, conditions []metav1.Condition) {

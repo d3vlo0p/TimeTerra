@@ -25,9 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -36,19 +34,13 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/transfer"
 	v1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
-	"github.com/d3vlo0p/TimeTerra/internal/cron"
-	"github.com/d3vlo0p/TimeTerra/notification"
 	"github.com/go-logr/logr"
 )
 
 // AwsTransferFamilyReconciler reconciles a AwsTransferFamily object
 type AwsTransferFamilyReconciler struct {
-	client.Client
-	Scheme              *runtime.Scheme
-	Cron                *cron.ScheduleService
-	NotificationService *notification.NotificationService
-	Recorder            record.EventRecorder
-	OperatorNamespace   string
+	BaseReconciler
+	OperatorNamespace string
 }
 
 //+kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=awstransferfamilies,verbs=get;list;watch;create;update;patch;delete
@@ -102,18 +94,6 @@ func (r *AwsTransferFamilyReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		instance.Spec.Actions,
 		r.startStopServer,
 	)
-}
-
-func (r *AwsTransferFamilyReconciler) GetScheduleService() *cron.ScheduleService {
-	return r.Cron
-}
-
-func (r *AwsTransferFamilyReconciler) GetNotificationService() *notification.NotificationService {
-	return r.NotificationService
-}
-
-func (r *AwsTransferFamilyReconciler) GetRecorder() record.EventRecorder {
-	return r.Recorder
 }
 
 func (r *AwsTransferFamilyReconciler) SetConditions(obj client.Object, conditions []metav1.Condition) {

@@ -9,36 +9,34 @@ import (
 )
 
 func getAwsCredentialProviderFromSecret(secret *corev1.Secret, keysRef *v1alpha1.AwsCredentialsKeysRef) (*credentials.StaticCredentialsProvider, error) {
-	values, err := decodeSecret(secret)
-	if err != nil {
-		return nil, err
-	}
-
 	var kAccessKeyId, kSecretAccessKey, kSessionToken = "aws_access_key_id", "aws_secret_access_key", "aws_session_token"
 	// override default keys if specified
 	if keysRef != nil {
 		kAccessKeyId, kSecretAccessKey, kSessionToken = keysRef.AccessKey, keysRef.SecretKey, keysRef.SessionKey
 	}
 
-	accessKeyId, ok := values[kAccessKeyId]
+	accessKeyIdBytes, ok := secret.Data[kAccessKeyId]
 	if !ok {
 		return nil, fmt.Errorf("failed to get AccessKeyId from Secret resource, no %q key found", kAccessKeyId)
 	}
-	secretAccessKey, ok := values[kSecretAccessKey]
+	secretAccessKeyBytes, ok := secret.Data[kSecretAccessKey]
 	if !ok {
 		return nil, fmt.Errorf("failed to get SecretAccessKey from Secret resource, no %q key found", kSecretAccessKey)
 	}
 	sessionToken := ""
 	if kSessionToken != "" {
-		sessionToken, ok = values[kSessionToken]
+		sessionTokenBytes, ok := secret.Data[kSessionToken]
 		if !ok && keysRef != nil {
 			return nil, fmt.Errorf("failed to get SessionToken from Secret resource, no %q key found", kSessionToken)
+		}
+		if ok {
+			sessionToken = string(sessionTokenBytes)
 		}
 	}
 
 	r := credentials.NewStaticCredentialsProvider(
-		accessKeyId,
-		secretAccessKey,
+		string(accessKeyIdBytes),
+		string(secretAccessKeyBytes),
 		sessionToken,
 	)
 

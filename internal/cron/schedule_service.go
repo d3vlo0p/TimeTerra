@@ -98,22 +98,6 @@ func (s *ScheduleService) GetActions(schedule string) map[string]map[string]int 
 	return s.m[schedule]
 }
 
-func (s *ScheduleService) GetActionIds(schedule string, action string) []int {
-	if _, ok := s.m[schedule]; !ok {
-		s.logger.Info("no actions for schedule", "schedule", schedule)
-		return []int{}
-	}
-	if _, ok := s.m[schedule][action]; !ok {
-		s.logger.Info("no actions for schedule", "schedule", schedule, "action", action)
-		return []int{}
-	}
-	var ids []int
-	for _, v := range s.m[schedule][action] {
-		ids = append(ids, v)
-	}
-	return ids
-}
-
 func (s *ScheduleService) GetActionsOfResource(schedule string, resource string) map[string]int {
 	if _, ok := s.m[schedule]; !ok {
 		s.logger.Info("no actions for schedule", "schedule", schedule)

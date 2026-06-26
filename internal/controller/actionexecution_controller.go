@@ -22,10 +22,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/go-logr/logr"
@@ -34,16 +32,12 @@ import (
 	"github.com/d3vlo0p/TimeTerra/internal/action"
 	"github.com/d3vlo0p/TimeTerra/notification"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/tools/record"
 )
 
 // ActionExecutionReconciler reconciles a ActionExecution object
 type ActionExecutionReconciler struct {
-	client.Client
-	Scheme              *runtime.Scheme
-	NotificationService *notification.NotificationService
-	Recorder            record.EventRecorder
-	OperatorNamespace   string
+	BaseReconciler
+	OperatorNamespace string
 }
 
 // +kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=actionexecutions,verbs=get;list;watch;create;update;patch;delete
@@ -135,7 +129,8 @@ func (r *ActionExecutionReconciler) finalizeAction(ctx context.Context, logger l
 	})
 
 	// 2. Bubble up to target resource
-	if op.Spec.TargetResource.Kind == "AwsRdsAuroraCluster" {
+	switch op.Spec.TargetResource.Kind {
+	case "AwsRdsAuroraCluster":
 		target := &timeterrav1alpha1.AwsRdsAuroraCluster{}
 		err := r.Get(ctx, types.NamespacedName{Name: op.Spec.TargetResource.Name, Namespace: op.Spec.TargetResource.Namespace}, target)
 		if err == nil {
@@ -166,7 +161,7 @@ func (r *ActionExecutionReconciler) finalizeAction(ctx context.Context, logger l
 		} else {
 			logger.Error(err, "Failed to get target resource for finalization")
 		}
-	} else if op.Spec.TargetResource.Kind == "AwsDocumentDBCluster" {
+	case "AwsDocumentDBCluster":
 		target := &timeterrav1alpha1.AwsDocumentDBCluster{}
 		err := r.Get(ctx, types.NamespacedName{Name: op.Spec.TargetResource.Name, Namespace: op.Spec.TargetResource.Namespace}, target)
 		if err == nil {

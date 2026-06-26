@@ -2,9 +2,7 @@ package action
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -28,6 +26,70 @@ type DocumentDbScaleHandler struct {
 	SecretProvider    func(secret *corev1.Secret, keysRef *v1alpha1.AwsCredentialsKeysRef) (*credentials.StaticCredentialsProvider, error)
 }
 
+type docdbClusterManager struct {
+	client *docdb.Client
+	opts   func(*docdb.Options)
+}
+
+func (m *docdbClusterManager) DescribeCluster(ctx context.Context, identifier string) (string, []string, error) {
+	descResp, err := m.client.DescribeDBClusters(ctx, &docdb.DescribeDBClustersInput{
+		DBClusterIdentifier: &identifier,
+	}, m.opts)
+	if err != nil {
+		return "", nil, err
+	}
+	if len(descResp.DBClusters) == 0 {
+		return "", nil, fmt.Errorf("cluster not found in AWS")
+	}
+
+	cluster := descResp.DBClusters[0]
+	var writer string
+	var readers []string
+
+	for _, member := range cluster.DBClusterMembers {
+		if member.IsClusterWriter != nil && *member.IsClusterWriter {
+			writer = *member.DBInstanceIdentifier
+		} else {
+			readers = append(readers, *member.DBInstanceIdentifier)
+		}
+	}
+	return writer, readers, nil
+}
+
+func (m *docdbClusterManager) ModifyInstance(ctx context.Context, identifier string, instanceClass string) error {
+	_, err := m.client.ModifyDBInstance(ctx, &docdb.ModifyDBInstanceInput{
+		DBInstanceIdentifier: aws.String(identifier),
+		DBInstanceClass:      aws.String(instanceClass),
+		ApplyImmediately:     aws.Bool(true),
+	}, m.opts)
+	return err
+}
+
+func (m *docdbClusterManager) CheckInstancesAvailable(ctx context.Context, identifiers []string, instanceClass string) (bool, error) {
+	for _, id := range identifiers {
+		desc, err := m.client.DescribeDBInstances(ctx, &docdb.DescribeDBInstancesInput{
+			DBInstanceIdentifier: aws.String(id),
+		}, m.opts)
+		if err != nil {
+			return false, err
+		}
+		if len(desc.DBInstances) == 0 || *desc.DBInstances[0].DBInstanceStatus != "available" {
+			return false, nil
+		}
+		if *desc.DBInstances[0].DBInstanceClass != instanceClass {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+func (m *docdbClusterManager) FailoverCluster(ctx context.Context, identifier string) error {
+	_, err := m.client.FailoverDBCluster(ctx, &docdb.FailoverDBClusterInput{
+		DBClusterIdentifier: &identifier,
+	}, m.opts)
+	return err
+}
+
 func (h *DocumentDbScaleHandler) Execute(ctx context.Context, logger logr.Logger, op *v1alpha1.ActionExecution) (ctrl.Result, bool, error) {
 	// 1. Fetch Target Resource
 	target := &v1alpha1.AwsDocumentDBCluster{}
@@ -37,19 +99,7 @@ func (h *DocumentDbScaleHandler) Execute(ctx context.Context, logger logr.Logger
 		return ctrl.Result{}, false, err
 	}
 
-	// 2. Parse Parameters
-	var params DocumentDBScaleParams
-	if err := json.Unmarshal([]byte(op.Spec.Parameters), &params); err != nil {
-		logger.Error(err, "Failed to parse parameters")
-		return ctrl.Result{}, true, err // Finish with error
-	}
-	if params.InstanceClass == "" {
-		err := fmt.Errorf("instanceClass is empty")
-		logger.Error(err, "Invalid parameters")
-		return ctrl.Result{}, true, err
-	}
-
-	// 3. AWS Config
+	// 2. AWS Config
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		logger.Error(err, "unable to load SDK config")
@@ -89,179 +139,14 @@ func (h *DocumentDbScaleHandler) Execute(ctx context.Context, logger logr.Logger
 	}
 	docdbClient := docdb.NewFromConfig(cfg)
 
-	// State Machine
-	if op.Status.StateData == nil {
-		op.Status.StateData = make(map[string]string)
+	mgr := &docdbClusterManager{
+		client: docdbClient,
+		opts:   opts,
 	}
 
-	if op.Status.Phase == "" {
-		op.Status.Phase = "Initialization"
+	genericHandler := &GenericScaleHandler{
+		Manager: mgr,
 	}
 
-	logger.Info("Executing DocumentDB Scale Phase", "phase", op.Status.Phase)
-
-	switch op.Status.Phase {
-	case "Initialization":
-		descResp, err := docdbClient.DescribeDBClusters(ctx, &docdb.DescribeDBClustersInput{
-			DBClusterIdentifier: &clusterInfo.Identifier,
-		}, opts)
-		if err != nil {
-			logger.Error(err, "DescribeDBClusters failed")
-			return ctrl.Result{}, false, err // retry later
-		}
-		if len(descResp.DBClusters) == 0 {
-			return ctrl.Result{}, true, fmt.Errorf("cluster not found in AWS")
-		}
-
-		cluster := descResp.DBClusters[0]
-		var writer string
-		var readers []string
-
-		for _, member := range cluster.DBClusterMembers {
-			if member.IsClusterWriter != nil && *member.IsClusterWriter {
-				writer = *member.DBInstanceIdentifier
-			} else {
-				readers = append(readers, *member.DBInstanceIdentifier)
-			}
-		}
-
-		op.Status.StateData["writer"] = writer
-		readersJson, _ := json.Marshal(readers)
-		op.Status.StateData["readers"] = string(readersJson)
-
-		if len(readers) == 0 {
-			logger.Info("No read replicas found. Proceeding directly to scale writer.")
-			op.Status.Phase = "ScalingWriter"
-		} else {
-			op.Status.Phase = "ScalingReplicas"
-		}
-		return ctrl.Result{Requeue: true}, false, nil
-
-	case "ScalingReplicas":
-		var readers []string
-		json.Unmarshal([]byte(op.Status.StateData["readers"]), &readers)
-
-		for _, reader := range readers {
-			_, err := docdbClient.ModifyDBInstance(ctx, &docdb.ModifyDBInstanceInput{
-				DBInstanceIdentifier: aws.String(reader),
-				DBInstanceClass:      aws.String(params.InstanceClass),
-				ApplyImmediately:     aws.Bool(true),
-			}, opts)
-			if err != nil {
-				logger.Error(err, "Failed to modify reader", "reader", reader)
-				return ctrl.Result{}, false, err
-			}
-		}
-		op.Status.Phase = "WaitReplicas"
-		return ctrl.Result{RequeueAfter: 30 * time.Second}, false, nil
-
-	case "WaitReplicas":
-		var readers []string
-		json.Unmarshal([]byte(op.Status.StateData["readers"]), &readers)
-
-		allAvailable := true
-		for _, reader := range readers {
-			desc, err := docdbClient.DescribeDBInstances(ctx, &docdb.DescribeDBInstancesInput{
-				DBInstanceIdentifier: aws.String(reader),
-			}, opts)
-			if err != nil {
-				return ctrl.Result{}, false, err
-			}
-			if len(desc.DBInstances) == 0 || *desc.DBInstances[0].DBInstanceStatus != "available" {
-				allAvailable = false
-				break
-			}
-			if *desc.DBInstances[0].DBInstanceClass != params.InstanceClass {
-				allAvailable = false
-				break
-			}
-		}
-
-		if allAvailable {
-			logger.Info("All replicas scaled and available. Proceeding to failover.")
-			op.Status.Phase = "PerformingFailover"
-			return ctrl.Result{Requeue: true}, false, nil
-		}
-
-		logger.Info("Waiting for replicas to scale and become available...")
-		return ctrl.Result{RequeueAfter: 1 * time.Minute}, false, nil
-
-	case "PerformingFailover":
-		_, err := docdbClient.FailoverDBCluster(ctx, &docdb.FailoverDBClusterInput{
-			DBClusterIdentifier: &clusterInfo.Identifier,
-		}, opts)
-		if err != nil {
-			logger.Error(err, "Failover failed")
-			return ctrl.Result{}, false, err
-		}
-
-		op.Status.Phase = "WaitWriterFailover"
-		return ctrl.Result{RequeueAfter: 30 * time.Second}, false, nil
-
-	case "WaitWriterFailover":
-		writer := op.Status.StateData["writer"]
-
-		desc, err := docdbClient.DescribeDBClusters(ctx, &docdb.DescribeDBClustersInput{
-			DBClusterIdentifier: &clusterInfo.Identifier,
-		}, opts)
-		if err != nil {
-			return ctrl.Result{}, false, err
-		}
-
-		if len(desc.DBClusters) > 0 {
-			for _, member := range desc.DBClusters[0].DBClusterMembers {
-				if *member.DBInstanceIdentifier == writer {
-					if member.IsClusterWriter != nil && *member.IsClusterWriter == false {
-						logger.Info("Failover successful.")
-						op.Status.Phase = "ScalingWriter"
-						return ctrl.Result{Requeue: true}, false, nil
-					}
-					break
-				}
-			}
-		}
-
-		logger.Info("Waiting for failover to complete...")
-		return ctrl.Result{RequeueAfter: 30 * time.Second}, false, nil
-
-	case "ScalingWriter":
-		writer := op.Status.StateData["writer"]
-		_, err := docdbClient.ModifyDBInstance(ctx, &docdb.ModifyDBInstanceInput{
-			DBInstanceIdentifier: aws.String(writer),
-			DBInstanceClass:      aws.String(params.InstanceClass),
-			ApplyImmediately:     aws.Bool(true),
-		}, opts)
-
-		if err != nil {
-			logger.Error(err, "Failed to modify original writer instance", "writer", writer)
-			return ctrl.Result{}, false, err
-		}
-
-		op.Status.Phase = "WaitOldWriter"
-		return ctrl.Result{RequeueAfter: 30 * time.Second}, false, nil
-
-	case "WaitOldWriter":
-		writer := op.Status.StateData["writer"]
-		desc, err := docdbClient.DescribeDBInstances(ctx, &docdb.DescribeDBInstancesInput{
-			DBInstanceIdentifier: aws.String(writer),
-		}, opts)
-		if err != nil {
-			return ctrl.Result{}, false, err
-		}
-		if len(desc.DBInstances) > 0 && *desc.DBInstances[0].DBInstanceStatus == "available" {
-			if *desc.DBInstances[0].DBInstanceClass == params.InstanceClass {
-				logger.Info("Old writer successfully scaled.")
-				op.Status.Phase = "Completed"
-				return ctrl.Result{}, true, nil // Done
-			}
-		}
-
-		logger.Info("Waiting for old writer to scale...")
-		return ctrl.Result{RequeueAfter: 1 * time.Minute}, false, nil
-
-	case "Completed":
-		return ctrl.Result{}, true, nil
-	}
-
-	return ctrl.Result{}, true, fmt.Errorf("unknown phase %s", op.Status.Phase)
+	return genericHandler.Execute(ctx, logger, op, clusterInfo.Identifier)
 }
