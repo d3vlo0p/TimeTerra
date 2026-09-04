@@ -19,10 +19,10 @@ package controller
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -62,37 +62,35 @@ func (r *ScheduleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		instance.Status.Conditions = make([]metav1.Condition, 0)
 	}
 
-	// Check periods
-	update := false
+	// Validate periods
+	hasInvalidPeriod := false
 	if len(instance.Spec.ActivePeriods) > 0 {
-		for i, period := range instance.Spec.ActivePeriods {
+		for _, period := range instance.Spec.ActivePeriods {
 			if period.Start.After(period.End.Time) {
-				logger.Info("Start date is after end date, switching them")
-				instance.Spec.ActivePeriods[i].End = period.Start
-				instance.Spec.ActivePeriods[i].Start = period.End
-				update = true
+				logger.Info("Start date is after end date in active period", "start", period.Start, "end", period.End)
+				r.Recorder.Eventf(instance, corev1.EventTypeWarning, "InvalidPeriod", "Start date %s is after end date %s in ActivePeriods", period.Start.String(), period.End.String())
+				hasInvalidPeriod = true
 			}
 		}
 	}
 	if len(instance.Spec.InactivePeriods) > 0 {
-		for i, period := range instance.Spec.InactivePeriods {
+		for _, period := range instance.Spec.InactivePeriods {
 			if period.Start.After(period.End.Time) {
-				logger.Info("Start date is after end date, switching them")
-				instance.Spec.InactivePeriods[i].End = period.Start
-				instance.Spec.InactivePeriods[i].Start = period.End
-				update = true
+				logger.Info("Start date is after end date in inactive period", "start", period.Start, "end", period.End)
+				r.Recorder.Eventf(instance, corev1.EventTypeWarning, "InvalidPeriod", "Start date %s is after end date %s in InactivePeriods", period.Start.String(), period.End.String())
+				hasInvalidPeriod = true
 			}
 		}
 	}
-	if update {
-		err = r.Update(ctx, instance)
-		if err != nil {
-			r.Recorder.Eventf(instance, corev1.EventTypeWarning, "ReconcileError", "Reconcile error: %s", err.Error())
-			logger.Info("Failed to update Schedule resource. Re-running reconcile")
-			return ctrl.Result{}, err
-		}
-		// return and trigger another reconcile for the update
-		return ctrl.Result{}, nil
+	if hasInvalidPeriod {
+		addToConditions(&instance.Status.Conditions, metav1.Condition{
+			LastTransitionTime: metav1.Now(),
+			Type:               "Ready",
+			Status:             metav1.ConditionFalse,
+			Reason:             "InvalidPeriod",
+			Message:            "Start date must be before end date in periods",
+		})
+		return ctrl.Result{}, r.Status().Update(ctx, instance)
 	}
 
 	err = r.reconcile(ctx, instance)
@@ -153,6 +151,13 @@ func (r *ScheduleReconciler) reconcile(ctx context.Context, instance *v1alpha1.S
 	removeMissingActionFromConditions(&instance.Status.Conditions, specActions)
 
 	if ret {
+		addToConditions(&instance.Status.Conditions, metav1.Condition{
+			LastTransitionTime: metav1.Now(),
+			Type:               "Ready",
+			Status:             metav1.ConditionFalse,
+			Reason:             "InvalidCronExpression",
+			Message:            "One or more action cron expressions are invalid",
+		})
 		return nil
 	}
 
@@ -203,24 +208,26 @@ func (r *ScheduleReconciler) reconcile(ctx context.Context, instance *v1alpha1.S
 }
 
 func removeMissingActionFromConditions(conditions *[]metav1.Condition, actions []string) {
-	// remove from orphanedConditions all current action, so will remain only conditions without actions
-	orphanedConditions := *conditions
+	if conditions == nil || len(*conditions) == 0 {
+		return
+	}
+	activeActionTypes := make(map[string]bool, len(actions))
 	for _, action := range actions {
-		cond := meta.FindStatusCondition(orphanedConditions, conditionTypeForAction(action))
-		if cond != nil {
-			// find cond inside orphanedConditions and remove it
-			for _, c := range orphanedConditions {
-				if c.Type == cond.Type {
-					removeFromConditions(&orphanedConditions, c.Type)
-					break
-				}
+		activeActionTypes[conditionTypeForAction(action)] = true
+	}
+	filtered := make([]metav1.Condition, 0, len(*conditions))
+	for _, c := range *conditions {
+		// Only consider Action- prefixed conditions for pruning
+		if strings.HasPrefix(c.Type, "Action-") {
+			if activeActionTypes[c.Type] {
+				filtered = append(filtered, c)
 			}
+		} else {
+			// Keep non-action conditions like "Ready"
+			filtered = append(filtered, c)
 		}
 	}
-	// remove orphaned conditions
-	for _, c := range orphanedConditions {
-		removeFromConditions(conditions, c.Type)
-	}
+	*conditions = filtered
 }
 
 // SetupWithManager sets up the controller with the Manager.

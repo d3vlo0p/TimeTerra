@@ -196,7 +196,9 @@ func (r *AwsEc2InstanceReconciler) startStopInstances(ctx context.Context, logge
 			Reason:             "Failed",
 			Message:            strings.Join(errorsList, ";"),
 		})
-		r.Status().Update(ctx, obj)
+		if updateErr := r.Status().Update(ctx, obj); updateErr != nil {
+			logger.Error(updateErr, "failed to update status after failure")
+		}
 		metadata["error_list"] = errorsList
 		return JobResultFailure, metadata
 	}
@@ -208,7 +210,9 @@ func (r *AwsEc2InstanceReconciler) startStopInstances(ctx context.Context, logge
 		Reason:             "Active",
 		Message:            fmt.Sprintf("last execution started:%q ended:%q", start.Format(time.RFC3339), time.Now().Format(time.RFC3339)),
 	})
-	r.Status().Update(ctx, obj)
+	if updateErr := r.Status().Update(ctx, obj); updateErr != nil {
+		logger.Error(updateErr, "failed to update status after success")
+	}
 	return JobResultSuccess, metadata
 }
 

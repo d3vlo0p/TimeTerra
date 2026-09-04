@@ -26,7 +26,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -107,13 +106,27 @@ func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, logger logr.
 		metadata["error"] = fmt.Sprintf("Action %q not found in PodReplicas resource", actionName)
 		return JobResultError, metadata
 	}
-	selector := labels.SelectorFromSet(obj.Spec.LabelSelector.MatchLabels)
-	if len(obj.Spec.Namespaces) == 0 {
-		obj.Spec.Namespaces = []string{metav1.NamespaceAll}
+	selector, err := metav1.LabelSelectorAsSelector(&obj.Spec.LabelSelector)
+	if err != nil {
+		logger.Error(err, "Invalid label selector in PodReplicas resource")
+		metadata["error"] = err.Error()
+		return JobResultError, metadata
 	}
+
+	namespaces := obj.Spec.Namespaces
+	if len(namespaces) == 0 {
+		if selector.Empty() {
+			err := fmt.Errorf("refusing to target all namespaces with an empty label selector to prevent accidental cluster-wide mutation")
+			logger.Error(err, "Unsafe selector configuration")
+			metadata["error"] = err.Error()
+			return JobResultError, metadata
+		}
+		namespaces = []string{metav1.NamespaceAll}
+	}
+
 	actionType := conditionTypeForAction(actionName)
 	errorsList := make([]string, 0)
-	for _, namespace := range obj.Spec.Namespaces {
+	for _, namespace := range namespaces {
 		switch kind := obj.Spec.ResourceType; kind {
 		case v1alpha1.K8sDeployment:
 			// retrive Deployments with specified labels
@@ -186,7 +199,9 @@ func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, logger logr.
 			Reason:             "Failed",
 			Message:            strings.Join(errorsList, ";"),
 		})
-		r.Status().Update(ctx, obj)
+		if updateErr := r.Status().Update(ctx, obj); updateErr != nil {
+			logger.Error(updateErr, "failed to update status after failure")
+		}
 		metadata["error_list"] = errorsList
 		return JobResultFailure, metadata
 	}
@@ -198,7 +213,9 @@ func (r *K8sPodReplicasReconciler) setReplicas(ctx context.Context, logger logr.
 		Reason:             "Active",
 		Message:            fmt.Sprintf("last execution started:%q ended:%q", start.Format(time.RFC3339), time.Now().Format(time.RFC3339)),
 	})
-	r.Status().Update(ctx, obj)
+	if updateErr := r.Status().Update(ctx, obj); updateErr != nil {
+		logger.Error(updateErr, "failed to update status after success")
+	}
 	return JobResultSuccess, metadata
 }
 

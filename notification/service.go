@@ -24,35 +24,46 @@ type Recipient interface {
 }
 
 type NotificationService struct {
+	mu         sync.RWMutex
 	ch         chan NotificationBody
 	recipients map[string]map[string]Recipient
 	logger     logr.Logger
 	threads    uint
+	closed     bool
 }
 
 func NewNotificationService() *NotificationService {
 	return &NotificationService{
-		ch:      make(chan NotificationBody),
-		threads: 1,
+		ch:         make(chan NotificationBody, 256),
+		recipients: make(map[string]map[string]Recipient),
+		logger:     log.Log.WithName("notification"),
+		threads:    1,
 	}
 }
 
 func (s *NotificationService) RemoveRecipient(id string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if s.recipients == nil {
 		return
 	}
 	// remove recipient from all schedules
 	for scheduleName := range s.recipients {
 		s.logger.Info("Removing recipient", "id", id, "schedule", scheduleName)
-		if _, ok := s.recipients[scheduleName][id]; !ok {
+		recipient, ok := s.recipients[scheduleName][id]
+		if !ok {
 			continue
 		}
-		monitoring.TimeTerraNotificationPolicies.WithLabelValues(s.recipients[scheduleName][id].Type().String(), scheduleName).Dec()
+		monitoring.TimeTerraNotificationPolicies.WithLabelValues(recipient.Type().String(), scheduleName).Dec()
 		delete(s.recipients[scheduleName], id)
 	}
 }
 
 func (s *NotificationService) AddRecipientToSchedule(schedule string, id string, recipient Recipient) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if s.recipients == nil {
 		s.recipients = make(map[string]map[string]Recipient)
 	}
@@ -66,7 +77,19 @@ func (s *NotificationService) AddRecipientToSchedule(schedule string, id string,
 }
 
 func (s *NotificationService) Send(body NotificationBody) {
-	s.ch <- body
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if s.closed {
+		s.logger.Info("Notification service is stopped, dropping notification", "schedule", body.Schedule, "action", body.Action)
+		return
+	}
+
+	select {
+	case s.ch <- body:
+	default:
+		s.logger.Info("Notification channel is full, dropping notification to prevent blocking", "schedule", body.Schedule, "action", body.Action)
+	}
 }
 
 func (s *NotificationService) run(i uint, wg *sync.WaitGroup) {
@@ -78,10 +101,17 @@ func (s *NotificationService) run(i uint, wg *sync.WaitGroup) {
 		if !ok {
 			break
 		}
-		if _, ok := s.recipients[body.Schedule]; !ok {
-			continue
+
+		s.mu.RLock()
+		recipientsCopy := make(map[string]Recipient)
+		if schedRecipients, ok := s.recipients[body.Schedule]; ok {
+			for id, rec := range schedRecipients {
+				recipientsCopy[id] = rec
+			}
 		}
-		for id, recipient := range s.recipients[body.Schedule] {
+		s.mu.RUnlock()
+
+		for id, recipient := range recipientsCopy {
 			start := time.Now()
 			status := "success"
 			err := recipient.Notify(id, body)
@@ -110,7 +140,12 @@ func (s *NotificationService) Start(ctx context.Context) error {
 	go func() {
 		<-ctx.Done()
 		s.logger.Info("Closing notification service channel")
+
+		s.mu.Lock()
+		s.closed = true
 		close(s.ch)
+		s.mu.Unlock()
+
 		s.logger.Info("Waiting for notification service to stop")
 		// wait for notification service to stop
 		wg.Wait()

@@ -9,10 +9,24 @@ import (
 )
 
 func getAwsCredentialProviderFromSecret(secret *corev1.Secret, keysRef *v1alpha1.AwsCredentialsKeysRef) (*credentials.StaticCredentialsProvider, error) {
+	if secret == nil || secret.Data == nil {
+		return nil, fmt.Errorf("secret resource contains no data")
+	}
+
 	var kAccessKeyId, kSecretAccessKey, kSessionToken = "aws_access_key_id", "aws_secret_access_key", "aws_session_token"
 	// override default keys if specified
 	if keysRef != nil {
-		kAccessKeyId, kSecretAccessKey, kSessionToken = keysRef.AccessKey, keysRef.SecretKey, keysRef.SessionKey
+		if keysRef.AccessKey != "" {
+			kAccessKeyId = keysRef.AccessKey
+		}
+		if keysRef.SecretKey != "" {
+			kSecretAccessKey = keysRef.SecretKey
+		}
+		if keysRef.SessionKey != "" {
+			kSessionToken = keysRef.SessionKey
+		} else {
+			kSessionToken = ""
+		}
 	}
 
 	accessKeyIdBytes, ok := secret.Data[kAccessKeyId]
