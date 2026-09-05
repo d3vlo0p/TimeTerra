@@ -4,7 +4,8 @@
     "operator-sdk@1.42.1",
     "go@1.24.0",
     "go-task@latest",
-    "gnumake@latest"
+    "gnumake@latest",
+    "awscli2@latest"
   ],
   "shell": {
     "init_hook": [

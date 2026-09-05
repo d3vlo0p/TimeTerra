@@ -1,0 +1,150 @@
+version: '3'
+
+vars:
+  FLOCI_AWS_ENDPOINT: http://localhost:4566
+  AWS_DEFAULT_REGION: us-east-1
+
+tasks:
+  default:
+    desc: Show Floci status
+    cmds:
+      - task: status
+
+  # --- General Aliases (Default to AWS) ---
+
+  start:
+    desc: Start Floci emulator (defaults to AWS)
+    cmds:
+      - task: aws:start
+
+  stop:
+    desc: Stop Floci emulator (defaults to AWS)
+    cmds:
+      - task: aws:stop
+
+  restart:
+    desc: Restart Floci emulator (defaults to AWS)
+    cmds:
+      - task: aws:restart
+
+  status:
+    desc: Show Floci status (defaults to AWS)
+    cmds:
+      - task: aws:status
+
+  logs:
+    desc: Follow Floci logs (defaults to AWS)
+    cmds:
+      - task: aws:logs
+
+  seed:
+    desc: Seed mock cloud resources and K8s secrets (defaults to AWS)
+    cmds:
+      - task: aws:seed
+
+  deploy-examples:
+    desc: Deploy examples (defaults to AWS)
+    cmds:
+      - task: aws:deploy-examples
+
+  undeploy-examples:
+    desc: Undeploy examples (defaults to AWS)
+    cmds:
+      - task: aws:undeploy-examples
+
+  # --- AWS Tasks ---
+
+  aws:start:
+    desc: Start the Floci AWS emulator
+    cmds:
+      - floci start
+
+  aws:stop:
+    desc: Stop the Floci AWS emulator
+    cmds:
+      - floci stop
+
+  aws:restart:
+    desc: Restart the Floci AWS emulator
+    cmds:
+      - floci restart
+
+  aws:status:
+    desc: Check the health and status of Floci AWS emulator
+    cmds:
+      - floci status
+
+  aws:logs:
+    desc: View logs from Floci AWS emulator
+    cmds:
+      - floci logs --follow
+
+  aws:seed:
+    desc: Provision mock AWS resources (EC2, Transfer Family, RDS, DocDB) and deploy mock credentials secret
+    cmds:
+      - ./hack/floci/seed-aws.sh
+
+  aws:clean:
+    desc: Stop Floci AWS container and clear state
+    cmds:
+      - floci stop
+
+  aws:deploy-examples:
+    desc: Deploy AWS examples with dynamic host IP endpoint via Kustomize
+    vars:
+      HOST_IP:
+        sh: echo "${HOST_IP:-$(ip route get 1.1.1.1 2>/dev/null | awk '{print $7; exit}' || hostname -I | awk '{print $1}')}"
+    cmds:
+      - kubectl kustomize examples/aws | sed "s|http://localhost:4566|http://{{.HOST_IP}}:4566|g" | kubectl apply --server-side -f -
+
+  aws:undeploy-examples:
+    desc: Undeploy AWS examples via Kustomize
+    cmds:
+      - kubectl delete -k examples/aws
+
+  # --- Multi-Cloud Placeholders (For Future Integrations) ---
+
+  gcp:start:
+    desc: Start the Floci GCP emulator
+    cmds:
+      - floci gcp start
+
+  gcp:stop:
+    desc: Stop the Floci GCP emulator
+    cmds:
+      - floci gcp stop
+
+  gcp:status:
+    desc: Check status of Floci GCP emulator
+    cmds:
+      - floci gcp status
+
+  az:start:
+    desc: Start the Floci Azure emulator
+    cmds:
+      - floci az start
+
+  az:stop:
+    desc: Stop the Floci Azure emulator
+    cmds:
+      - floci az stop
+
+  az:status:
+    desc: Check status of Floci Azure emulator
+    cmds:
+      - floci az status
+
+  oci:start:
+    desc: Start the Floci OCI emulator
+    cmds:
+      - floci oci start
+
+  oci:stop:
+    desc: Stop the Floci OCI emulator
+    cmds:
+      - floci oci stop
+
+  oci:status:
+    desc: Check status of Floci OCI emulator
+    cmds:
+      - floci oci status

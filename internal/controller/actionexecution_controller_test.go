@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -58,14 +59,13 @@ var _ = Describe("ActionExecution Controller", func() {
 		})
 
 		AfterEach(func() {
-			// TODO(user): Cleanup logic after each test, like removing the resource instance.
 			resource := &timeterrav1alpha1.ActionExecution{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
-			Expect(err).NotTo(HaveOccurred())
-
-			By("Cleanup the specific resource instance ActionExecution")
-			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
+			if err == nil {
+				_ = k8sClient.Delete(ctx, resource)
+			}
 		})
+
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
 			controllerReconciler := &ActionExecutionReconciler{
@@ -79,8 +79,29 @@ var _ = Describe("ActionExecution Controller", func() {
 				NamespacedName: typeNamespacedName,
 			})
 			Expect(err).NotTo(HaveOccurred())
-			// TODO(user): Add more specific assertions depending on your controller's reconciliation logic.
-			// Example: If you expect a certain status condition after reconciliation, verify it here.
+		})
+
+		It("should timeout and delete the resource when ActionTimeout is exceeded", func() {
+			By("Reconciling with an expired timeout")
+			controllerReconciler := &ActionExecutionReconciler{
+				BaseReconciler: BaseReconciler{
+					Client: k8sClient,
+					Scheme: k8sClient.Scheme(),
+				},
+				ActionTimeout: 1 * time.Nanosecond,
+			}
+
+			time.Sleep(10 * time.Millisecond)
+
+			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: typeNamespacedName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// The resource should have been deleted due to timeout
+			deletedOp := &timeterrav1alpha1.ActionExecution{}
+			err = k8sClient.Get(ctx, typeNamespacedName, deletedOp)
+			Expect(errors.IsNotFound(err)).To(BeTrue())
 		})
 	})
 })

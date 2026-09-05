@@ -58,6 +58,12 @@ func (h *GenericScaleHandler) Execute(ctx context.Context, logger logr.Logger, o
 			return ctrl.Result{}, false, err // retry later
 		}
 
+		if writer == "" {
+			err := fmt.Errorf("no writer instance found for cluster %s", identifier)
+			logger.Error(err, "Cluster has no writer instance")
+			return ctrl.Result{}, false, err
+		}
+
 		op.Status.StateData["writer"] = writer
 		readersJson, _ := json.Marshal(readers)
 		op.Status.StateData["readers"] = string(readersJson)
@@ -114,6 +120,13 @@ func (h *GenericScaleHandler) Execute(ctx context.Context, logger logr.Logger, o
 
 	case "WaitWriterFailover":
 		writer := op.Status.StateData["writer"]
+		if writer == "" {
+			discoveredWriter, _, err := h.Manager.DescribeCluster(ctx, identifier)
+			if err == nil && discoveredWriter != "" {
+				writer = discoveredWriter
+				op.Status.StateData["writer"] = writer
+			}
+		}
 
 		currentWriter, _, err := h.Manager.DescribeCluster(ctx, identifier)
 		if err != nil {
@@ -131,6 +144,18 @@ func (h *GenericScaleHandler) Execute(ctx context.Context, logger logr.Logger, o
 
 	case "ScalingWriter":
 		writer := op.Status.StateData["writer"]
+		if writer == "" {
+			logger.Info("Writer identifier missing in stateData, rediscovering from cluster...")
+			discoveredWriter, _, err := h.Manager.DescribeCluster(ctx, identifier)
+			if err != nil || discoveredWriter == "" {
+				err := fmt.Errorf("writer instance is empty and could not be rediscovered for cluster %s", identifier)
+				logger.Error(err, "Cannot scale writer with empty identifier")
+				return ctrl.Result{}, false, err
+			}
+			writer = discoveredWriter
+			op.Status.StateData["writer"] = writer
+		}
+
 		err := h.Manager.ModifyInstance(ctx, writer, params.InstanceClass)
 		if err != nil {
 			logger.Error(err, "Failed to modify original writer instance", "writer", writer)
@@ -142,6 +167,14 @@ func (h *GenericScaleHandler) Execute(ctx context.Context, logger logr.Logger, o
 
 	case "WaitOldWriter":
 		writer := op.Status.StateData["writer"]
+		if writer == "" {
+			discoveredWriter, _, err := h.Manager.DescribeCluster(ctx, identifier)
+			if err == nil && discoveredWriter != "" {
+				writer = discoveredWriter
+				op.Status.StateData["writer"] = writer
+			}
+		}
+
 		allAvailable, err := h.Manager.CheckInstancesAvailable(ctx, []string{writer}, params.InstanceClass)
 		if err != nil {
 			return ctrl.Result{}, false, err

@@ -4,6 +4,7 @@ includes:
   op: ./Taskfile.operator.yml
   chart: ./Taskfile.chart.yml
   dagger: ./Taskfile.dagger.yml
+  floci: ./Taskfile.floci.yml
 
 vars:
   PLATFORMS: linux/amd64

@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/docdb"
+	docdbtypes "github.com/aws/aws-sdk-go-v2/service/docdb/types"
 	v1alpha1 "github.com/d3vlo0p/TimeTerra/api/v1alpha1"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -42,17 +43,68 @@ func (m *docdbClusterManager) DescribeCluster(ctx context.Context, identifier st
 		return "", nil, fmt.Errorf("cluster not found in AWS")
 	}
 
-	cluster := descResp.DBClusters[0]
+	var cluster *docdbtypes.DBCluster
+	for i := range descResp.DBClusters {
+		if descResp.DBClusters[i].DBClusterIdentifier != nil && *descResp.DBClusters[i].DBClusterIdentifier == identifier {
+			cluster = &descResp.DBClusters[i]
+			break
+		}
+	}
+	if cluster == nil {
+		cluster = &descResp.DBClusters[0]
+	}
+
 	var writer string
 	var readers []string
 
 	for _, member := range cluster.DBClusterMembers {
+		if member.DBInstanceIdentifier == nil {
+			continue
+		}
 		if member.IsClusterWriter != nil && *member.IsClusterWriter {
 			writer = *member.DBInstanceIdentifier
 		} else {
 			readers = append(readers, *member.DBInstanceIdentifier)
 		}
 	}
+
+	// Fallback 1: If single instance cluster, treat that instance as writer
+	if writer == "" && len(cluster.DBClusterMembers) == 1 && cluster.DBClusterMembers[0].DBInstanceIdentifier != nil {
+		writer = *cluster.DBClusterMembers[0].DBInstanceIdentifier
+		readers = nil
+	}
+
+	// Fallback 2: If no DBClusterMembers, look up instances by cluster identifier filter
+	if writer == "" && len(cluster.DBClusterMembers) == 0 {
+		instResp, err := m.client.DescribeDBInstances(ctx, &docdb.DescribeDBInstancesInput{
+			Filters: []docdbtypes.Filter{
+				{
+					Name:   aws.String("db-cluster-id"),
+					Values: []string{identifier},
+				},
+			},
+		}, m.opts)
+		if err == nil && len(instResp.DBInstances) > 0 {
+			for _, inst := range instResp.DBInstances {
+				if inst.DBInstanceIdentifier == nil {
+					continue
+				}
+				if inst.DBClusterIdentifier == nil || *inst.DBClusterIdentifier != identifier {
+					continue
+				}
+				if writer == "" {
+					writer = *inst.DBInstanceIdentifier
+				} else {
+					readers = append(readers, *inst.DBInstanceIdentifier)
+				}
+			}
+		}
+	}
+
+	if writer == "" {
+		return "", nil, fmt.Errorf("no writer instance found for cluster %s", identifier)
+	}
+
 	return writer, readers, nil
 }
 

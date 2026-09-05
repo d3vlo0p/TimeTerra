@@ -18,12 +18,16 @@ package controller
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"time"
 
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/go-logr/logr"
@@ -34,15 +38,18 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+var ErrActionTimeout = errors.New("action execution timed out")
+
 // ActionExecutionReconciler reconciles a ActionExecution object
 type ActionExecutionReconciler struct {
 	BaseReconciler
 	OperatorNamespace string
+	ActionTimeout     time.Duration
 }
 
-// +kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=actionexecutions,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=actionexecutions/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=actionexecutions/finalizers,verbs=update
+//+kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=actionexecutions,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=actionexecutions/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=actionexecutions/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -59,10 +66,32 @@ func (r *ActionExecutionReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	op := &timeterrav1alpha1.ActionExecution{}
 	err := r.Get(ctx, req.NamespacedName, op)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
+	}
+
+	// Ignore resources that are already being deleted
+	if !op.DeletionTimestamp.IsZero() {
+		return ctrl.Result{}, nil
+	}
+
+	// Check if action execution has timed out
+	timeout := r.ActionTimeout
+	if timeout <= 0 {
+		timeout = 30 * time.Minute
+	}
+	if !op.CreationTimestamp.IsZero() && time.Since(op.CreationTimestamp.Time) > timeout {
+		timeoutErr := fmt.Errorf("%w after %v in phase %s", ErrActionTimeout, timeout, op.Status.Phase)
+		logger.Info("ActionExecution timed out, finalizing and deleting", "timeout", timeout, "phase", op.Status.Phase)
+		op.Status.Phase = "Timeout"
+		r.finalizeAction(ctx, logger, op, timeoutErr)
+		if delErr := client.IgnoreNotFound(r.Delete(ctx, op)); delErr != nil {
+			logger.Error(delErr, "Failed to delete timed out ActionExecution")
+			return ctrl.Result{}, delErr
+		}
+		return ctrl.Result{}, nil
 	}
 
 	var result ctrl.Result
@@ -89,18 +118,21 @@ func (r *ActionExecutionReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, nil // Ignore
 	}
 
-	if err := r.Status().Update(ctx, op); err != nil {
-		logger.Error(err, "Failed to update ActionExecution status")
-		return ctrl.Result{}, err
-	}
-
 	if done {
 		r.finalizeAction(ctx, logger, op, handlerErr)
-		if err := r.Delete(ctx, op); err != nil {
+		if err := client.IgnoreNotFound(r.Delete(ctx, op)); err != nil {
 			logger.Error(err, "Failed to delete ActionExecution")
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
+	}
+
+	if err := r.Status().Update(ctx, op); err != nil {
+		if apierrors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
+		logger.Error(err, "Failed to update ActionExecution status")
+		return ctrl.Result{}, err
 	}
 
 	return result, handlerErr
@@ -109,7 +141,11 @@ func (r *ActionExecutionReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 func (r *ActionExecutionReconciler) finalizeAction(ctx context.Context, logger logr.Logger, op *timeterrav1alpha1.ActionExecution, handlerErr error) {
 	statusStr := "Success"
 	if handlerErr != nil {
-		statusStr = "Error"
+		if errors.Is(handlerErr, ErrActionTimeout) {
+			statusStr = "Timeout"
+		} else {
+			statusStr = "Error"
+		}
 	}
 
 	metadata := map[string]interface{}{
@@ -120,77 +156,71 @@ func (r *ActionExecutionReconciler) finalizeAction(ctx context.Context, logger l
 	}
 
 	// 1. Notify
-	r.NotificationService.Send(notification.NotificationBody{
-		Schedule: op.Spec.ActionName, // For ActionExecution, ActionName usually holds the schedule/trigger name context
-		Action:   op.Spec.ActionType,
-		Resource: op.Spec.TargetResource.Name,
-		Status:   statusStr,
-		Metadata: metadata,
-	})
+	if r.NotificationService != nil {
+		r.NotificationService.Send(notification.NotificationBody{
+			Schedule: op.Spec.ActionName, // For ActionExecution, ActionName usually holds the schedule/trigger name context
+			Action:   op.Spec.ActionType,
+			Resource: op.Spec.TargetResource.Name,
+			Status:   statusStr,
+			Metadata: metadata,
+		})
+	}
 
 	// 2. Bubble up to target resource
+	var target client.Object
+	var conditions *[]metav1.Condition
+
 	switch op.Spec.TargetResource.Kind {
 	case "AwsRdsAuroraCluster":
-		target := &timeterrav1alpha1.AwsRdsAuroraCluster{}
-		err := r.Get(ctx, types.NamespacedName{Name: op.Spec.TargetResource.Name, Namespace: op.Spec.TargetResource.Namespace}, target)
+		auroraTarget := &timeterrav1alpha1.AwsRdsAuroraCluster{}
+		err := r.Get(ctx, types.NamespacedName{Name: op.Spec.TargetResource.Name, Namespace: op.Spec.TargetResource.Namespace}, auroraTarget)
 		if err == nil {
-			condType := "Action" + op.Spec.ActionType
-			reason := "Active"
-			status := metav1.ConditionTrue
-			msg := "Action execution completed successfully"
-
-			if handlerErr != nil {
-				reason = "Failed"
-				status = metav1.ConditionFalse
-				msg = handlerErr.Error()
-			}
-
-			meta.SetStatusCondition(&target.Status.Conditions, metav1.Condition{
-				Type:               condType,
-				Status:             status,
-				Reason:             reason,
-				Message:            msg,
-				LastTransitionTime: metav1.Now(),
-			})
-			if updateErr := r.Status().Update(ctx, target); updateErr != nil {
-				logger.Error(updateErr, "Failed to bubble up conditions to parent resource")
-			} else {
-				// Emit K8s event on the parent
-				r.Recorder.Event(target, corev1.EventTypeNormal, reason, msg)
-			}
+			target = auroraTarget
+			conditions = &auroraTarget.Status.Conditions
 		} else {
 			logger.Error(err, "Failed to get target resource for finalization")
 		}
 	case "AwsDocumentDBCluster":
-		target := &timeterrav1alpha1.AwsDocumentDBCluster{}
-		err := r.Get(ctx, types.NamespacedName{Name: op.Spec.TargetResource.Name, Namespace: op.Spec.TargetResource.Namespace}, target)
+		docdbTarget := &timeterrav1alpha1.AwsDocumentDBCluster{}
+		err := r.Get(ctx, types.NamespacedName{Name: op.Spec.TargetResource.Name, Namespace: op.Spec.TargetResource.Namespace}, docdbTarget)
 		if err == nil {
-			condType := "Action" + op.Spec.ActionType
-			reason := "Active"
-			status := metav1.ConditionTrue
-			msg := "Action execution completed successfully"
-
-			if handlerErr != nil {
-				reason = "Failed"
-				status = metav1.ConditionFalse
-				msg = handlerErr.Error()
-			}
-
-			meta.SetStatusCondition(&target.Status.Conditions, metav1.Condition{
-				Type:               condType,
-				Status:             status,
-				Reason:             reason,
-				Message:            msg,
-				LastTransitionTime: metav1.Now(),
-			})
-			if updateErr := r.Status().Update(ctx, target); updateErr != nil {
-				logger.Error(updateErr, "Failed to bubble up conditions to parent resource")
-			} else {
-				// Emit K8s event on the parent
-				r.Recorder.Event(target, corev1.EventTypeNormal, reason, msg)
-			}
+			target = docdbTarget
+			conditions = &docdbTarget.Status.Conditions
 		} else {
 			logger.Error(err, "Failed to get target resource for finalization")
+		}
+	}
+
+	if target != nil && conditions != nil {
+		condType := "Action" + op.Spec.ActionType
+		reason := "Active"
+		status := metav1.ConditionTrue
+		msg := "Action execution completed successfully"
+		eventType := corev1.EventTypeNormal
+
+		if handlerErr != nil {
+			status = metav1.ConditionFalse
+			msg = handlerErr.Error()
+			eventType = corev1.EventTypeWarning
+			if errors.Is(handlerErr, ErrActionTimeout) {
+				reason = "Timeout"
+			} else {
+				reason = "Failed"
+			}
+		}
+
+		meta.SetStatusCondition(conditions, metav1.Condition{
+			Type:               condType,
+			Status:             status,
+			Reason:             reason,
+			Message:            msg,
+			LastTransitionTime: metav1.Now(),
+		})
+		if updateErr := r.Status().Update(ctx, target); updateErr != nil {
+			logger.Error(updateErr, "Failed to bubble up conditions to parent resource")
+		} else if r.Recorder != nil {
+			// Emit K8s event on the parent
+			r.Recorder.Event(target, eventType, reason, msg)
 		}
 	}
 }
