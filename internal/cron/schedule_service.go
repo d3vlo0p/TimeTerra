@@ -12,7 +12,7 @@ import (
 )
 
 type ScheduleService struct {
-	mu     sync.RWMutex
+	mu sync.RWMutex
 	// map of schedule => map of action => map of resource => list of cron ids
 	m      map[string]map[string]map[string]int
 	c      *cron.Cron

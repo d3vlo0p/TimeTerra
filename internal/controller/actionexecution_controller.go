@@ -40,9 +40,9 @@ type ActionExecutionReconciler struct {
 	OperatorNamespace string
 }
 
-// +kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=actionexecutions,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=actionexecutions/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=actionexecutions/finalizers,verbs=update
+//+kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=actionexecutions,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=actionexecutions/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=timeterra.d3vlo0p.dev,resources=actionexecutions/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
