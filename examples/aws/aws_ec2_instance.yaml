@@ -1,0 +1,43 @@
+# Complete example for testing AwsEc2Instance with Floci local cloud emulator.
+# It creates:
+# 1. A Schedule defining recurring cron times for 'stop' and 'start'
+# 2. An AwsEc2Instance CR pointing to Floci (http://localhost:4566)
+#
+# Note: The instance ID below matches the one created by 'task floci:seed'
+# or can be retrieved with: aws --endpoint-url http://localhost:4566 ec2 describe-instances
+
+apiVersion: timeterra.d3vlo0p.dev/v1alpha1
+kind: Schedule
+metadata:
+  name: ec2-schedule
+  namespace: timeterra
+spec:
+  enabled: true
+  actions:
+    # Stop every 4 minutes (e.g., at minute 0, 4, 8...)
+    stop:
+      cron: "0/4 * * * *"
+    # Start 2 minutes after stop (e.g., at minute 2, 6, 10...)
+    start:
+      cron: "2/4 * * * *"
+---
+apiVersion: timeterra.d3vlo0p.dev/v1alpha1
+kind: AwsEc2Instance
+metadata:
+  name: demo-ec2-instance
+  namespace: timeterra
+spec:
+  enabled: true
+  schedule: ec2-schedule
+  serviceEndpoint: "http://localhost:4566"
+  credentials:
+    secretName: aws-credentials
+    namespace: timeterra
+  instances:
+    - id: i-9c7ed8d479ed95ced
+      region: us-east-1
+  actions:
+    stop:
+      command: stop
+    start:
+      command: start

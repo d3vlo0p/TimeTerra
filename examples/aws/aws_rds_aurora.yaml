@@ -1,0 +1,42 @@
+# Complete example for testing AwsRdsAuroraCluster with Floci local cloud emulator.
+# It creates:
+# 1. A Schedule defining recurring cron times for 'scale-up' and 'scale-down'
+# 2. An AwsRdsAuroraCluster CR pointing to Floci (http://localhost:4566)
+#
+# Note: The cluster identifier 'timeterra-demo-aurora' matches the one created by 'task floci:seed'
+
+apiVersion: timeterra.d3vlo0p.dev/v1alpha1
+kind: Schedule
+metadata:
+  name: aurora-schedule
+  namespace: timeterra
+spec:
+  enabled: true
+  actions:
+    scale-up:
+      cron: "0/4 * * * *"
+    scale-down:
+      cron: "2/4 * * * *"
+---
+apiVersion: timeterra.d3vlo0p.dev/v1alpha1
+kind: AwsRdsAuroraCluster
+metadata:
+  name: demo-aurora-cluster
+  namespace: timeterra
+spec:
+  enabled: true
+  schedule: aurora-schedule
+  serviceEndpoint: "http://localhost:4566"
+  credentials:
+    secretName: aws-credentials
+    namespace: timeterra
+  dbClusterIdentifiers:
+    - identifier: timeterra-demo-aurora
+      region: us-east-1
+  actions:
+    scale-up:
+      command: scale
+      instanceClass: "db.r5.xlarge"
+    scale-down:
+      command: scale
+      instanceClass: "db.r5.large"
