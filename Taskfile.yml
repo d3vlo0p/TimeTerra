@@ -34,13 +34,17 @@ tasks:
 
   deploy-examples:
     cmds:
-      - kubectl create deployment hello-k8s --image=nginx:alpine --replicas=2
-      - kubectl apply --server-side -f examples/simple_pod_replicas.yaml
+      - kubectl apply --server-side -f examples/k8s_deployment_replicas.yaml
+      - kubectl apply --server-side -f examples/k8s_hpa_scaling.yaml
+      - kubectl apply --server-side -f examples/k8s_run_job.yaml
+      - kubectl apply --server-side -f examples/k8s_statefulset_replicas.yaml
 
   undeploy-examples:
     cmds:
-      - kubectl delete -f examples/simple_pod_replicas.yaml
-      - kubectl delete deployment hello-k8s
+      - kubectl delete -f examples/k8s_deployment_replicas.yaml
+      - kubectl delete -f examples/k8s_hpa_scaling.yaml
+      - kubectl delete -f examples/k8s_run_job.yaml
+      - kubectl delete -f examples/k8s_statefulset_replicas.yaml
 
   publish-release:
     vars:

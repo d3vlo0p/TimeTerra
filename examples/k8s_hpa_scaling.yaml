@@ -1,0 +1,91 @@
+# Complete end-to-end example for testing K8sHpa (HorizontalPodAutoscaler scaling).
+# It creates:
+# 1. A Deployment with resource requests (demo-hpa-app)
+# 2. A HorizontalPodAutoscaler (demo-hpa) targeting the deployment
+# 3. A Schedule defining triggers for 'peak-hours' and 'off-peak'
+# 4. A K8sHpa CR that updates minReplicas and maxReplicas according to the schedule
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-hpa-app
+  namespace: default
+  labels:
+    app.kubernetes.io/name: demo-hpa-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: demo-hpa-app
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: demo-hpa-app
+    spec:
+      containers:
+        - name: web
+          image: nginx:alpine
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: demo-hpa
+  namespace: default
+  labels:
+    app.kubernetes.io/name: demo-hpa-target
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: demo-hpa-app
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: timeterra.d3vlo0p.dev/v1alpha1
+kind: Schedule
+metadata:
+  name: demo-hpa-schedule
+spec:
+  enabled: true
+  actions:
+    # Rapid schedule for testing: peak every 4 mins, off-peak every 4 mins offset by 2
+    # In production, this might be: '0 8 * * 1-5' (08:00 on weekdays)
+    peak-hours:
+      cron: "0/4 * * * *"
+    # In production, this might be: '0 19 * * 1-5' (19:00 on weekdays)
+    off-peak:
+      cron: "2/4 * * * *"
+---
+apiVersion: timeterra.d3vlo0p.dev/v1alpha1
+kind: K8sHpa
+metadata:
+  name: demo-hpa-scaler
+spec:
+  enabled: true
+  namespaces:
+    - default
+  labelSelector:
+    matchLabels:
+      app.kubernetes.io/name: demo-hpa-target
+  schedule: demo-hpa-schedule
+  actions:
+    peak-hours:
+      minReplicas: 3
+      maxReplicas: 10
+    off-peak:
+      minReplicas: 1
+      maxReplicas: 4
