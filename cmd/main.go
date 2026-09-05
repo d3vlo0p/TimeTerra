@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/d3vlo0p/TimeTerra/internal/cron"
 	"github.com/d3vlo0p/TimeTerra/internal/feature"
@@ -93,6 +94,23 @@ func getWatchNamespace() (string, error) {
 		return "", fmt.Errorf("%s not found", watchNamespaceEnvVar)
 	}
 	return ns, nil
+}
+
+// getActionExecutionTimeout returns the timeout for action executions, defaulting to 30 minutes
+func getActionExecutionTimeout() time.Duration {
+	const defaultTimeout = 30 * time.Minute
+	var actionExecutionTimeoutEnvVar = "ACTION_EXECUTION_TIMEOUT"
+
+	val, found := os.LookupEnv(actionExecutionTimeoutEnvVar)
+	if !found || val == "" {
+		return defaultTimeout
+	}
+	d, err := time.ParseDuration(val)
+	if err != nil {
+		setupLog.Error(err, "invalid ACTION_EXECUTION_TIMEOUT format, using default", "default", defaultTimeout)
+		return defaultTimeout
+	}
+	return d
 }
 
 func main() {
@@ -454,6 +472,7 @@ func main() {
 			Recorder:            mgr.GetEventRecorderFor("actionexecution-controller"),
 		},
 		OperatorNamespace: operatorNamespace,
+		ActionTimeout:     getActionExecutionTimeout(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ActionExecution")
 		os.Exit(1)

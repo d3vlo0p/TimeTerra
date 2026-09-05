@@ -46,6 +46,10 @@ spec:
             - name: NAMESPACE
               value: {{ .Release.Namespace }}
             {{- include "timeterra.settings.watchNamespaces" . | nindent 12 }}
+            {{- if and .Values.settings .Values.settings.actionExecutionTimeout }}
+            - name: ACTION_EXECUTION_TIMEOUT
+              value: {{ .Values.settings.actionExecutionTimeout | quote }}
+            {{- end }}
           {{- with .Values.env }}
             {{- toYaml .Values.env | nindent 12 }}
           {{- end }}

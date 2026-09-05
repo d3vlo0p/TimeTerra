@@ -79,6 +79,10 @@ settings:
   ##available feature gates: AuroraVerticalScaling, DocumentDBVerticalScaling
   ##by default all experimental features are disabled
   featureGates: ""
+  ##timeout for action executions (e.g. vertical scaling)
+  ##accepts standard Go duration strings (e.g., "30m", "45m", "1h")
+  ##defaults to "30m" in the operator if empty
+  actionExecutionTimeout: ""
 
 # Additional env vars
 env: []
