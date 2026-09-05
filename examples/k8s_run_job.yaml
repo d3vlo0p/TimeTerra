@@ -1,0 +1,84 @@
+# Complete example for testing K8sRunJob (periodic Kubernetes Jobs launched by TimeTerra).
+# It creates:
+# 1. A Schedule defining cron triggers for two actions: 'daily-backup' and 'nightly-cleanup'
+# 2. A K8sRunJob CR specifying the Job templates to run when triggered
+
+apiVersion: timeterra.d3vlo0p.dev/v1alpha1
+kind: Schedule
+metadata:
+  name: demo-job-schedule
+spec:
+  enabled: true
+  actions:
+    # Rapid schedule for testing: triggers 'daily-backup' every 4 minutes (:00, :04, ...)
+    daily-backup:
+      cron: "0/4 * * * *"
+    # Rapid schedule for testing: triggers 'nightly-cleanup' every 4 minutes (:02, :06, ...)
+    nightly-cleanup:
+      cron: "2/4 * * * *"
+---
+apiVersion: timeterra.d3vlo0p.dev/v1alpha1
+kind: K8sRunJob
+metadata:
+  name: demo-k8srunjob
+spec:
+  enabled: true
+  schedule: demo-job-schedule
+  namespaces:
+    - default
+  actions:
+    daily-backup:
+      job:
+        # Automatically clean up completed Job after 120 seconds
+        ttlSecondsAfterFinished: 120
+        backoffLimit: 2
+        template:
+          metadata:
+            labels:
+              app.kubernetes.io/name: demo-backup-task
+          spec:
+            restartPolicy: OnFailure
+            containers:
+              - name: backup-worker
+                image: busybox:latest
+                command:
+                  - /bin/sh
+                  - -c
+                  - |
+                    echo "Starting simulated backup at $(date)..."
+                    sleep 5
+                    echo "Backup completed successfully!"
+                resources:
+                  requests:
+                    cpu: 10m
+                    memory: 16Mi
+                  limits:
+                    cpu: 50m
+                    memory: 32Mi
+    nightly-cleanup:
+      job:
+        ttlSecondsAfterFinished: 120
+        backoffLimit: 2
+        template:
+          metadata:
+            labels:
+              app.kubernetes.io/name: demo-cleanup-task
+          spec:
+            restartPolicy: OnFailure
+            containers:
+              - name: cleanup-worker
+                image: busybox:latest
+                command:
+                  - /bin/sh
+                  - -c
+                  - |
+                    echo "Starting cleanup task at $(date)..."
+                    sleep 3
+                    echo "Cleanup completed successfully!"
+                resources:
+                  requests:
+                    cpu: 10m
+                    memory: 16Mi
+                  limits:
+                    cpu: 50m
+                    memory: 32Mi

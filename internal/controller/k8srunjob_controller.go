@@ -114,11 +114,16 @@ func (r *K8sRunJobReconciler) runJob(ctx context.Context, logger logr.Logger, ke
 		namespaces = []string{r.OperatorNamespace}
 	}
 
-	//generate string suffix date with format YYYYMMDDHHmm
+	// generate string suffix date with format YYYYMMDDHHmm (12 chars)
 	suffix := time.Now().Format("200601021504")
-	jobName := fmt.Sprintf("%s-%s-%s", obj.Name, actionName, suffix)
+	prefix := fmt.Sprintf("%s-%s", obj.Name, actionName)
+	// Ensure job name does not exceed 63 characters (RFC 1123 limit)
+	if len(prefix) > 48 {
+		prefix = prefix[:48]
+	}
+	jobName := fmt.Sprintf("%s-%s", prefix, suffix)
 
-	//set default TTL
+	// set default TTL
 	if action.Job.TTLSecondsAfterFinished == nil {
 		defaultTTLSeconds := new(int32)
 		*defaultTTLSeconds = 86400
@@ -131,20 +136,18 @@ func (r *K8sRunJobReconciler) runJob(ctx context.Context, logger logr.Logger, ke
 				Name:      jobName,
 				Namespace: namespace,
 				Labels: map[string]string{
-					"timeterra.d3vlo0p.dev/action":   actionName,
-					"timeterra.d3vlo0p.dev/schedule": obj.Spec.Schedule,
+					"timeterra.d3vlo0p.dev/action":    actionName,
+					"timeterra.d3vlo0p.dev/schedule":  obj.Spec.Schedule,
+					"timeterra.d3vlo0p.dev/k8srunjob": obj.Name,
 				},
 			},
 			Spec: action.Job,
 		}
 
-		err = ctrl.SetControllerReference(obj, job, r.Scheme)
-		if err != nil {
-			msg := fmt.Sprintf("Failed to set controller reference: %s", err)
-			errorsList = append(errorsList, msg)
-			logger.Error(err, msg)
-			r.Recorder.Eventf(obj, corev1.EventTypeWarning, "Failed", msg)
-			continue
+		// Since K8sRunJob is cluster-scoped, SetControllerReference across scopes may fail.
+		// If it fails, log as debug/info and continue with label-based correlation.
+		if err := ctrl.SetControllerReference(obj, job, r.Scheme); err != nil {
+			logger.Info("Cannot set controller reference (likely cross-scope); relying on labels and TTL for cleanup", "error", err.Error())
 		}
 
 		err = r.Create(ctx, job)
@@ -168,7 +171,9 @@ func (r *K8sRunJobReconciler) runJob(ctx context.Context, logger logr.Logger, ke
 			Reason:             "Failed",
 			Message:            strings.Join(errorsList, ";"),
 		})
-		r.Status().Update(ctx, obj)
+		if updateErr := r.Status().Update(ctx, obj); updateErr != nil {
+			logger.Error(updateErr, "failed to update status after failure")
+		}
 		metadata["error_list"] = errorsList
 		return JobResultFailure, metadata
 	}
@@ -180,7 +185,9 @@ func (r *K8sRunJobReconciler) runJob(ctx context.Context, logger logr.Logger, ke
 		Reason:             "Active",
 		Message:            fmt.Sprintf("last execution started:%q ended:%q", start.Format(time.RFC3339), time.Now().Format(time.RFC3339)),
 	})
-	r.Status().Update(ctx, obj)
+	if updateErr := r.Status().Update(ctx, obj); updateErr != nil {
+		logger.Error(updateErr, "failed to update status after success")
+	}
 	return JobResultSuccess, metadata
 }
 

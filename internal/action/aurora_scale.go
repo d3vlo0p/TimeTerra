@@ -73,10 +73,14 @@ func (m *rdsClusterManager) CheckInstancesAvailable(ctx context.Context, identif
 		if err != nil {
 			return false, err
 		}
-		if len(desc.DBInstances) == 0 || *desc.DBInstances[0].DBInstanceStatus != "available" {
+		if len(desc.DBInstances) == 0 {
 			return false, nil
 		}
-		if *desc.DBInstances[0].DBInstanceClass != instanceClass {
+		inst := desc.DBInstances[0]
+		if inst.DBInstanceStatus == nil || *inst.DBInstanceStatus != "available" {
+			return false, nil
+		}
+		if inst.DBInstanceClass == nil || *inst.DBInstanceClass != instanceClass {
 			return false, nil
 		}
 	}

@@ -2,6 +2,7 @@ package cron
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/d3vlo0p/TimeTerra/monitoring"
@@ -11,6 +12,7 @@ import (
 )
 
 type ScheduleService struct {
+	mu     sync.RWMutex
 	// map of schedule => map of action => map of resource => list of cron ids
 	m      map[string]map[string]map[string]int
 	c      *cron.Cron
@@ -19,8 +21,9 @@ type ScheduleService struct {
 
 func New() *ScheduleService {
 	return &ScheduleService{
-		m: make(map[string]map[string]map[string]int),
-		c: cron.New(),
+		m:      make(map[string]map[string]map[string]int),
+		c:      cron.New(),
+		logger: log.Log.WithName("cron"),
 	}
 }
 
@@ -61,6 +64,9 @@ func (s *ScheduleService) Add(schedule string, action string, resource string, s
 		return 0, err
 	}
 
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if _, ok := s.m[schedule]; !ok {
 		s.m[schedule] = make(map[string]map[string]int)
 	}
@@ -75,6 +81,12 @@ func (s *ScheduleService) Add(schedule string, action string, resource string, s
 }
 
 func (s *ScheduleService) Remove(schedule string, action string, resource string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.removeLocked(schedule, action, resource)
+}
+
+func (s *ScheduleService) removeLocked(schedule string, action string, resource string) {
 	if _, ok := s.m[schedule]; !ok {
 		return
 	}
@@ -91,32 +103,51 @@ func (s *ScheduleService) Remove(schedule string, action string, resource string
 }
 
 func (s *ScheduleService) GetActions(schedule string) map[string]map[string]int {
-	if _, ok := s.m[schedule]; !ok {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	actions, ok := s.m[schedule]
+	if !ok {
 		s.logger.Info("no actions for schedule", "schedule", schedule)
 		return make(map[string]map[string]int)
 	}
-	return s.m[schedule]
+	copyMap := make(map[string]map[string]int, len(actions))
+	for action, resources := range actions {
+		copyMap[action] = make(map[string]int, len(resources))
+		for res, id := range resources {
+			copyMap[action][res] = id
+		}
+	}
+	return copyMap
 }
 
 func (s *ScheduleService) GetActionsOfResource(schedule string, resource string) map[string]int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	if _, ok := s.m[schedule]; !ok {
 		s.logger.Info("no actions for schedule", "schedule", schedule)
 		return make(map[string]int)
 	}
 	resourceMap := make(map[string]int)
 	for action, v := range s.m[schedule] {
-		resourceMap[action] = v[resource]
+		if id, ok := v[resource]; ok {
+			resourceMap[action] = id
+		}
 	}
 	return resourceMap
 }
 
 func (s *ScheduleService) RemoveActionsOfResourceFromNonCurrentSchedule(currentSchedule string, resource string) []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	actionsRemoved := make([]string, 0)
 	for schedule, actions := range s.m {
 		if schedule != currentSchedule {
 			for action, resources := range actions {
 				if _, ok := resources[resource]; ok {
-					s.Remove(schedule, action, resource)
+					s.removeLocked(schedule, action, resource)
 					actionsRemoved = append(actionsRemoved, action)
 				}
 			}
@@ -126,10 +157,13 @@ func (s *ScheduleService) RemoveActionsOfResourceFromNonCurrentSchedule(currentS
 }
 
 func (s *ScheduleService) RemoveResource(resource string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	for schedule, actions := range s.m {
 		for action, resources := range actions {
 			if _, ok := resources[resource]; ok {
-				s.Remove(schedule, action, resource)
+				s.removeLocked(schedule, action, resource)
 			}
 		}
 	}
@@ -141,6 +175,9 @@ func (s *ScheduleService) IsValidCron(spec string) bool {
 }
 
 func (s *ScheduleService) UpdateCronSpec(schedule string, action string, resource string, spec string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if _, ok := s.m[schedule]; !ok {
 		return false
 	}

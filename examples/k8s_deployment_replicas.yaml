@@ -1,0 +1,66 @@
+# Complete end-to-end example for testing K8sPodReplicas with a Kubernetes Deployment.
+# It creates:
+# 1. A test Deployment (demo-deployment)
+# 2. A Schedule defining recurring cron times for 'scaleup' and 'scalein'
+# 3. A K8sPodReplicas CR that instructs TimeTerra to scale matching deployments
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-deployment
+  namespace: default
+  labels:
+    app.kubernetes.io/name: demo-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: demo-deployment
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: demo-deployment
+    spec:
+      containers:
+        - name: web
+          image: nginx:alpine
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 50m
+              memory: 64Mi
+---
+apiVersion: timeterra.d3vlo0p.dev/v1alpha1
+kind: Schedule
+metadata:
+  name: demo-deployment-schedule
+spec:
+  enabled: true
+  actions:
+    # Scale up at every 5th minute (adjust cron expression as needed for rapid testing)
+    scaleup:
+      cron: "0/4 * * * *"
+    # Scale down 2 minutes after scale up
+    scalein:
+      cron: "2/4 * * * *"
+---
+apiVersion: timeterra.d3vlo0p.dev/v1alpha1
+kind: K8sPodReplicas
+metadata:
+  name: demo-deployment-replicas
+spec:
+  enabled: true
+  resourceType: Deployment
+  namespaces:
+    - default
+  labelSelector:
+    matchLabels:
+      app.kubernetes.io/name: demo-deployment
+  schedule: demo-deployment-schedule
+  actions:
+    scaleup:
+      replicas: 3
+    scalein:
+      replicas: 1

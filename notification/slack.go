@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -123,11 +124,17 @@ func (s *SlackNotification) Notify(id string, body NotificationBody) error {
 		return err
 	}
 	bodyReader := bytes.NewReader(jsonBody)
-	resp, err := http.Post(s.WebHookUrl, "application/json", bodyReader)
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+	resp, err := client.Post(s.WebHookUrl, "application/json", bodyReader)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("slack notification returned non-success status: %s", resp.Status)
+	}
 	s.logger.Info("Notification sent", "id", id, "status", resp.Status, "body", string(jsonBody))
 	return nil
 }

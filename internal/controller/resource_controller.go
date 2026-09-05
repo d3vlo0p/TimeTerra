@@ -158,12 +158,14 @@ func reconcileResource[Action Activable](
 			}
 			logger.Info("The action is not scheduled, let's schedule it", "action", actionName, "schedule", scheduleName, "cron", scheduleAction.Cron)
 			_, err := scheduleService.Add(scheduleName, actionName, resourceName, scheduleAction.Cron, func() {
-				// retrive schedule for cheking if it is active
-				// we do the check here because the check is simpler, and it avoids us having to delete and create objects in cron schedule
+				// Create an independent context with timeout for the asynchronous cron execution
+				jobCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+				defer cancel()
+
 				innerLogger := logger.WithValues("action", actionName, "schedule", scheduleName)
 				start := time.Now()
 				s := &v1alpha1.Schedule{}
-				err := r.Get(ctx, client.ObjectKey{Name: scheduleName}, s)
+				err := r.Get(jobCtx, client.ObjectKey{Name: scheduleName}, s)
 				if err != nil {
 					innerLogger.Error(err, "Cron run, failed to get schedule")
 					monitoring.TimeterraActionLatency.WithLabelValues(scheduleName, actionName, resourceName, JobResultError.String()).Observe(time.Since(start).Seconds())
@@ -182,9 +184,9 @@ func reconcileResource[Action Activable](
 					return
 				}
 
-				//Logic for managing time periods
-				//Inactive periods have priority over active ones, no active periods means always active.
-				//Truncate time to minute to reflect cron precision
+				// Logic for managing time periods
+				// Inactive periods have priority over active ones, no active periods means always active.
+				// Truncate time to minute to reflect cron precision
 				now := start.Truncate(time.Minute)
 				if len(s.Spec.ActivePeriods) > 0 {
 					active := false
@@ -192,7 +194,7 @@ func reconcileResource[Action Activable](
 					for _, p := range s.Spec.ActivePeriods {
 						if (now.After(p.Start.Time) && now.Before(p.End.Time)) || now.Equal(p.Start.Time) || now.Equal(p.End.Time) {
 							if len(p.Actions) > 0 {
-								// check if current action is inside an Active Period, if not then skip exec
+								// check if current action is inside an Active Period
 								for _, action := range p.Actions {
 									if action == actionName {
 										active = true
@@ -202,7 +204,9 @@ func reconcileResource[Action Activable](
 							} else {
 								active = true
 							}
-							break
+							if active {
+								break
+							}
 						}
 					}
 					if !active {
@@ -212,7 +216,7 @@ func reconcileResource[Action Activable](
 					}
 				}
 				if len(s.Spec.InactivePeriods) > 0 {
-					active := true
+					inactive := false
 					// check if current date is inside an Inactive Period, if it is then skip exec
 					for _, p := range s.Spec.InactivePeriods {
 						if (now.After(p.Start.Time) && now.Before(p.End.Time)) || now.Equal(p.Start.Time) || now.Equal(p.End.Time) {
@@ -220,17 +224,19 @@ func reconcileResource[Action Activable](
 								// check if current action is inside an Inactive Period, then skip exec
 								for _, action := range p.Actions {
 									if action == actionName {
-										active = false
+										inactive = true
 										break
 									}
 								}
 							} else {
-								active = false
+								inactive = true
 							}
-							break
+							if inactive {
+								break
+							}
 						}
 					}
-					if !active {
+					if inactive {
 						innerLogger.Info("The execution job action is inside an inactive period, skipping execution")
 						monitoring.TimeterraActionLatency.WithLabelValues(scheduleName, actionName, resourceName, JobResultSkipped.String()).Observe(time.Since(start).Seconds())
 						return
@@ -238,7 +244,7 @@ func reconcileResource[Action Activable](
 				}
 
 				innerLogger.Info("Scheduled job action is starting")
-				status, metadata := job(ctx, innerLogger, client.ObjectKey{Name: obj.GetName(), Namespace: obj.GetNamespace()}, actionName)
+				status, metadata := job(jobCtx, innerLogger, client.ObjectKey{Name: obj.GetName(), Namespace: obj.GetNamespace()}, actionName)
 				monitoring.TimeterraActionLatency.WithLabelValues(scheduleName, actionName, resourceName, status.String()).Observe(time.Since(start).Seconds())
 				notificationService.Send(notification.NotificationBody{
 					Schedule: scheduleName,
